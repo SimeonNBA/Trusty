@@ -2826,6 +2826,26 @@ body::before {
               <div class="token-stat-label">Token Age</div>
               <div class="token-stat-val" id="td-age">—</div>
             </div>
+            <div class="token-stat">
+              <div class="token-stat-label">Buys / Sells 24h</div>
+              <div class="token-stat-val" id="td-buysell">—</div>
+            </div>
+            <div class="token-stat">
+              <div class="token-stat-label">Holders</div>
+              <div class="token-stat-val" id="td-holders">—</div>
+            </div>
+            <div class="token-stat" id="td-tax-wrap" style="display:none">
+              <div class="token-stat-label">Buy / Sell Tax</div>
+              <div class="token-stat-val" id="td-tax">—</div>
+            </div>
+          </div>
+
+          <!-- Warning banners shown conditionally -->
+          <div id="td-tax-warn" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.35);border-radius:10px;font-size:12px;color:#FCA5A5;line-height:1.6;">
+            🚨 <strong>High Tax Detected</strong> — This coin has a sell tax of <span id="td-tax-warn-pct">—</span>. That means a cut is taken every time someone sells. DYOR on what the tax is used for — could be a dev fund, buyback, or just a way to bleed holders. Anything over 5% is a red flag ser.
+          </div>
+          <div id="td-holders-tip" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:10px;font-size:12px;color:var(--yellow);line-height:1.6;">
+            👥 <strong>Check if the community is actually active</strong> — Holder count alone doesn't tell you if real people care about this coin. Jump into their Telegram or Twitter right now. Is it active conversation or just price spam? Dead community = no one left to buy. That's your real exit problem.
           </div>
 
           <div class="token-links" id="tokenLinks"></div>
@@ -3397,6 +3417,22 @@ body::before {
           </div>
         </div>
 
+        <!-- 2026 -->
+        <div class="tl-item">
+          <div class="tl-dot milestone"></div>
+          <div class="tl-year">Feb 2026</div>
+          <div class="tl-card">
+            <div class="tl-event-title">🚀 Felix Fan Takes the Helm <span class="tl-badge growth">NEW ERA</span></div>
+            <div class="tl-desc">
+              On <strong>February 11, 2026</strong>, Trust Wallet named <strong>Felix Fan</strong> as its new CEO, succeeding Eowyn Chen after her planned 4-year tenure. Felix came from OKX where he ran product, bringing over 10 years of product strategy and growth experience. He started immediately — within 48 hours of taking over, Trust Wallet shipped the Trade Menu, swap price impact protection, an updated Trending Page, prediction markets, and 1-click swaps. His three H1 priorities: <strong>trading, UX, and AI</strong>. He also launched the <strong>Agent Kit</strong> — a toolkit letting AI agents execute real crypto transactions across 25+ blockchains. The goal: 40% active user rate, not just downloads.
+            </div>
+            <div class="tl-trusty-comment">
+              <div class="tl-trusty-icon">🛡️</div>
+              <div class="tl-trusty-quote">"I didn't need months to audit Trust Wallet. I came in with a clear point of view." Day one energy. The Agent Kit he shipped is literally what we're building on right now fren. WAGMI.</div>
+            </div>
+          </div>
+        </div>
+
       </div><!-- end timeline -->
     </div>
 
@@ -3424,8 +3460,16 @@ body::before {
           <div class="person-avatar">💼</div>
           <div>
             <div class="person-name">Eowyn Chen</div>
-            <div class="person-role">CEO (2022 — Present)</div>
-            <div class="person-bio">Former Binance Marketing VP who took over from Viktor in March 2022. Under her leadership Trust Wallet hit 200M+ installs, achieved 4x revenue growth, and unveiled the 1 billion users by 2030 roadmap. Running the rocket ship now.</div>
+            <div class="person-role">CEO (2022 — Feb 2026)</div>
+            <div class="person-bio">Former Binance Marketing VP who took over from Viktor in March 2022. Grew Trust Wallet from 40M to 200M+ users, turned the company profitable with 4x revenue growth, and unveiled the 1B users by 2030 roadmap. Handed off after a planned 4-year term. Legendary run ser.</div>
+          </div>
+        </div>
+        <div class="person-card">
+          <div class="person-avatar">⚡</div>
+          <div>
+            <div class="person-name">Felix Fan</div>
+            <div class="person-role">CEO (Feb 2026 — Present)</div>
+            <div class="person-bio">Came from OKX where he ran product. Took over February 11, 2026 and shipped 5 features within 48 hours of starting. Launched the Agent Kit — the exact toolkit we're building Trusty on. His priorities: trading, UX, and AI. The builder CEO.</div>
           </div>
         </div>
         <div class="person-card">
@@ -4106,6 +4150,34 @@ function renderTokenData(pair, ca) {
   if (!linksHtml) linksHtml = '<span class="token-link-pill" style="opacity:0.5">No socials detected</span>';
   linksEl.innerHTML = linksHtml;
 
+  // Buy/Sell ratio
+  const buys = pair.txns?.h24?.buys || 0;
+  const sells = pair.txns?.h24?.sells || 0;
+  const buySellEl = document.getElementById('td-buysell');
+  if (buys || sells) {
+    buySellEl.textContent = buys + 'B / ' + sells + 'S';
+    const ratio = sells > 0 ? buys / sells : 99;
+    buySellEl.className = 'token-stat-val ' + (ratio >= 1.2 ? 'green' : ratio >= 0.7 ? 'yellow' : 'red');
+  } else {
+    buySellEl.textContent = '—';
+    buySellEl.className = 'token-stat-val';
+  }
+
+  // Holders from DexScreener info (if available)
+  const holderCount = pair.info?.holders || pair.holders || null;
+  const holdersEl = document.getElementById('td-holders');
+  const holdersTip = document.getElementById('td-holders-tip');
+  if (holderCount) {
+    holdersEl.textContent = holderCount.toLocaleString();
+    holdersEl.className = 'token-stat-val ' + (holderCount >= 500 ? 'green' : holderCount >= 100 ? 'yellow' : 'red');
+    // Always show the community tip — checking community is always good advice
+    holdersTip.style.display = 'block';
+  } else {
+    holdersEl.textContent = 'Check DEX';
+    holdersEl.className = 'token-stat-val';
+    holdersTip.style.display = 'block'; // show tip regardless
+  }
+
   // DexScreener link
   const dexLink = document.getElementById('tokenDexLink');
   dexLink.href = pair.url || `https://dexscreener.com/search?q=${ca}`;
@@ -4600,6 +4672,12 @@ function resetAll() {
   document.getElementById('caError').classList.remove('visible');
   document.getElementById('caLoading').classList.remove('visible');
   document.getElementById('caManualNotice').classList.remove('visible');
+  const taxWrap = document.getElementById('td-tax-wrap');
+  const taxWarn = document.getElementById('td-tax-warn');
+  const holdersTip = document.getElementById('td-holders-tip');
+  if (taxWrap) taxWrap.style.display = 'none';
+  if (taxWarn) taxWarn.style.display = 'none';
+  if (holdersTip) holdersTip.style.display = 'none';
   state.chain = null; state.narrative = ''; state.ownership = null;
   state.age = null; state.socials = new Set(); state.supply = null; state.supplyType = null;
   document.querySelectorAll('.choice-btn, .social-btn').forEach(b => b.classList.remove('selected'));
@@ -4872,7 +4950,7 @@ function renderEvm(data, panel, content) {
 
   const buyTaxStr = data.buyTax !== null && data.buyTax !== undefined ? data.buyTax.toFixed(1) + '%' : 'Unknown';
   const sellTaxStr = data.sellTax !== null && data.sellTax !== undefined ? data.sellTax.toFixed(1) + '%' : 'Unknown';
-  const taxClass = (data.sellTax > 10) ? 'bad' : (data.sellTax > 0) ? 'warn' : 'good';
+  const taxClass = (data.sellTax >= 5) ? 'bad' : (data.sellTax > 0) ? 'warn' : 'good';
 
   let html = `<div class="cs-grid">
     <div class="cs-item ${honeypotClass}">
@@ -4910,6 +4988,9 @@ function renderEvm(data, panel, content) {
   }
 
   content.innerHTML = html;
+
+  // Also update the token data card tax fields
+  updateTokenCardTax(data.buyTax, data.sellTax);
 }
 
 // ── UPDATE SCORE WITH CONTRACT SAFETY ──
@@ -4930,7 +5011,8 @@ function updateContractSafetyScore(data) {
     if (data.contractRenounced === true) contractScore += 15;
     if (data.mintAuthorityRevoked === true) contractScore += 10;
     if (data.mintAuthorityRevoked === false) contractScore -= 20;
-    if (data.sellTax > 10) contractScore -= 15;
+    if (data.sellTax >= 5) contractScore -= 10;
+  if (data.sellTax > 10) contractScore -= 15; // stacks with above
     contractScore = Math.max(0, Math.min(100, contractScore));
   }
 
@@ -5251,6 +5333,33 @@ function showGcVerdict() {
   };
   document.getElementById('trustyTip').innerHTML = tipMessages[tierClass] || 'Gut check complete fren 🛡️';
   shakeTrusty();
+}
+
+// ── UPDATE TOKEN CARD TAX (called after contract safety scan) ──
+function updateTokenCardTax(buyTax, sellTax) {
+  if (buyTax === null && sellTax === null) return;
+  const wrap = document.getElementById('td-tax-wrap');
+  const taxEl = document.getElementById('td-tax');
+  const taxWarn = document.getElementById('td-tax-warn');
+  const taxWarnPct = document.getElementById('td-tax-warn-pct');
+  if (!wrap || !taxEl) return;
+
+  const buyStr = buyTax !== null && buyTax !== undefined ? buyTax.toFixed(1) + '%' : '?';
+  const sellStr = sellTax !== null && sellTax !== undefined ? sellTax.toFixed(1) + '%' : '?';
+
+  wrap.style.display = 'block';
+  taxEl.textContent = buyStr + ' / ' + sellStr;
+
+  // Flag if sell tax >= 5%
+  if (sellTax >= 5) {
+    taxEl.className = 'token-stat-val red';
+    taxWarn.style.display = 'block';
+    taxWarnPct.textContent = sellStr;
+  } else if (sellTax > 0) {
+    taxEl.className = 'token-stat-val yellow';
+  } else {
+    taxEl.className = 'token-stat-val green';
+  }
 }
 
 // ── HISTORY PAGE ──
