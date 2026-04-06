@@ -15,89 +15,77 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch trending from Trust Wallet API
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install TWAK CLI
+        run: npm install -g @trustwallet/cli
+
+      - name: Init TWAK credentials
         env:
           TW_ACCESS_ID: ${{ secrets.TW_ACCESS_ID }}
           TW_HMAC_SECRET: ${{ secrets.TW_HMAC_SECRET }}
         run: |
-          cat << 'EOF' > fetch.mjs
-          import crypto from 'crypto';
-          import https from 'https';
-          import fs from 'fs';
+          twak init --api-key "$TW_ACCESS_ID" --api-secret "$TW_HMAC_SECRET"
 
-          const ACCESS_ID = process.env.TW_ACCESS_ID;
-          const HMAC_SECRET = process.env.TW_HMAC_SECRET;
-          const BASE_URL = 'tws.trustwallet.com';
+      - name: Fetch trending data
+        run: |
+          mkdir -p data
 
-          function makeRequest(path, query = '') {
-            return new Promise((resolve, reject) => {
-              const method = 'GET';
-              const nonce = crypto.randomUUID().replace(/-/g, '');
-              const date = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-              const sigInput = `${method}${path}${query}${ACCESS_ID}${nonce}${date}`;
-              const signature = crypto
-                .createHmac('sha256', HMAC_SECRET)
-                .update(sigInput)
-                .digest('base64');
+          echo "Fetching memes..."
+          twak trending --category memes --sort price_change --limit 10 --json > data/cat_memes.json 2>&1 || echo "{}" > data/cat_memes.json
 
-              const fullPath = query ? `${path}?${query}` : path;
-              const options = {
-                hostname: BASE_URL,
-                path: fullPath,
-                method: 'GET',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-TW-Credential': ACCESS_ID,
-                  'X-TW-Nonce': nonce,
-                  'X-TW-Date': date,
-                  'Authorization': signature
-                }
-              };
+          echo "Fetching bnb..."
+          twak trending --category bnb --sort price_change --limit 10 --json > data/cat_bnb.json 2>&1 || echo "{}" > data/cat_bnb.json
 
-              const req = https.request(options, res => {
-                let data = '';
-                res.on('data', chunk => data += chunk);
-                res.on('end', () => {
-                  console.log(`${path} → HTTP ${res.statusCode}`);
-                  try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }
-                  catch(e) { resolve({ status: res.statusCode, body: data }); }
-                });
-              });
-              req.on('error', reject);
-              req.end();
-            });
-          }
+          echo "Fetching sol..."
+          twak trending --category sol --sort price_change --limit 10 --json > data/cat_sol.json 2>&1 || echo "{}" > data/cat_sol.json
 
-          // Fetch trending meme coins across categories
-          const categories = ['memes', 'bnb', 'sol', 'ai', 'pumpfun'];
-          const results = {};
+          echo "Fetching ai..."
+          twak trending --category ai --sort price_change --limit 10 --json > data/cat_ai.json 2>&1 || echo "{}" > data/cat_ai.json
 
-          for (const cat of categories) {
+          echo "Fetching pumpfun..."
+          twak trending --category pumpfun --sort price_change --limit 10 --json > data/cat_pumpfun.json 2>&1 || echo "{}" > data/cat_pumpfun.json
+
+          echo "Done fetching categories"
+          cat data/cat_memes.json | head -5
+
+      - name: Combine into trending.json
+        run: |
+          node << 'EOF'
+          const fs = require('fs');
+
+          function safeRead(file) {
             try {
-              const res = await makeRequest(
-                '/v1/trending',
-                `category=${cat}&sort=price_change&limit=10`
-              );
-              results[cat] = res.body;
-              console.log(`${cat}:`, JSON.stringify(res.body).slice(0, 120));
+              const content = fs.readFileSync(file, 'utf8').trim();
+              return JSON.parse(content);
             } catch(e) {
-              console.error(`Failed ${cat}:`, e.message);
-              results[cat] = { error: e.message };
+              return { error: 'parse failed' };
             }
           }
 
           const output = {
             updatedAt: new Date().toISOString(),
-            categories: results
+            categories: {
+              memes:   safeRead('data/cat_memes.json'),
+              bnb:     safeRead('data/cat_bnb.json'),
+              sol:     safeRead('data/cat_sol.json'),
+              ai:      safeRead('data/cat_ai.json'),
+              pumpfun: safeRead('data/cat_pumpfun.json')
+            }
           };
 
-          fs.mkdirSync('data', { recursive: true });
           fs.writeFileSync('data/trending.json', JSON.stringify(output, null, 2));
-          console.log('Saved data/trending.json');
+          console.log('Combined trending.json saved');
+          console.log('Preview:', JSON.stringify(output).slice(0, 300));
           EOF
-          node fetch.mjs
 
-      - name: Commit and push trending data
+          # Clean up temp files
+          rm -f data/cat_*.json
+
+      - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
