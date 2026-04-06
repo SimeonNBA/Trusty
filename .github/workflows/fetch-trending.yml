@@ -3,7 +3,7 @@ name: Fetch TW Trending
 on:
   schedule:
     - cron: '*/15 * * * *'   # every 15 minutes
-  workflow_dispatch:           # allows manual trigger from GitHub UI
+  workflow_dispatch:           # manual trigger from GitHub UI
 
 jobs:
   fetch:
@@ -14,11 +14,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
       - name: Fetch trending from Trust Wallet API
         env:
@@ -32,37 +27,40 @@ jobs:
 
           const ACCESS_ID = process.env.TW_ACCESS_ID;
           const HMAC_SECRET = process.env.TW_HMAC_SECRET;
+          const BASE_URL = 'tws.trustwallet.com';
 
-          function buildHeaders(method, path, body = '') {
-            const timestamp = Math.floor(Date.now() / 1000).toString();
-            const nonce = crypto.randomBytes(8).toString('hex');
-            const bodyHash = body ? crypto.createHash('sha256').update(body).digest('hex') : '';
-            const message = [method.toUpperCase(), path, timestamp, nonce, bodyHash].join('\n');
-            const signature = crypto.createHmac('sha256', HMAC_SECRET).update(message).digest('hex');
-            return {
-              'Content-Type': 'application/json',
-              'X-Access-Id': ACCESS_ID,
-              'X-Timestamp': timestamp,
-              'X-Nonce': nonce,
-              'X-Signature': signature
-            };
-          }
-
-          function httpsGet(path) {
+          function makeRequest(path, query = '') {
             return new Promise((resolve, reject) => {
-              const headers = buildHeaders('GET', path);
+              const method = 'GET';
+              const nonce = crypto.randomUUID().replace(/-/g, '');
+              const date = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+              const sigInput = `${method}${path}${query}${ACCESS_ID}${nonce}${date}`;
+              const signature = crypto
+                .createHmac('sha256', HMAC_SECRET)
+                .update(sigInput)
+                .digest('base64');
+
+              const fullPath = query ? `${path}?${query}` : path;
               const options = {
-                hostname: 'api.tw-wallet.com',
-                path,
+                hostname: BASE_URL,
+                path: fullPath,
                 method: 'GET',
-                headers
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-TW-Credential': ACCESS_ID,
+                  'X-TW-Nonce': nonce,
+                  'X-TW-Date': date,
+                  'Authorization': signature
+                }
               };
+
               const req = https.request(options, res => {
                 let data = '';
                 res.on('data', chunk => data += chunk);
                 res.on('end', () => {
-                  try { resolve(JSON.parse(data)); }
-                  catch(e) { resolve({ raw: data }); }
+                  console.log(`${path} → HTTP ${res.statusCode}`);
+                  try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }
+                  catch(e) { resolve({ status: res.statusCode, body: data }); }
                 });
               });
               req.on('error', reject);
@@ -70,23 +68,24 @@ jobs:
             });
           }
 
-          // Fetch multiple categories
+          // Fetch trending meme coins across categories
           const categories = ['memes', 'bnb', 'sol', 'ai', 'pumpfun'];
           const results = {};
 
           for (const cat of categories) {
             try {
-              const path = `/v1/trending?category=${cat}&sort=price_change&limit=10`;
-              const data = await httpsGet(path);
-              results[cat] = data;
-              console.log(`Fetched ${cat}:`, JSON.stringify(data).slice(0, 100));
+              const res = await makeRequest(
+                '/v1/trending',
+                `category=${cat}&sort=price_change&limit=10`
+              );
+              results[cat] = res.body;
+              console.log(`${cat}:`, JSON.stringify(res.body).slice(0, 120));
             } catch(e) {
               console.error(`Failed ${cat}:`, e.message);
               results[cat] = { error: e.message };
             }
           }
 
-          // Save with timestamp
           const output = {
             updatedAt: new Date().toISOString(),
             categories: results
