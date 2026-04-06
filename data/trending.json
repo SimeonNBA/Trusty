@@ -1,0 +1,20 @@
+{
+  "updatedAt": "2026-04-06T18:56:13.299Z",
+  "categories": {
+    "memes": {
+      "error": "getaddrinfo ENOTFOUND api.tw-wallet.com"
+    },
+    "bnb": {
+      "error": "getaddrinfo ENOTFOUND api.tw-wallet.com"
+    },
+    "sol": {
+      "error": "getaddrinfo ENOTFOUND api.tw-wallet.com"
+    },
+    "ai": {
+      "error": "getaddrinfo ENOTFOUND api.tw-wallet.com"
+    },
+    "pumpfun": {
+      "error": "getaddrinfo ENOTFOUND api.tw-wallet.com"
+    }
+  }
+}
