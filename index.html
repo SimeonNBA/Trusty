@@ -2874,6 +2874,200 @@ body::before {
   color: var(--muted);
   font-style: italic;
 }
+
+/* ── TRENDING TAB ── */
+.trending-section {
+  margin-bottom: 16px;
+}
+
+.trending-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.trending-title {
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, var(--yellow), var(--orange));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  flex: 1;
+}
+
+.trending-updated {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* Category tabs */
+.trending-cats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.trending-cat-btn {
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.trending-cat-btn:hover { border-color: var(--yellow); color: var(--text); }
+.trending-cat-btn.active {
+  background: rgba(251,191,36,0.12);
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+/* Trending coin cards */
+.trending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trending-coin {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  text-align: left;
+}
+.trending-coin:hover {
+  border-color: var(--yellow);
+  background: var(--card2);
+  transform: translateX(3px);
+}
+
+.trending-rank {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.trending-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.trending-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+.trending-info { flex: 1; min-width: 0; }
+
+.trending-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trending-symbol {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+.trending-price {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.trending-change {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+  flex-shrink: 0;
+  min-width: 52px;
+}
+.trending-change.up { color: var(--green); }
+.trending-change.down { color: var(--red); }
+
+.trending-mc {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+  flex-shrink: 0;
+  min-width: 60px;
+}
+
+.trending-eval-btn {
+  background: rgba(251,191,36,0.1);
+  border: 1px solid rgba(251,191,36,0.3);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--yellow);
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+  transition: all 0.15s;
+}
+.trending-coin:hover .trending-eval-btn {
+  background: rgba(251,191,36,0.2);
+  border-color: var(--yellow);
+}
+
+.trending-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.trending-error {
+  text-align: center;
+  padding: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .trending-mc { display: none; }
+  .trending-price { display: none; }
+}
 </style>
 </head>
 <body>
@@ -2916,6 +3110,27 @@ body::before {
         <div class="step-pip" id="pip4"></div>
         <div class="step-pip" id="pip5"></div>
         <div class="step-pip" id="pip6"></div>
+      </div>
+    </div>
+
+    <!-- ── TRENDING TAB ── -->
+    <div class="trending-section" id="trendingSection">
+      <div class="trending-header">
+        <div class="trending-title">🔥 TRENDING NOW</div>
+        <div class="trending-updated" id="trendingUpdated">Loading...</div>
+      </div>
+      <div class="trending-cats">
+        <button class="trending-cat-btn active" onclick="switchTrendingCat('memes',this)">🐸 Memes</button>
+        <button class="trending-cat-btn" onclick="switchTrendingCat('bnb',this)">🟡 BNB</button>
+        <button class="trending-cat-btn" onclick="switchTrendingCat('sol',this)">◎ Solana</button>
+        <button class="trending-cat-btn" onclick="switchTrendingCat('ai',this)">🤖 AI</button>
+        <button class="trending-cat-btn" onclick="switchTrendingCat('pumpfun',this)">⚡ PumpFun</button>
+      </div>
+      <div class="trending-list" id="trendingList">
+        <div class="trending-loading">
+          <div class="ca-spinner" style="border-top-color:var(--yellow)"></div>
+          <span>Loading trending coins from Trust Wallet...</span>
+        </div>
       </div>
     </div>
 
@@ -3327,7 +3542,7 @@ body::before {
     <div class="speech-bubble">
       <div class="trusty-tip-label">TRUSTY TIPS</div>
       <div class="trusty-tip-text" id="trustyTip">
-        Paste any CA and I scan it automatically fren! Or switch to Manual mode to fill it in yourself 🔮
+        Paste any CA and I scan it automatically fren! 🔮
       </div>
     </div>
     <!-- GLOSSARY BUTTON -->
@@ -4878,6 +5093,8 @@ function resetAll() {
   document.getElementById('results-section').style.display = 'none';
   document.getElementById('form-sections').style.display = 'block';
   contractSafetyData = null;
+  // Scroll back to top showing trending
+  document.getElementById('trendingSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
   const csp = document.getElementById('contractSafetyPanel');
   if (csp) csp.style.display = 'none';
   const csr = document.getElementById('contract-safety-row');
@@ -4891,7 +5108,7 @@ function resetAll() {
   document.getElementById('caError').classList.remove('visible');
   document.getElementById('caLoading').classList.remove('visible');
   document.getElementById('caManualNotice').classList.remove('visible');
-  document.getElementById('trustyTip').innerHTML = 'Paste any CA and I scan it automatically fren! Or switch to Manual mode 🔮';
+  document.getElementById('trustyTip').innerHTML = 'Paste any CA and I scan it automatically fren! 🔮';
   updateHistoryCount();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -5521,6 +5738,138 @@ function showGcVerdict() {
   shakeTrusty();
 }
 
+
+
+// ════════════════════════════════════════════
+//  TRENDING TAB — powered by Trust Wallet API
+//  Data fetched by GitHub Action every 15 mins
+//  Stored in /data/trending.json
+// ════════════════════════════════════════════
+
+let trendingData = null;
+let activeTrendingCat = 'memes';
+
+// Fetch trending JSON from repo (GitHub Actions updates it every 15 mins)
+async function loadTrendingData() {
+  try {
+    const url = 'data/trending.json?t=' + Date.now();
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Could not load trending data');
+    trendingData = await res.json();
+    renderTrendingList(activeTrendingCat);
+
+    // Show last updated time
+    if (trendingData.updatedAt) {
+      const updated = getTimeAgo(new Date(trendingData.updatedAt).getTime());
+      document.getElementById('trendingUpdated').textContent = 'Updated ' + updated;
+    }
+  } catch(e) {
+    document.getElementById('trendingList').innerHTML =
+      '<div class="trending-error">Could not load trending data. Try refreshing 🔄</div>';
+    document.getElementById('trendingUpdated').textContent = 'Error loading';
+  }
+}
+
+function switchTrendingCat(cat, btn) {
+  activeTrendingCat = cat;
+  document.querySelectorAll('.trending-cat-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderTrendingList(cat);
+}
+
+function fmtTrendingNum(n) {
+  if (!n) return '—';
+  if (n >= 1e9) return '$' + (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+  return '$' + n.toFixed(4);
+}
+
+function fmtTrendingPrice(p) {
+  if (!p) return '—';
+  if (p >= 1000) return '$' + p.toFixed(0);
+  if (p >= 1) return '$' + p.toFixed(3);
+  if (p >= 0.001) return '$' + p.toFixed(5);
+  return '$' + p.toExponential(2);
+}
+
+function extractCA(assetId, chain) {
+  // assetId format: c60_t0x... (EVM) or c501_tMINT... (Solana) or c3 (native)
+  if (!assetId) return null;
+  const parts = assetId.split('_t');
+  if (parts.length < 2) return null;
+  return parts[1]; // returns the contract address / mint
+}
+
+function getChainFromAssetId(assetId) {
+  if (!assetId) return 'other';
+  if (assetId.startsWith('c501')) return 'solana';
+  if (assetId.startsWith('c20000714')) return 'bnb';
+  if (assetId.startsWith('c60_')) return 'ethereum';
+  if (assetId.startsWith('c20000137')) return 'polygon';
+  if (assetId.startsWith('c8453')) return 'base';
+  return 'other';
+}
+
+function renderTrendingList(cat) {
+  const list = document.getElementById('trendingList');
+  if (!trendingData) {
+    list.innerHTML = '<div class="trending-loading"><div class="ca-spinner" style="border-top-color:var(--yellow)"></div><span>Loading...</span></div>';
+    return;
+  }
+
+  const coins = trendingData.categories?.[cat];
+  if (!coins || !Array.isArray(coins) || coins.length === 0) {
+    list.innerHTML = '<div class="trending-error">No trending data for this category right now fren 🤷</div>';
+    return;
+  }
+
+  list.innerHTML = coins.map((coin, i) => {
+    const ca = extractCA(coin.assetId, coin.chain);
+    const change = coin.priceChange24h || 0;
+    const changeClass = change >= 0 ? 'up' : 'down';
+    const changeStr = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+    const iconHtml = coin.logoUrl
+      ? `<img src="${coin.logoUrl}" onerror="this.parentElement.innerHTML='🪙'" alt="${coin.symbol}">`
+      : '🪙';
+    const canEval = ca && ca.length >= 10;
+
+    return `<button class="trending-coin" onclick="${canEval ? `evalTrendingCoin('${ca}')` : 'void(0)'}" ${canEval ? '' : 'style="opacity:0.6;cursor:default"'}>
+      <div class="trending-rank">${i + 1}</div>
+      <div class="trending-icon">${iconHtml}</div>
+      <div class="trending-info">
+        <div class="trending-name">${coin.name || '—'}</div>
+        <div class="trending-symbol">$${coin.symbol || '—'}</div>
+      </div>
+      <div class="trending-price">${fmtTrendingPrice(coin.priceUsd)}</div>
+      <div class="trending-mc">${fmtTrendingNum(coin.marketCapUsd)}</div>
+      <div class="trending-change ${changeClass}">${changeStr}</div>
+      <div class="trending-eval-btn">${canEval ? 'SCAN ▶' : 'N/A'}</div>
+    </button>`;
+  }).join('');
+}
+
+function evalTrendingCoin(ca) {
+  // Scroll to CA input, paste the CA, trigger scan
+  const input = document.getElementById('caInput');
+  input.value = ca;
+
+  // Scroll smoothly to the CA section
+  document.getElementById('ca-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Trigger the scan after scroll
+  setTimeout(() => {
+    triggerCaScan(ca);
+    document.getElementById('trustyTip').innerHTML = "Scanning trending coin fren... let's see if it's actually worth it 🔥";
+    shakeTrusty();
+  }, 400);
+}
+
+// Load trending on page start
+loadTrendingData();
+
+// Refresh every 15 minutes to match GitHub Action schedule
+setInterval(loadTrendingData, 15 * 60 * 1000);
 
 // ════════════════════════════════════════════
 //  SEARCH HISTORY (localStorage)
