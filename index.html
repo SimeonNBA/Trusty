@@ -3120,7 +3120,7 @@ body::before {
         <div class="trending-updated" id="trendingUpdated">Loading...</div>
       </div>
       <div class="trending-cats">
-        <button class="trending-cat-btn active" onclick="switchTrendingCat('memes',this)">🐸 Memes</button>
+        <button class="trending-cat-btn" onclick="switchTrendingCat('memes',this)">🐸 Memes</button>
         <button class="trending-cat-btn" onclick="switchTrendingCat('bnb',this)">🟡 BNB</button>
         <button class="trending-cat-btn" onclick="switchTrendingCat('sol',this)">◎ Solana</button>
         <button class="trending-cat-btn" onclick="switchTrendingCat('ai',this)">🤖 AI</button>
@@ -5747,7 +5747,7 @@ function showGcVerdict() {
 // ════════════════════════════════════════════
 
 let trendingData = null;
-let activeTrendingCat = 'memes';
+let activeTrendingCat = null; // no category selected on load
 
 // Fetch trending JSON from repo (GitHub Actions updates it every 15 mins)
 async function loadTrendingData() {
@@ -5756,7 +5756,9 @@ async function loadTrendingData() {
     const res = await fetch(url);
     if (!res.ok) throw new Error('Could not load trending data');
     trendingData = await res.json();
-    renderTrendingList(activeTrendingCat);
+    // Don't auto-render a category — show closed state
+    document.getElementById('trendingList').innerHTML =
+      '<div class="trending-error" style="color:var(--muted);font-style:italic">Pick a category above to see trending coins 👆</div>';
 
     // Show last updated time
     if (trendingData.updatedAt) {
@@ -5771,6 +5773,14 @@ async function loadTrendingData() {
 }
 
 function switchTrendingCat(cat, btn) {
+  // If already active — deselect and collapse
+  if (activeTrendingCat === cat && btn && btn.classList.contains('active')) {
+    activeTrendingCat = null;
+    btn.classList.remove('active');
+    document.getElementById('trendingList').innerHTML =
+      '<div class="trending-error" style="color:var(--muted);font-style:italic">Pick a category above to see trending coins 👆</div>';
+    return;
+  }
   activeTrendingCat = cat;
   document.querySelectorAll('.trending-cat-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
