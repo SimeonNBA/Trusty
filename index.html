@@ -3068,6 +3068,226 @@ body::before {
   .trending-mc { display: none; }
   .trending-price { display: none; }
 }
+
+/* ── EDUCATION RED FLAG CARDS ── */
+.edu-card {
+  margin-top: 12px;
+  background: rgba(239,68,68,0.06);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: 14px;
+  padding: 16px;
+  animation: fadeUp 0.3s ease both;
+}
+
+.edu-card.warn-card {
+  background: rgba(251,191,36,0.06);
+  border-color: rgba(251,191,36,0.25);
+}
+
+.edu-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.edu-card-icon { font-size: 22px; flex-shrink: 0; }
+
+.edu-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.edu-card-subtitle {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-top: 1px;
+}
+
+.edu-card.warn-card .edu-card-subtitle { color: var(--yellow); }
+
+.edu-section {
+  margin-bottom: 10px;
+}
+
+.edu-section-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.edu-section-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.edu-example {
+  background: var(--bg3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-top: 8px;
+  border-left: 3px solid rgba(239,68,68,0.4);
+  font-style: italic;
+}
+
+.edu-card.warn-card .edu-example { border-left-color: rgba(251,191,36,0.4); }
+
+.edu-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--blue2);
+  font-weight: 600;
+}
+
+/* ── FIRST TIMER MODE TOGGLE ── */
+.first-timer-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.first-timer-wrap:hover { border-color: var(--border2); }
+
+.ft-left { display: flex; align-items: center; gap: 10px; }
+.ft-icon { font-size: 20px; }
+.ft-label { font-size: 13px; font-weight: 700; color: var(--text); }
+.ft-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+.ft-toggle {
+  width: 40px;
+  height: 22px;
+  background: var(--bg3);
+  border: 1.5px solid var(--border2);
+  border-radius: 11px;
+  position: relative;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+.ft-toggle::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--muted);
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: all 0.3s;
+}
+.ft-toggle.on { background: rgba(34,197,94,0.2); border-color: var(--green); }
+.ft-toggle.on::after { background: var(--green); transform: translateX(18px); }
+
+/* ── ONBOARDING INTRO ── */
+.onboarding-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  background: rgba(5,8,15,0.97);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.onboarding-overlay.open { display: flex; }
+
+.onboarding-modal {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 480px;
+  padding: 32px 28px 28px;
+  animation: modalSlideUp 0.4s cubic-bezier(0.34,1.2,0.64,1) both;
+  text-align: center;
+}
+
+.ob-step-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.ob-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: all 0.3s;
+}
+.ob-dot.active { background: var(--blue); transform: scale(1.3); }
+.ob-dot.done { background: var(--green); }
+
+.ob-card { display: none; animation: fadeUp 0.3s ease both; }
+.ob-card.active { display: block; }
+
+.ob-emoji { font-size: 52px; margin-bottom: 16px; display: block; filter: drop-shadow(0 0 20px rgba(59,130,246,0.4)); }
+.ob-title {
+  font-family: var(--display);
+  font-size: 26px;
+  letter-spacing: 2px;
+  color: var(--text);
+  margin-bottom: 12px;
+  line-height: 1.1;
+}
+.ob-text {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 24px;
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.ob-text strong { color: var(--text); }
+
+.ob-next-btn {
+  background: linear-gradient(135deg, #2563EB, #3B82F6);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 28px;
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s;
+}
+.ob-next-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59,130,246,0.35); }
+
+.ob-skip {
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  margin-top: 14px;
+  display: block;
+  transition: color 0.2s;
+}
+.ob-skip:hover { color: var(--text); }
 </style>
 </head>
 <body>
@@ -3378,6 +3598,18 @@ body::before {
       <div class="results-header">
         <div class="section-num" style="text-align:center">TRUSTY'S VERDICT</div>
         <div class="results-title" id="results-title">ANALYSIS COMPLETE</div>
+      </div>
+
+      <!-- FIRST TIMER MODE TOGGLE -->
+      <div class="first-timer-wrap" onclick="toggleFirstTimerMode()" id="firstTimerWrap">
+        <div class="ft-left">
+          <div class="ft-icon">🔰</div>
+          <div>
+            <div class="ft-label">First Timer Mode</div>
+            <div class="ft-sub">Switch to plain English — no crypto jargon</div>
+          </div>
+        </div>
+        <div class="ft-toggle" id="ftToggle"></div>
       </div>
 
       <div class="score-ring-wrap">
@@ -5041,6 +5273,11 @@ function showResults(scores, total, tier, tierClass, scoreColor, pros, cons, ape
 
   document.getElementById('trusty-final').textContent = finalMsg;
 
+  // Education card for whale supply
+  if (state.supply === 'whale') {
+    setTimeout(() => addSupplyEducation('whale'), 600);
+  }
+
   const tipEl = document.getElementById('trustyTip');
   if (total >= 72) tipEl.innerHTML = 'WAGMI energy detected! Still ape responsibly fren 💚🛡️';
   else if (total >= 55) tipEl.innerHTML = 'Could go either way ser. Small size, eyes open 👀';
@@ -5102,6 +5339,11 @@ function resetAll() {
   Object.keys(currentScores).forEach(k => delete currentScores[k]);
   closeMetricPopup();
   closeGutCheck();
+  firstTimerMode = false;
+  const ftToggle = document.getElementById('ftToggle');
+  if (ftToggle) ftToggle.classList.remove('on');
+  const whaleCard = document.getElementById('edu-whale-card');
+  if (whaleCard) whaleCard.remove();
   setMode('ca');
   document.getElementById('caInput').value = '';
   document.getElementById('tokenDataCard').classList.remove('visible');
@@ -5266,6 +5508,9 @@ function renderContractSafety(data, panel, content) {
   } else {
     renderEvm(data, panel, content);
   }
+
+  // Add education cards for any red flags found
+  addEducationCards(data);
 }
 
 function getStatusClass(revoked, danger) {
@@ -6001,6 +6246,294 @@ document.addEventListener('DOMContentLoaded', () => {
 // Also update immediately in case DOM already loaded
 updateHistoryCount();
 
+
+// ════════════════════════════════════════════
+//  ONBOARDING — shows once to new users
+// ════════════════════════════════════════════
+
+let obCurrentStep = 0;
+
+function checkOnboarding() {
+  const seen = localStorage.getItem('trusty_onboarding_seen');
+  if (!seen) {
+    document.getElementById('onboardingOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function obNext(step) {
+  // Mark current dot done
+  document.getElementById('ob-dot-' + obCurrentStep).classList.remove('active');
+  document.getElementById('ob-dot-' + obCurrentStep).classList.add('done');
+  document.getElementById('ob-card-' + obCurrentStep).classList.remove('active');
+
+  // Activate next
+  obCurrentStep = step;
+  document.getElementById('ob-dot-' + step).classList.add('active');
+  document.getElementById('ob-card-' + step).classList.add('active');
+}
+
+function closeOnboarding() {
+  localStorage.setItem('trusty_onboarding_seen', '1');
+  document.getElementById('onboardingOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Run on load
+checkOnboarding();
+
+// ════════════════════════════════════════════
+//  FIRST TIMER MODE
+// ════════════════════════════════════════════
+
+let firstTimerMode = false;
+
+const ftTranslations = {
+  // Tier badges
+  '🟢 WAGMI': '🟢 LOOKS SOLID',
+  '🟡 MAYBE SER': '🟡 MIXED SIGNALS',
+  '🟠 DEGEN PLAY': '🟠 HIGH RISK',
+  '🔴 NGMI BRO': '🔴 AVOID THIS ONE',
+  // Ape sizes
+  '2–5%': 'Small amount — like money you can afford to lose',
+  '0.5–2%': 'Very small — treat it like a lottery ticket',
+  '0.1–0.5%': 'Tiny amount only — this is very risky',
+  '0%': 'Do not buy this',
+};
+
+const ftGlossary = {
+  'ape': 'buy quickly without much research',
+  'fren': 'friend',
+  'ser': 'sir / friend',
+  'WAGMI': 'looks good',
+  'NGMI': 'not looking good',
+  'rekt': 'lost a lot of money',
+  'bags': 'the tokens you own',
+  'diamond hands': 'holding long term without selling',
+  'paper hands': 'selling too early',
+  'rug': 'scam where developer steals your money',
+  'honeypot': 'a coin you can buy but never sell',
+  'LP': 'liquidity pool — the money pool that lets people buy and sell',
+  'CTO': 'community took over from the original developer',
+  'degen': 'someone who takes big risks in crypto',
+  'vibes': 'general feeling about something',
+};
+
+function toggleFirstTimerMode() {
+  firstTimerMode = !firstTimerMode;
+  const toggle = document.getElementById('ftToggle');
+  const wrap = document.getElementById('firstTimerWrap');
+
+  if (firstTimerMode) {
+    toggle.classList.add('on');
+    wrap.style.borderColor = 'rgba(34,197,94,0.4)';
+    applyFirstTimerMode();
+    document.getElementById('trustyTip').innerHTML = `First Timer Mode is ON 🔰 Everything is now in plain English. No jargon, no degen speak.`;
+    shakeTrusty();
+  } else {
+    toggle.classList.remove('on');
+    wrap.style.borderColor = '';
+    document.location.reload(); // cleanest way to restore original text
+  }
+}
+
+function applyFirstTimerMode() {
+  // Replace tier badge text
+  const badge = document.getElementById('tierBadge');
+  if (badge) {
+    const original = badge.textContent.trim();
+    badge.textContent = ftTranslations[original] || original;
+  }
+
+  // Replace ape size
+  const apePct = document.getElementById('apePct');
+  if (apePct) {
+    const original = apePct.textContent.trim();
+    apePct.textContent = ftTranslations[original] || original;
+  }
+
+  // Replace section nums with plain labels
+  const sectionNums = {
+    'Chain Safety': 'Which blockchain is this on?',
+    'Narrative': 'What is this coin about?',
+    'Ownership': 'Who controls this coin?',
+    'Age / Timing': 'How old is this coin?',
+    'Social Presence': 'Does this coin have an online community?',
+    'Supply Safety': 'Who holds most of the coins?',
+    'Contract Safety': 'Is the contract safe?',
+  };
+
+  document.querySelectorAll('.cat-name').forEach(el => {
+    const original = el.textContent.trim();
+    if (sectionNums[original]) el.textContent = sectionNums[original];
+  });
+
+  // Add glossary tooltips to key terms in final verdict
+  const finalEl = document.getElementById('trusty-final');
+  if (finalEl) {
+    let text = finalEl.textContent;
+    Object.entries(ftGlossary).forEach(([term, def]) => {
+      const regex = new RegExp(`\b${term}\b`, 'gi');
+      text = text.replace(regex, `<span style="border-bottom:1px dashed var(--blue2);cursor:help" title="${def}">${term}</span>`);
+    });
+    finalEl.innerHTML = text;
+  }
+
+  // Show plain English banner
+  const banner = document.createElement('div');
+  banner.style.cssText = 'background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:10px 14px;font-size:12px;color:#86EFAC;margin-bottom:14px;line-height:1.6;';
+  banner.innerHTML = '🔰 <strong>First Timer Mode is ON</strong> — All crypto terms are explained in plain English. Hover over <span style="border-bottom:1px dashed var(--blue2)">underlined words</span> to see what they mean.';
+  const resultsHeader = document.querySelector('.results-header');
+  if (resultsHeader) resultsHeader.insertAdjacentElement('afterend', banner);
+}
+
+// ════════════════════════════════════════════
+//  RED FLAG EDUCATION CARDS
+// ════════════════════════════════════════════
+
+const redFlagEducation = {
+  honeypot: {
+    icon: '🍯',
+    title: 'HONEYPOT DETECTED',
+    subtitle: 'YOU CANNOT SELL THIS COIN',
+    plain: 'This contract is designed to let people buy but never sell. Once you send your money in, there is no way to get it back. The developer takes everything.',
+    example: 'Real example: In 2023, a coin called $SQUID pumped 45,000% in 5 days. Nobody could sell. The developer walked away with $3.38 million. Holders were left with worthless tokens.',
+    action: '🚫 Do not buy this under any circumstances. This is not a high-risk play — it is a guaranteed loss.'
+  },
+  mintAuthority: {
+    icon: '🖨️',
+    title: 'MINT AUTHORITY ACTIVE',
+    subtitle: 'DEV CAN PRINT UNLIMITED TOKENS',
+    plain: 'The developer has the ability to create unlimited new tokens at any time. Every new token they create makes your tokens worth less — exactly like a government printing money and causing inflation.',
+    example: 'Real example: Many rug pulls work exactly this way. Dev mints 100x the supply overnight, dumps it all at once, and disappears. Your tokens become worthless in minutes.',
+    action: '⚠️ Only buy if the mint authority is revoked. You can verify this on RugCheck.xyz before spending anything.'
+  },
+  freezeAuthority: {
+    icon: '🧊',
+    title: 'FREEZE AUTHORITY ACTIVE',
+    subtitle: 'DEV CAN FREEZE YOUR WALLET',
+    plain: 'The developer has the power to freeze your wallet — meaning they can stop you from moving or selling your tokens whenever they want. You could be locked out of your own money.',
+    example: 'Real example: This was used in several Solana scams where developers froze early holder wallets right before a dump, preventing them from selling while the dev exited.',
+    action: '⚠️ This is a serious red flag. Check if freeze authority is revoked before buying.'
+  },
+  highTax: {
+    icon: '💸',
+    title: 'HIGH SELL TAX',
+    subtitle: 'YOU LOSE MONEY EVERY TIME YOU SELL',
+    plain: `Every time you sell this coin, a percentage is taken out automatically. A 10% sell tax means if you put in $100 and try to sell at the same price, you only get $90 back. And that's before the price even moves.`,
+    example: 'Real example: A coin with 15% sell tax and 15% buy tax was once promoted as "sustainable tokenomics." Anyone who bought at launch and sold 1 week later had already lost 30% just from taxes — before any price movement.',
+    action: `⚠️ Ask yourself: what is this tax actually used for? Legitimate projects explain this clearly. If they don't — be very careful.`
+  },
+  whaleDanger: {
+    icon: '🐋',
+    title: 'WHALE WALLET RISK',
+    subtitle: 'A FEW WALLETS CONTROL MOST OF THE SUPPLY',
+    plain: `When a small number of wallets hold a large percentage of the total supply, those holders can crash the price simply by selling. You are essentially betting that they won't sell before you do.`,
+    example: 'Real example: A coin with 3 wallets holding 65% of supply pumped 20x. When one whale sold just 15% of their holdings, the price dropped 60% in 4 minutes. Everyone else was left holding bags.',
+    action: '⚠️ Check BubbleMaps to see how concentrated the supply is. The more spread out, the safer.'
+  },
+  noLiquidity: {
+    icon: '🏜️',
+    title: 'LOW LIQUIDITY WARNING',
+    subtitle: 'HARD TO EXIT WITHOUT CRASHING THE PRICE',
+    plain: 'Liquidity is the pool of money that lets you buy and sell. When liquidity is low, even a small sell can crash the price significantly. You might not be able to exit your position without losing a lot.',
+    example: 'Real example: A coin with $8,000 liquidity looks fine when you buy $200 worth. But when you try to sell $500 worth, the price drops 40% just from your own sell. This is called price impact.',
+    action: `💡 As a rule of thumb, never put in more than 1% of the total liquidity. If liquidity is $10,000, don't put in more than $100.`
+  }
+};
+
+function showRedFlagCard(flagKey, containerId) {
+  const flag = redFlagEducation[flagKey];
+  if (!flag) return;
+
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  // Don't add twice
+  if (container.querySelector('.edu-card')) return;
+
+  const isWarn = flagKey === 'highTax' || flagKey === 'whaleDanger' || flagKey === 'noLiquidity';
+  const cardClass = isWarn ? 'edu-card warn-card' : 'edu-card';
+
+  const card = document.createElement('div');
+  card.className = cardClass;
+  card.innerHTML = `
+    <div class="edu-card-header">
+      <div class="edu-card-icon">${flag.icon}</div>
+      <div>
+        <div class="edu-card-title">${flag.title}</div>
+        <div class="edu-card-subtitle">${flag.subtitle}</div>
+      </div>
+    </div>
+    <div class="edu-section">
+      <div class="edu-section-label">In plain English</div>
+      <div class="edu-section-text">${flag.plain}</div>
+    </div>
+    <div class="edu-example">${flag.example}</div>
+    <div class="edu-action">💡 ${flag.action}</div>
+  `;
+
+  container.appendChild(card);
+}
+
+// Hook education cards into contract safety rendering
+function addEducationCards(data) {
+  if (!data) return;
+
+  // Give the DOM a moment to render first
+  setTimeout(() => {
+    const csContent = document.getElementById('csContent');
+    if (!csContent) return;
+
+    if (data.isHoneypot === true) {
+      showRedFlagCard('honeypot', 'csContent');
+    }
+    if (data.mintAuthorityRevoked === false || data.mintAuthorityDanger === true) {
+      showRedFlagCard('mintAuthority', 'csContent');
+    }
+    if (data.freezeAuthorityRevoked === false || data.freezeAuthorityDanger === true) {
+      showRedFlagCard('freezeAuthority', 'csContent');
+    }
+    if (data.sellTax >= 5) {
+      showRedFlagCard('highTax', 'csContent');
+    }
+  }, 300);
+}
+
+// Hook education cards for red flags in the pros/cons section too
+function addSupplyEducation(supplyType) {
+  const apeSection = document.querySelector('.ape-section');
+  if (!apeSection) return;
+
+  if (supplyType === 'whale') {
+    const existing = document.getElementById('edu-whale-card');
+    if (!existing) {
+      const div = document.createElement('div');
+      div.id = 'edu-whale-card';
+      const card = document.createElement('div');
+      card.className = 'edu-card warn-card';
+      const flag = redFlagEducation.whaleDanger;
+      card.innerHTML = `
+        <div class="edu-card-header">
+          <div class="edu-card-icon">${flag.icon}</div>
+          <div>
+            <div class="edu-card-title">${flag.title}</div>
+            <div class="edu-card-subtitle">${flag.subtitle}</div>
+          </div>
+        </div>
+        <div class="edu-section">
+          <div class="edu-section-label">In plain English</div>
+          <div class="edu-section-text">${flag.plain}</div>
+        </div>
+        <div class="edu-example">${flag.example}</div>
+        <div class="edu-action">💡 ${flag.action}</div>
+      `;
+      div.appendChild(card);
+      apeSection.insertAdjacentElement('afterend', div);
+    }
+  }
+}
+
 // ── UPDATE TOKEN CARD TAX (called after contract safety scan) ──
 function updateTokenCardTax(buyTax, sellTax) {
   if (buyTax === null && sellTax === null) return;
@@ -6530,6 +7063,55 @@ document.addEventListener('keydown', function(e) {
         <button class="gc-done-btn" onclick="closeGutCheck()">🛡️ GOT IT, TRUSTY</button>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  ONBOARDING INTRO (shows once to new users)           -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="onboarding-overlay" id="onboardingOverlay">
+  <div class="onboarding-modal">
+    <div class="ob-step-dots">
+      <div class="ob-dot active" id="ob-dot-0"></div>
+      <div class="ob-dot" id="ob-dot-1"></div>
+      <div class="ob-dot" id="ob-dot-2"></div>
+    </div>
+
+    <!-- Card 1 -->
+    <div class="ob-card active" id="ob-card-0">
+      <span class="ob-emoji">💸</span>
+      <div class="ob-title">PEOPLE LOSE MONEY EVERY DAY</div>
+      <div class="ob-text">
+        Not because the market is unfair. Because nobody taught them to ask <strong>the right questions</strong> before clicking buy.<br><br>
+        Honeypots. Hidden taxes. Whale dumps. Rug pulls. They all have warning signs — if you know where to look.
+      </div>
+      <button class="ob-next-btn" onclick="obNext(1)">SHOW ME HOW →</button>
+      <span class="ob-skip" onclick="closeOnboarding()">Skip intro</span>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="ob-card" id="ob-card-1">
+      <span class="ob-emoji">🛡️</span>
+      <div class="ob-title">TRUSTY CHECKS IT IN 10 SECONDS</div>
+      <div class="ob-text">
+        Paste any contract address. Trusty scans the contract, checks for honeypots, sell taxes, whale wallets, and liquidity risks — and explains what each one means <strong>in plain English.</strong><br><br>
+        No signup. No fees. Works for any chain.
+      </div>
+      <button class="ob-next-btn" onclick="obNext(2)">ONE MORE THING →</button>
+      <span class="ob-skip" onclick="closeOnboarding()">Skip intro</span>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="ob-card" id="ob-card-2">
+      <span class="ob-emoji">⏳</span>
+      <div class="ob-title">THERE IS ALWAYS ANOTHER ENTRY</div>
+      <div class="ob-text">
+        The market always gives you another chance. A honeypot gives you zero.<br><br>
+        <strong>10 seconds of checking now can save you everything later.</strong><br><br>
+        Paste a contract address below to get started.
+      </div>
+      <button class="ob-next-btn" onclick="closeOnboarding()">🛡️ LET'S GO</button>
     </div>
   </div>
 </div>
