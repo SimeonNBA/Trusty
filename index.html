@@ -6254,10 +6254,14 @@ updateHistoryCount();
 let obCurrentStep = 0;
 
 function checkOnboarding() {
-  const seen = localStorage.getItem('trusty_onboarding_seen');
+  let seen = false;
+  try { seen = localStorage.getItem('trusty_onboarding_seen'); } catch(e) {}
   if (!seen) {
-    document.getElementById('onboardingOverlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    const overlay = document.getElementById('onboardingOverlay');
+    if (overlay) {
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
   }
 }
 
@@ -6274,13 +6278,18 @@ function obNext(step) {
 }
 
 function closeOnboarding() {
-  localStorage.setItem('trusty_onboarding_seen', '1');
-  document.getElementById('onboardingOverlay').classList.remove('open');
+  try { localStorage.setItem('trusty_onboarding_seen', '1'); } catch(e) {}
+  const overlay = document.getElementById('onboardingOverlay');
+  if (overlay) overlay.classList.remove('open');
   document.body.style.overflow = '';
 }
 
-// Run on load
-checkOnboarding();
+// Run on load — wait for DOM to be ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkOnboarding);
+} else {
+  checkOnboarding();
+}
 
 // ════════════════════════════════════════════
 //  FIRST TIMER MODE
@@ -6332,27 +6341,40 @@ function toggleFirstTimerMode() {
     shakeTrusty();
   } else {
     toggle.classList.remove('on');
-    wrap.style.borderColor = '';
-    document.location.reload(); // cleanest way to restore original text
+    if (wrap) wrap.style.borderColor = '';
+    // Restore original values from stored data
+    const badge = document.getElementById('tierBadge');
+    if (badge && badge.dataset.original) badge.textContent = badge.dataset.original;
+    const apePct = document.getElementById('apePct');
+    if (apePct && apePct.dataset.original) apePct.textContent = apePct.dataset.original;
+    document.querySelectorAll('.cat-name').forEach(el => {
+      if (el.dataset.original) el.textContent = el.dataset.original;
+    });
+    const finalEl = document.getElementById('trusty-final');
+    if (finalEl && finalEl.dataset.original) finalEl.innerHTML = finalEl.dataset.original;
+    const ftBanner = document.getElementById('ft-banner');
+    if (ftBanner) ftBanner.remove();
+    document.getElementById('trustyTip').innerHTML = 'First Timer Mode OFF. Back to degen speak 🛡️';
+    shakeTrusty();
   }
 }
 
 function applyFirstTimerMode() {
-  // Replace tier badge text
+  // Replace tier badge text — store original first
   const badge = document.getElementById('tierBadge');
   if (badge) {
-    const original = badge.textContent.trim();
-    badge.textContent = ftTranslations[original] || original;
+    if (!badge.dataset.original) badge.dataset.original = badge.textContent.trim();
+    badge.textContent = ftTranslations[badge.dataset.original] || badge.dataset.original;
   }
 
-  // Replace ape size
+  // Replace ape size — store original first
   const apePct = document.getElementById('apePct');
   if (apePct) {
-    const original = apePct.textContent.trim();
-    apePct.textContent = ftTranslations[original] || original;
+    if (!apePct.dataset.original) apePct.dataset.original = apePct.textContent.trim();
+    apePct.textContent = ftTranslations[apePct.dataset.original] || apePct.dataset.original;
   }
 
-  // Replace section nums with plain labels
+  // Replace category names — store originals
   const sectionNums = {
     'Chain Safety': 'Which blockchain is this on?',
     'Narrative': 'What is this coin about?',
@@ -6365,26 +6387,32 @@ function applyFirstTimerMode() {
 
   document.querySelectorAll('.cat-name').forEach(el => {
     const original = el.textContent.trim();
+    if (!el.dataset.original) el.dataset.original = original;
     if (sectionNums[original]) el.textContent = sectionNums[original];
   });
 
   // Add glossary tooltips to key terms in final verdict
   const finalEl = document.getElementById('trusty-final');
   if (finalEl) {
+    if (!finalEl.dataset.original) finalEl.dataset.original = finalEl.innerHTML;
     let text = finalEl.textContent;
     Object.entries(ftGlossary).forEach(([term, def]) => {
-      const regex = new RegExp(`\b${term}\b`, 'gi');
+      const regex = new RegExp('\\b' + term + '\\b', 'gi');
       text = text.replace(regex, `<span style="border-bottom:1px dashed var(--blue2);cursor:help" title="${def}">${term}</span>`);
     });
     finalEl.innerHTML = text;
   }
 
   // Show plain English banner
-  const banner = document.createElement('div');
-  banner.style.cssText = 'background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:10px 14px;font-size:12px;color:#86EFAC;margin-bottom:14px;line-height:1.6;';
-  banner.innerHTML = '🔰 <strong>First Timer Mode is ON</strong> — All crypto terms are explained in plain English. Hover over <span style="border-bottom:1px dashed var(--blue2)">underlined words</span> to see what they mean.';
-  const resultsHeader = document.querySelector('.results-header');
-  if (resultsHeader) resultsHeader.insertAdjacentElement('afterend', banner);
+  const existingBanner = document.getElementById('ft-banner');
+  if (!existingBanner) {
+    const banner = document.createElement('div');
+    banner.id = 'ft-banner';
+    banner.style.cssText = 'background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:10px 14px;font-size:12px;color:#86EFAC;margin-bottom:14px;line-height:1.6;';
+    banner.innerHTML = '🔰 <strong>First Timer Mode is ON</strong> — Everything is in plain English now. Hover over <span style="border-bottom:1px dashed var(--blue2)">underlined words</span> to see what they mean.';
+    const firstTimerWrap = document.getElementById('firstTimerWrap');
+    if (firstTimerWrap) firstTimerWrap.insertAdjacentElement('afterend', banner);
+  }
 }
 
 // ════════════════════════════════════════════
@@ -6480,10 +6508,18 @@ function showRedFlagCard(flagKey, containerId) {
 function addEducationCards(data) {
   if (!data) return;
 
-  // Give the DOM a moment to render first
-  setTimeout(() => {
+  // Wait for DOM to render — use longer delay and retry
+  function tryAddCards(attempts) {
     const csContent = document.getElementById('csContent');
+    if (!csContent && attempts > 0) {
+      setTimeout(() => tryAddCards(attempts - 1), 300);
+      return;
+    }
     if (!csContent) return;
+
+    // Always show panel
+    const panel = document.getElementById('contractSafetyPanel');
+    if (panel) panel.style.display = 'block';
 
     if (data.isHoneypot === true) {
       showRedFlagCard('honeypot', 'csContent');
@@ -6494,16 +6530,22 @@ function addEducationCards(data) {
     if (data.freezeAuthorityRevoked === false || data.freezeAuthorityDanger === true) {
       showRedFlagCard('freezeAuthority', 'csContent');
     }
-    if (data.sellTax >= 5) {
+    if (data.sellTax !== null && data.sellTax !== undefined && data.sellTax >= 5) {
       showRedFlagCard('highTax', 'csContent');
     }
-  }, 300);
+  }
+
+  setTimeout(() => tryAddCards(5), 500);
 }
 
 // Hook education cards for red flags in the pros/cons section too
 function addSupplyEducation(supplyType) {
+  // Retry until apeSection exists in DOM
   const apeSection = document.querySelector('.ape-section');
-  if (!apeSection) return;
+  if (!apeSection) {
+    setTimeout(() => addSupplyEducation(supplyType), 400);
+    return;
+  }
 
   if (supplyType === 'whale') {
     const existing = document.getElementById('edu-whale-card');
