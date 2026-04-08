@@ -3472,6 +3472,224 @@ body::before {
   .sh-item-name { font-size: 12px; }
   .search-history-panel { max-height: 240px; }
 }
+
+/* ════════════════════════════════════
+   DEGEN ACADEMY
+   ════════════════════════════════════ */
+#academy-page {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 8000;
+  overflow-y: auto;
+}
+.academy-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+}
+.academy-close {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 24px;
+}
+.academy-close:hover { color: var(--text); border-color: var(--blue); }
+
+.academy-header {
+  margin-bottom: 32px;
+}
+.academy-title {
+  font-family: var(--display);
+  font-size: 42px;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, #C084FC, #818CF8, #60A5FA);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+.academy-sub {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* narrative cards */
+.narrative-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+.narrative-card:hover { border-color: var(--border2); }
+
+.narrative-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  cursor: pointer;
+  user-select: none;
+}
+.narrative-emoji { font-size: 28px; flex-shrink: 0; }
+.narrative-title-wrap { flex: 1; }
+.narrative-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.narrative-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.narrative-chevron {
+  color: var(--muted);
+  font-size: 14px;
+  transition: transform 0.3s;
+  flex-shrink: 0;
+}
+.narrative-card.open .narrative-chevron { transform: rotate(180deg); }
+
+.narrative-body {
+  display: none;
+  padding: 0 20px 20px;
+  border-top: 1px solid var(--border);
+}
+.narrative-card.open .narrative-body { display: block; }
+
+/* audio bar */
+.audio-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  margin-top: 14px;
+}
+.audio-play-btn {
+  background: var(--blue);
+  border: none;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.audio-play-btn:hover { background: var(--blue2); transform: scale(1.05); }
+.audio-label {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+.audio-progress {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.audio-progress-fill {
+  height: 100%;
+  background: var(--blue);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+.narrative-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.75;
+  margin-bottom: 14px;
+}
+.narrative-text strong { color: var(--blue2); }
+
+/* coins row */
+.coins-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.coin-chip {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--blue2);
+  font-weight: 600;
+}
+
+/* risk / how to play */
+.playbook-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.playbook-box {
+  background: var(--bg3);
+  border-radius: 12px;
+  padding: 14px;
+}
+.playbook-label {
+  font-size: 10px;
+  font-family: var(--mono);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.playbook-label.green { color: var(--green); }
+.playbook-label.red { color: var(--red); }
+.playbook-label.yellow { color: var(--yellow); }
+.playbook-label.purple { color: #C084FC; }
+.playbook-text {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.6;
+}
+.risk-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-left: 8px;
+}
+.risk-extreme { background: rgba(239,68,68,0.15); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.3); }
+.risk-high { background: rgba(249,115,22,0.15); color: #FDBA74; border: 1px solid rgba(249,115,22,0.3); }
+.risk-medium { background: rgba(251,191,36,0.15); color: #FDE68A; border: 1px solid rgba(251,191,36,0.3); }
+
+@media (max-width: 480px) {
+  .academy-title { font-size: 30px; }
+  .playbook-grid { grid-template-columns: 1fr; }
+  .narrative-title { font-size: 15px; }
+}
 </style>
 </head>
 <body>
@@ -3929,6 +4147,9 @@ body::before {
       </div>
     </div>
     <!-- GLOSSARY BUTTON -->
+    <button class="glossary-btn" onclick="openAcademy()" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(59,130,246,0.15));border-color:rgba(168,85,247,0.4);color:#C084FC;margin-bottom:6px;">
+      📚 DEGEN ACADEMY
+    </button>
     <button class="glossary-btn" onclick="openGlossary(null)">
       📖 DEGEN GLOSSARY
     </button>
@@ -3961,6 +4182,8 @@ body::before {
   <span class="footer-link" onclick="openHistory('tw')">🛡️ Trust Wallet History</span>
   <span class="footer-dot" style="width:4px;height:4px;border-radius:50%;background:var(--border2);display:inline-block;"></span>
   <span class="footer-link" onclick="openHistory('crypto')">₿ History of Crypto</span>
+  <span class="footer-dot" style="width:4px;height:4px;border-radius:50%;background:var(--border2);display:inline-block;"></span>
+  <span class="footer-link" onclick="openAcademy()">📚 Degen Academy</span>
   <span class="footer-dot" style="width:4px;height:4px;border-radius:50%;background:var(--border2);display:inline-block;"></span>
   <span class="footer-link" style="color:var(--muted);font-size:10px;">Not financial advice ser 🙏</span>
 </footer>
@@ -6949,6 +7172,95 @@ function filterGlossary(val) { renderGlossary(val); }
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') { closeGlossary(); closeHistory(); closeMetricPopup(); closeGutCheck(); closeCaHelp(); }
 });
+
+// ── DEGEN ACADEMY ──
+function openAcademy() {
+  document.getElementById('academy-page').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  window.scrollTo(0, 0);
+}
+
+function closeAcademy() {
+  document.getElementById('academy-page').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function toggleNarrative(id) {
+  const card = document.getElementById('nc-' + id);
+  card.classList.toggle('open');
+}
+
+// Text to speech
+let currentSpeech = null;
+let currentNarrativeId = null;
+
+const narrativeTexts = {
+  dogs: `The dog meta is the foundation of all meme coins. It started with Dogecoin in 2013 — a joke that became one of the top 10 cryptocurrencies by market cap. Dogs dominate: DOGE alone makes up 47% of the entire meme coin market cap. Dog coins move together — when one pumps, others follow. The new wave of Solana dogs like WIF and BONK move fast and hard. WIF delivered 100,000 times returns for the earliest holders. BONK saved the Solana ecosystem during its 2022 crisis. The key insight: dogs run hardest during peak bull market euphoria, especially when Elon Musk tweets about DOGE. The meta is old but it never fully dies.`,
+  cats: `Cats are the highest-beta play in animal memes. When the dog meta runs, cats run harder and later. POPCAT delivered 23,895 percent returns in 2024 while DOGE only did 300 percent in the same period. The pattern is clear: dogs pump first, then capital rotates into cats. Every time dogs spiked in 2024 to 2025, cats followed at higher multipliers. This is the beta rotation trade — one of the most consistent patterns in meme coin history. The key to finding legitimate cat coins: the character should have existed as an internet meme before being tokenized.`,
+  tiktok: `TikTok is the fastest and most dangerous meta. These coins live and die with a single viral moment. When a meme takes over TikTok, people who have never bought crypto create wallets just to buy the coin. ChillGuy went from 10 million to 500 million dollar market cap in 48 hours in November 2024. PENGUIN went from 387 thousand dollars to 173 million dollars after the White House posted "Embrace the penguin" in January 2026. PUNCH hit 80,000 percent gains after a baby Japanese macaque named Punch went viral for clinging to an IKEA orangutan plushie. The golden entry point: after social media explosion but before crypto press coverage. Once CoinDesk writes about it, you're too late.`,
+  ai: `The AI meta was the defining narrative of late 2024 into 2025. It started with something unprecedented: an actual AI promoted a coin called Goatseus Maximus — GOAT — which hit a 1.22 billion dollar market cap. AI16Z hit 800 million in two months. ZEREBRO is an AI agent that released an actual album on Spotify. FARTCOIN, despite the name, hit over a billion dollar market cap. In January 2026, Moltbook launched — a Reddit-style social network where 1.5 million AI agents post and debate philosophy. The MOLT token surged 7,000 percent then hit 93 million dollar market cap before crashing 75 percent. The AI meta is different from animal memes: these projects have actual ongoing activity. If the underlying AI is real and active, the narrative has legs.`,
+  mascot: `Mascot coins are the most durable meta. PEPE has 15 years of internet history — it existed long before any crypto token. That cultural weight is everything. BRETT is PEPE's best friend from the Boy's Club comic — authentic cultural origin, not manufactured. WIF has plushies and hats in the real world now. Pudgy Penguins sold over 1 million physical toys at Walmart and Target, then launched PENGU with a 1.5 billion dollar airdrop. Physical merch appearing organically — without the team pushing it — is the highest conviction signal that a mascot coin has staying power. The playbook: characters with pre-existing cultural weight outperform coins where someone just drew something and launched it.`,
+  cz: `CZ is the most influential person in BNB Chain meme coin history. In September 2025, a community developer launched GIGGLE on BNB Chain with a smart contract that automatically sends fees to CZ's Giggle Academy education charity. In 12 hours it raised 1.3 million dollars in donations. CZ publicly praised it. Binance announced it would donate 50 percent of trading fees. GIGGLE surged 717 percent. Then CZ posted the number 4 on social media. The coin called 4 on BNB Chain pumped 349 percent weekly. One trader made 10 million dollars. When CZ declared Meme Coin Season is here, BNB Chain DEX volume hit 6 billion dollars in a single day. The CZ meta is unique to BNB Chain — watch his personal X account for any hint, and move fast.`,
+  political: `Political meme coins are tied directly to real-world events. When Trump won the 2024 US election, the meme coin market cap hit an all-time high of 150 billion dollars. TRUMP coin launched January 2025 and became one of the fastest-growing tokens in history — then corrected 80 percent. These coins are pure momentum trades. There is no fundamental case for holding them. The play is simple: enter before the political event peaks, exit ruthlessly when the news cycle moves on. Political coins carry unique risks: regulatory scrutiny, copyright issues, extreme whale concentration. Treat them like a sports bet — small amount, defined exit, no emotions.`
+};
+
+function playNarrative(id) {
+  const btn = document.getElementById('audio-btn-' + id);
+  const progressBar = document.getElementById('ap-' + id);
+
+  if (currentNarrativeId === id && window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+    btn.textContent = '▶';
+    currentNarrativeId = null;
+    progressBar.style.width = '0%';
+    return;
+  }
+
+  if (window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+    if (currentNarrativeId) {
+      document.getElementById('audio-btn-' + currentNarrativeId).textContent = '▶';
+      document.getElementById('ap-' + currentNarrativeId).style.width = '0%';
+    }
+  }
+
+  const text = narrativeTexts[id];
+  if (!text) return;
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.95;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+
+  const words = text.split(' ').length;
+  const estimatedMs = (words / 140) * 60 * 1000;
+  let startTime = Date.now();
+
+  const progressInterval = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    const pct = Math.min((elapsed / estimatedMs) * 100, 99);
+    progressBar.style.width = pct + '%';
+  }, 200);
+
+  utterance.onend = () => {
+    clearInterval(progressInterval);
+    progressBar.style.width = '100%';
+    btn.textContent = '▶';
+    currentNarrativeId = null;
+    setTimeout(() => { progressBar.style.width = '0%'; }, 1000);
+  };
+
+  utterance.onerror = () => {
+    clearInterval(progressInterval);
+    btn.textContent = '▶';
+    currentNarrativeId = null;
+  };
+
+  btn.textContent = '⏸';
+  currentNarrativeId = id;
+  window.speechSynthesis.speak(utterance);
+}
+
 </script>
 
 <!-- ── CA HELP MODAL ── -->
@@ -7312,6 +7624,408 @@ document.addEventListener('keydown', function(e) {
       </div>
       <button class="ob-next-btn" onclick="closeOnboarding()">🛡️ LET'S SCAN</button>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  DEGEN ACADEMY                                        -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div id="academy-page">
+  <div class="academy-inner">
+
+    <button class="academy-close" onclick="closeAcademy()">← Back to Evaluator</button>
+
+    <div class="academy-header">
+      <div class="academy-title">📚 DEGEN ACADEMY</div>
+      <div class="academy-sub">
+        Every meme coin runs on a narrative. Understanding which meta is active — and how to play it — is the difference between early entry and exit liquidity. This is not financial advice. This is pattern recognition from history. DYOR always.
+      </div>
+    </div>
+
+    <!-- ── NARRATIVE 1: DOGS ── -->
+    <div class="narrative-card" id="nc-dogs">
+      <div class="narrative-header" onclick="toggleNarrative('dogs')">
+        <div class="narrative-emoji">🐶</div>
+        <div class="narrative-title-wrap">
+          <div class="narrative-title">Dog Meta — The OG</div>
+          <div class="narrative-subtitle">DOGE · SHIB · WIF · BONK · FLOKI · NEIRO</div>
+        </div>
+        <div class="narrative-chevron">▼</div>
+      </div>
+      <div class="narrative-body" id="nb-dogs">
+        <div class="audio-bar">
+          <button class="audio-play-btn" onclick="playNarrative('dogs')" id="audio-btn-dogs">▶</button>
+          <div class="audio-label">LISTEN TO THIS</div>
+          <div class="audio-progress"><div class="audio-progress-fill" id="ap-dogs"></div></div>
+        </div>
+        <div class="narrative-text" id="nt-dogs">
+          The dog meta is the foundation of all meme coins. It started with <strong>Dogecoin (DOGE)</strong> in 2013 — a joke that became one of the top 10 cryptocurrencies by market cap. Dogs dominate: DOGE alone makes up <strong>47.3% of the entire meme coin market cap</strong>, and including other dog coins that number jumps to nearly 87%.
+          <br><br>
+          Dog coins move together. DOGE and SHIB have a correlation of 0.90 — when one pumps, others follow. The new wave of Solana dogs (WIF, BONK, FLOKI, NEIRO) move fast and hard. <strong>WIF delivered 100,000x returns</strong> for the earliest holders. BONK saved the Solana ecosystem during its 2022 crisis by airdropping to NFT holders.
+          <br><br>
+          The key insight with dogs: they run hardest during peak bull market euphoria, especially when Elon Musk tweets about DOGE. The meta is old but it never fully dies — it just waits for the right moment.
+        </div>
+        <div class="coins-row">
+          <span class="coin-chip">$DOGE</span>
+          <span class="coin-chip">$SHIB</span>
+          <span class="coin-chip">$WIF</span>
+          <span class="coin-chip">$BONK</span>
+          <span class="coin-chip">$FLOKI</span>
+          <span class="coin-chip">$NEIRO</span>
+        </div>
+        <div class="playbook-grid">
+          <div class="playbook-box">
+            <div class="playbook-label green">✅ WHEN TO APE</div>
+            <div class="playbook-text">Early in a bull cycle before DOGE 3x's. When Elon tweets. When BTC breaks ATH and liquidity rotates to memes. New dog launches on Solana with strong LP burned and active community.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label red">🚨 WHEN TO AVOID</div>
+            <div class="playbook-text">After DOGE already pumped 3x+. Bear markets. When every Telegram is shilling the same dog coin at the same time — that's the top. Copy-cat dogs with no identity.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label yellow">⚡ KEY SIGNAL</div>
+            <div class="playbook-text">Watch DOGE volume. When DOGE daily volume spikes 10x+, the dog meta is alive. Small dogs outperform first. BONK and WIF both ran while DOGE was flat.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label purple">🎯 RISK LEVEL</div>
+            <div class="playbook-text">DOGE/SHIB = medium risk. New Solana dogs = extreme risk. Even WIF dropped 80% from its ATH after the initial run. Never hold bags on new dogs.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NARRATIVE 2: CATS ── -->
+    <div class="narrative-card" id="nc-cats">
+      <div class="narrative-header" onclick="toggleNarrative('cats')">
+        <div class="narrative-emoji">🐱</div>
+        <div class="narrative-title-wrap">
+          <div class="narrative-title">Cat Meta — The Challenger</div>
+          <div class="narrative-subtitle">POPCAT · MOG · MEW · MICHI</div>
+        </div>
+        <div class="narrative-chevron">▼</div>
+      </div>
+      <div class="narrative-body" id="nb-cats">
+        <div class="audio-bar">
+          <button class="audio-play-btn" onclick="playNarrative('cats')" id="audio-btn-cats">▶</button>
+          <div class="audio-label">LISTEN TO THIS</div>
+          <div class="audio-progress"><div class="audio-progress-fill" id="ap-cats"></div></div>
+        </div>
+        <div class="narrative-text" id="nt-cats">
+          Cats are the highest-beta play in animal memes. When the dog meta runs, cats run harder and later. <strong>POPCAT delivered 23,895% returns in 2024</strong> while DOGE only did 300% in the same period. Cat coins delivered a market-cap weighted ROI of 61.81% in early 2025 vs dogs at -34.34%.
+          <br><br>
+          The pattern: dogs pump first, then capital rotates into cats. Every time dogs spiked in 2024-2025, cats followed at higher multipliers. This is the beta rotation trade — one of the most consistent patterns in meme coin history.
+          <br><br>
+          Cat coins have smaller communities but sharper price movements. POPCAT's origin was a viral clicking game where countries competed for clicks — this gave it an existing cultural footprint before the token even existed. That cultural pre-existence is the key differentiator for legitimate cat coins.
+        </div>
+        <div class="coins-row">
+          <span class="coin-chip">$POPCAT</span>
+          <span class="coin-chip">$MOG</span>
+          <span class="coin-chip">$MEW</span>
+          <span class="coin-chip">$MICHI</span>
+        </div>
+        <div class="playbook-grid">
+          <div class="playbook-box">
+            <div class="playbook-label green">✅ WHEN TO APE</div>
+            <div class="playbook-text">After dog meta has already been running for 2-4 weeks. Look for cat coins lagging while dogs pump — that lag is the entry. Cats that existed as internet memes BEFORE being tokenized have higher staying power.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label red">🚨 WHEN TO AVOID</div>
+            <div class="playbook-text">First mover in a new cat launch — let it establish a floor first. Cats with no cultural origin (just "cat coin" with no meme backing). When the dog meta is already dead — cats won't revive it alone.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label yellow">⚡ KEY SIGNAL</div>
+            <div class="playbook-text">POPCAT/DOGE ratio. When cats are lagging dogs by more than 2 weeks in a bull run, the rotation is coming. Watch for cat memes going viral on TikTok and Twitter simultaneously.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label purple">🎯 RISK LEVEL</div>
+            <div class="playbook-text"><span class="risk-badge risk-high">HIGH</span> Higher reward than OG dogs but much less stable. POPCAT dropped 85%+ from ATH. Take profits at 3-5x, don't hold to zero.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NARRATIVE 3: TIKTOK ── -->
+    <div class="narrative-card" id="nc-tiktok">
+      <div class="narrative-header" onclick="toggleNarrative('tiktok')">
+        <div class="narrative-emoji">📱</div>
+        <div class="narrative-title-wrap">
+          <div class="narrative-title">TikTok Meta — The Normie Pipeline</div>
+          <div class="narrative-subtitle">CHILLGUY · PENGU · PENGUIN · PUNCH · MOODENG</div>
+        </div>
+        <div class="narrative-chevron">▼</div>
+      </div>
+      <div class="narrative-body" id="nb-tiktok">
+        <div class="audio-bar">
+          <button class="audio-play-btn" onclick="playNarrative('tiktok')" id="audio-btn-tiktok">▶</button>
+          <div class="audio-label">LISTEN TO THIS</div>
+          <div class="audio-progress"><div class="audio-progress-fill" id="ap-tiktok"></div></div>
+        </div>
+        <div class="narrative-text" id="nt-tiktok">
+          TikTok is the fastest and most dangerous meta. These coins live and die with a single viral moment. When a meme takes over TikTok, people who have never bought crypto create wallets just to buy the coin. That's the normie pipeline — and it's pure rocket fuel.
+          <br><br>
+          <strong>CHILLGUY (Nov 2024)</strong> — went from $10M to $500M market cap in 48 hours. The character had 600 million TikTok videos by end of 2024. One trader turned $865 into $6.4 million. The coin later dropped 91% from ATH. Classic TikTok arc.
+          <br><br>
+          <strong>PENGUIN (Jan 2026)</strong> — a 2007 documentary penguin clip went viral on TikTok. The White House posted "Embrace the penguin" and the coin went from $387,000 market cap to $173 million in days — a 17,253% move. This is the new meta: old documentary clips rediscovered on TikTok become million-dollar tokens overnight.
+          <br><br>
+          <strong>PUNCH (Feb 2026)</strong> — a baby Japanese macaque named Punch, rescued from wildlife traffickers, went viral for clinging to an IKEA orangutan plushie. The coin hit 80,000% gains. "PUNCH is gearing up to be the MOODENG of 2026." Same emotional story format — rescued animal, heartwarming narrative, cross-platform virality.
+          <br><br>
+          <strong>PENGU (Dec 2024)</strong> — Pudgy Penguins evolved from an NFT collection to sell over 1 million physical toys at Walmart and Target. Their PENGU token launched with a $1.5 billion airdrop. This is the mascot-to-token pipeline at its most successful — real-world brand first, then tokenization.
+          <br><br>
+          The TikTok meta pattern: viral moment → crypto media coverage → exchange listings → pump → dump. The window between TikTok virality and crypto press coverage is the golden entry point.
+        </div>
+        <div class="coins-row">
+          <span class="coin-chip">$CHILLGUY</span>
+          <span class="coin-chip">$PENGU</span>
+          <span class="coin-chip">$PENGUIN</span>
+          <span class="coin-chip">$PUNCH</span>
+          <span class="coin-chip">$MOODENG</span>
+          <span class="coin-chip">$PNUT</span>
+        </div>
+        <div class="playbook-grid">
+          <div class="playbook-box">
+            <div class="playbook-label green">✅ WHEN TO APE</div>
+            <div class="playbook-text">After social media explosion but BEFORE crypto press coverage. Check TikTok Creative Center for trending sounds and characters. If a meme is everywhere on TikTok but hasn't hit CoinDesk yet — that's the window. Small position, 10-minute attention span.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label red">🚨 WHEN TO AVOID</div>
+            <div class="playbook-text">After Binance or Coinbase announces listing — that's often the top. When the coin has a tiny liquidity pool ($5M) despite a $500M market cap — exits are brutal. Coins using artist's IP without permission face legal risk.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label yellow">⚡ KEY SIGNAL</div>
+            <div class="playbook-text">Cross-platform momentum: same meme trending on TikTok, Twitter/X AND Reddit simultaneously. MoonPay reported record Solana transactions on ChillGuy's peak day — exchange on-ramp volume spikes are a real-time signal.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label purple">🎯 RISK LEVEL</div>
+            <div class="playbook-text"><span class="risk-badge risk-extreme">EXTREME</span> These are lottery tickets. Set a strict exit: 2x-5x and you're out. Never hold waiting for "the next leg up." The run is over when you start rationalizing why to stay.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NARRATIVE 4: AI AGENTS ── -->
+    <div class="narrative-card" id="nc-ai">
+      <div class="narrative-header" onclick="toggleNarrative('ai')">
+        <div class="narrative-emoji">🤖</div>
+        <div class="narrative-title-wrap">
+          <div class="narrative-title">AI Agents Meta — The 2024/25 Wave</div>
+          <div class="narrative-subtitle">GOAT · AI16Z · ZEREBRO · GRIFFAIN · FARTCOIN · MOLT</div>
+        </div>
+        <div class="narrative-chevron">▼</div>
+      </div>
+      <div class="narrative-body" id="nb-ai">
+        <div class="audio-bar">
+          <button class="audio-play-btn" onclick="playNarrative('ai')" id="audio-btn-ai">▶</button>
+          <div class="audio-label">LISTEN TO THIS</div>
+          <div class="audio-progress"><div class="audio-progress-fill" id="ap-ai"></div></div>
+        </div>
+        <div class="narrative-text" id="nt-ai">
+          The AI meta was the defining narrative of late 2024 into 2025. It started with something unprecedented: an actual AI — Truth Terminal, built by programmer Andy Ayrey — started posting online and promoting a coin called <strong>Goatseus Maximus (GOAT)</strong>. The coin hit a $1.22 billion market cap. An AI-endorsed meme coin. The crypto world had never seen anything like it.
+          <br><br>
+          From there the AI meta exploded. <strong>AI16Z</strong> — inspired by VC firm a16z but run by an AI "Marc AIndreessen" — hit $800M market cap in two months. <strong>ZEREBRO</strong> is an AI agent that autonomously generates music, NFTs, and social media content — it released an actual album on Spotify. <strong>GRIFFAIN</strong> turns user thoughts into on-chain actions — Solana officially supported it. <strong>FARTCOIN</strong>, despite the name, hit a $1B+ market cap — born from Truth Terminal conversations about the "ideal meme coin."
+          <br><br>
+          Then came <strong>MOLT (Jan 2026)</strong> — the 2026 AI meta. Moltbook launched: a Reddit-style social network where over 1.5 million AI agents post, debate philosophy, and even invented their own religion (Crustafarianism). The $MOLT token surged 7,000% then hit $93 million market cap before crashing 75%. Elon Musk called it "early stages of the singularity." Justin Sun promoted it. This is the 2026 AI narrative: not just AI coins, but AI agents running their own social networks and economies.
+          <br><br>
+          The AI meta has a key difference from animal memes: these projects have actual ongoing activity. ZEREBRO still posts. AI16Z still manages funds. The narrative has legs beyond the initial pump if the underlying product is real.
+        </div>
+        <div class="coins-row">
+          <span class="coin-chip">$GOAT</span>
+          <span class="coin-chip">$AI16Z</span>
+          <span class="coin-chip">$ZEREBRO</span>
+          <span class="coin-chip">$GRIFFAIN</span>
+          <span class="coin-chip">$FARTCOIN</span>
+          <span class="coin-chip">$MOLT</span>
+          <span class="coin-chip">$VIRTUAL</span>
+        </div>
+        <div class="playbook-grid">
+          <div class="playbook-box">
+            <div class="playbook-label green">✅ WHEN TO APE</div>
+            <div class="playbook-text">Find AI projects with verifiable autonomous activity — actual posts, actual content, actual on-chain transactions from the agent itself. If you can see the AI working in real time, the narrative has substance. Early discovery before Binance lists.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label red">🚨 WHEN TO AVOID</div>
+            <div class="playbook-text">Coins that just add "AI" to a generic meme with no actual AI component. After the meta already ran — GOAT dropped from $1.22B to $338M. The first wave is done. Look for the next layer: AI agents with actual products, not just narratives.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label yellow">⚡ KEY SIGNAL</div>
+            <div class="playbook-text">Check if the AI is actually doing things. Does ZEREBRO post? Does AI16Z trade? Does MOLT have active agents? Real activity = real narrative longevity. GitHub stars on ElizaOS framework is a proxy for the whole AI agent ecosystem health.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label purple">🎯 RISK LEVEL</div>
+            <div class="playbook-text"><span class="risk-badge risk-high">HIGH</span> Higher than animals but narrative has more legs if the product is real. MOLT peaked at $93M then lost 75% in days. Even GOAT is 70%+ below its ATH. These are not store-of-value assets.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NARRATIVE 5: MASCOT ── -->
+    <div class="narrative-card" id="nc-mascot">
+      <div class="narrative-header" onclick="toggleNarrative('mascot')">
+        <div class="narrative-emoji">🎭</div>
+        <div class="narrative-title-wrap">
+          <div class="narrative-title">Mascot Meta — The Stickiest</div>
+          <div class="narrative-subtitle">PEPE · BRETT · WIF · PENGU · TRUSTY</div>
+        </div>
+        <div class="narrative-chevron">▼</div>
+      </div>
+      <div class="narrative-body" id="nb-mascot">
+        <div class="audio-bar">
+          <button class="audio-play-btn" onclick="playNarrative('mascot')" id="audio-btn-mascot">▶</button>
+          <div class="audio-label">LISTEN TO THIS</div>
+          <div class="audio-progress"><div class="audio-progress-fill" id="ap-mascot"></div></div>
+        </div>
+        <div class="narrative-text" id="nt-mascot">
+          Mascot coins are the most durable meta. When a character has genuine cultural roots — art that existed before the coin, merch that people actually want, a face that people recognize outside crypto — that coin has staying power that pure meme coins can't match.
+          <br><br>
+          <strong>PEPE</strong> is the gold standard. The Pepe the Frog character has 15+ years of internet history. It existed long before any crypto token. When PEPE launched on Ethereum in 2023, it hit a $1.6 billion market cap because the meme itself was already famous. That existing cultural weight is everything.
+          <br><br>
+          <strong>BRETT</strong> is PEPE's best friend from the Boy's Club comic — another character with authentic cultural origin. It became one of the strongest Base chain coins precisely because of this shared heritage.
+          <br><br>
+          <strong>WIF (dogwifhat)</strong> — a Shiba Inu dog wearing a pink knitted hat. Simple. Iconic. Easy to put on merchandise. WIF plushies, hats, and stickers exist in the real world now. Physical merch is a sign of mascot staying power.
+          <br><br>
+          <strong>PENGU</strong> took it furthest: over 1 million Pudgy Penguin toys sold at Walmart and Target. A Visa card. A browser game. That's a mascot that left crypto and entered mainstream consumer culture — which is the ultimate destination for any mascot coin.
+          <br><br>
+          The mascot playbook: characters with pre-existing cultural weight, existing fan art, and potential for physical merchandise outperform coins where someone just drew a character and launched it.
+        </div>
+        <div class="coins-row">
+          <span class="coin-chip">$PEPE</span>
+          <span class="coin-chip">$BRETT</span>
+          <span class="coin-chip">$WIF</span>
+          <span class="coin-chip">$PENGU</span>
+          <span class="coin-chip">$ANDY</span>
+        </div>
+        <div class="playbook-grid">
+          <div class="playbook-box">
+            <div class="playbook-label green">✅ WHEN TO APE</div>
+            <div class="playbook-text">When the character existed BEFORE the coin. When fan art and community exist organically, not just in the official Telegram. When you see merch appearing without the team pushing it — organic merch is the highest conviction signal.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label red">🚨 WHEN TO AVOID</div>
+            <div class="playbook-text">AI-generated mascots with no history. Characters that look like other mascots (PEPE clones). Projects where the "mascot" is just a logo with no storytelling behind it. Mascots need lore to survive.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label yellow">⚡ KEY SIGNAL</div>
+            <div class="playbook-text">Search for the character on Google Images and TikTok outside of crypto contexts. If people who don't know about the coin know the character — that's a mascot with real cultural weight. Check if merch exists anywhere.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label purple">🎯 RISK LEVEL</div>
+            <div class="playbook-text"><span class="risk-badge risk-medium">MEDIUM</span> The most durable meme coin category. PEPE and WIF survived multiple 80%+ drawdowns. But even blue-chip mascots can go to zero — nothing is guaranteed in this space.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NARRATIVE 6: CZ META ── -->
+    <div class="narrative-card" id="nc-cz">
+      <div class="narrative-header" onclick="toggleNarrative('cz')">
+        <div class="narrative-emoji">🟡</div>
+        <div class="narrative-title-wrap">
+          <div class="narrative-title">CZ Meta — The BNB Season</div>
+          <div class="narrative-subtitle">GIGGLE · $4 · PAUL · SZN · BNB ecosystem</div>
+        </div>
+        <div class="narrative-chevron">▼</div>
+      </div>
+      <div class="narrative-body" id="nb-cz">
+        <div class="audio-bar">
+          <button class="audio-play-btn" onclick="playNarrative('cz')" id="audio-btn-cz">▶</button>
+          <div class="audio-label">LISTEN TO THIS</div>
+          <div class="audio-progress"><div class="audio-progress-fill" id="ap-cz"></div></div>
+        </div>
+        <div class="narrative-text" id="nt-cz">
+          Changpeng Zhao (CZ) is the most influential person in BNB Chain meme coin history. When CZ posts something — anything — the BNB meme ecosystem lights up. This is a uniquely BNB Chain phenomenon.
+          <br><br>
+          <strong>The GIGGLE story (Sep-Oct 2025)</strong>: CZ launched Giggle Academy, a free education platform for underprivileged children. A community developer launched <strong>$GIGGLE</strong> on BNB Chain with a smart contract that automatically sends 5% trading fees to Giggle Academy's donation address. In 12 hours, it raised $1.3 million in donations. CZ went from "meme coins have no utility" to publicly praising it. Then Binance announced it would donate 50% of GIGGLE trading fees to Giggle Academy. GIGGLE surged 717% in a week to $140 ATH.
+          <br><br>
+          <strong>The $4 story</strong>: CZ posted the number "4" cryptically on social media. The token <strong>$4</strong> on BNB Chain pumped 349% weekly, briefly hitting a $200 million market cap with $290 million in 24-hour volume. One trader made $10 million. The trigger was literally a single number in a tweet. This is the power of CZ's social presence on BNB Chain.
+          <br><br>
+          When CZ declared "Meme Coin SZN is here" on October 8, 2025, BNB Chain DEX volume hit $6.05 billion in a single day — one of its strongest ever. Tokens like PAUL surged 2,246% and SZN surged 5,600%. BNB Chain overtook Solana in meme coin trading volume during this period.
+          <br><br>
+          The CZ meta is unique to BNB Chain. It requires watching CZ's personal X account, Binance announcements, and any new initiative CZ is involved in. The playbook: find BNB tokens connected to CZ projects before Binance announces anything official.
+        </div>
+        <div class="coins-row">
+          <span class="coin-chip">$GIGGLE</span>
+          <span class="coin-chip">$4</span>
+          <span class="coin-chip">$PAUL</span>
+          <span class="coin-chip">$SZN</span>
+          <span class="coin-chip">$PUP</span>
+        </div>
+        <div class="playbook-grid">
+          <div class="playbook-box">
+            <div class="playbook-label green">✅ WHEN TO APE</div>
+            <div class="playbook-text">When CZ mentions anything new — a project, a cause, a number. Find the BNB Chain token connected to it before Binance makes it official. GIGGLE went 700%+ before CZ publicly praised it. Speed is everything — these moves happen in hours.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label red">🚨 WHEN TO AVOID</div>
+            <div class="playbook-text">GIGGLE crashed 30% the moment CZ said it's not his official token. The Binance clarification announcement is often a sell signal, not a buy signal. Avoid anything claiming to be "official CZ" or "official Binance" — they never are.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label yellow">⚡ KEY SIGNAL</div>
+            <div class="playbook-text">Follow CZ on X (@cz_binance). Any mention of a charity, project, or even a cryptic number can be the trigger. Check BNB Chain DEX volume as a leading indicator — when volume spikes without obvious cause, CZ season may be starting.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label purple">🎯 RISK LEVEL</div>
+            <div class="playbook-text"><span class="risk-badge risk-extreme">EXTREME</span> These are event-driven plays with zero fundamentals. The window is hours, not days. If you're not in before the tweet goes viral, you're exit liquidity. Strict stop losses required.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NARRATIVE 7: POLITICAL ── -->
+    <div class="narrative-card" id="nc-political">
+      <div class="narrative-header" onclick="toggleNarrative('political')">
+        <div class="narrative-emoji">🇺🇸</div>
+        <div class="narrative-title-wrap">
+          <div class="narrative-title">Political Meta — The Event Trader</div>
+          <div class="narrative-subtitle">TRUMP · MELANIA · BODEN · MAGA</div>
+        </div>
+        <div class="narrative-chevron">▼</div>
+      </div>
+      <div class="narrative-body" id="nb-political">
+        <div class="audio-bar">
+          <button class="audio-play-btn" onclick="playNarrative('political')" id="audio-btn-political">▶</button>
+          <div class="audio-label">LISTEN TO THIS</div>
+          <div class="audio-progress"><div class="audio-progress-fill" id="ap-political"></div></div>
+        </div>
+        <div class="narrative-text" id="nt-political">
+          Political meme coins are tied directly to real-world events. When Donald Trump won the 2024 US election, the meme coin market cap hit an all-time high of <strong>$150.6 billion</strong>. The TRUMP coin launched in January 2025 and became one of the fastest-growing tokens in history — then corrected sharply.
+          <br><br>
+          These coins are pure momentum trades. There is no "fundamental case" for holding TRUMP. The play is simple: enter before the political event peaks, exit ruthlessly when the news cycle moves on. The moment the political conversation shifts to something else, the coin follows.
+          <br><br>
+          Political coins also carry unique risks beyond standard meme coins: regulatory scrutiny (politicians launching tokens drew SEC attention), copyright issues (using a politician's name and image), and extreme concentration risk (large wallets close to the launch team).
+          <br><br>
+          The PENGUIN narrative in January 2026 showed a new evolution: a political moment (White House post) triggering an existing coin rather than a new launch. The coin already had community from the documentary meme — the White House post was pure gasoline.
+        </div>
+        <div class="coins-row">
+          <span class="coin-chip">$TRUMP</span>
+          <span class="coin-chip">$MELANIA</span>
+          <span class="coin-chip">$BODEN</span>
+          <span class="coin-chip">$MAGA</span>
+        </div>
+        <div class="playbook-grid">
+          <div class="playbook-box">
+            <div class="playbook-label green">✅ WHEN TO APE</div>
+            <div class="playbook-text">Only before the political event — not after. Watch election calendars, political debate schedules, major policy announcements. The entry is hours before mainstream coverage, not after. Very small position size only.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label red">🚨 WHEN TO AVOID</div>
+            <div class="playbook-text">After the political event already happened. If the politician has already acknowledged the coin — that's usually the top. Any coin claiming official political endorsement is lying and likely a rug.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label yellow">⚡ KEY SIGNAL</div>
+            <div class="playbook-text">Political news cycles. Track Google Trends for political terms — when a political figure's name spikes in search volume, related coins follow within hours. Monitor Polymarket for political events.</div>
+          </div>
+          <div class="playbook-box">
+            <div class="playbook-label purple">🎯 RISK LEVEL</div>
+            <div class="playbook-text"><span class="risk-badge risk-extreme">EXTREME</span> The fastest to rise, fastest to fall. TRUMP dropped 80%+ from ATH. These are not investments. They are event-driven bets. Treat like a sports bet: small amount, defined exit, no emotions.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-top:8px;text-align:center;">
+      <div style="font-size:11px;font-family:var(--mono);color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">REMEMBER FREN</div>
+      <div style="font-size:14px;color:var(--text);line-height:1.7;">Understanding the narrative is only half the battle. The other half is supply safety, contract security, and liquidity. That's what the scanner is for. <strong style="color:var(--blue2);">Read the meta. Scan the contract. Then decide.</strong></div>
+    </div>
+
   </div>
 </div>
 </body>
