@@ -1511,7 +1511,7 @@ body::before {
 
 /* ── MOBILE ── */
 @media (max-width: 700px) {
-  .app { flex-direction: column; padding: 16px 14px 80px; }
+  .app { flex-direction: column; padding: 16px 14px 100px; }
   .trusty-sidebar { width: 100%; flex-direction: row; align-items: flex-start; position: relative; top: 0; }
   .trusty-figure { width: 80px; flex-shrink: 0; }
   #trustyFig { width: 80px; flex-shrink: 0; border-radius: 10px; }
@@ -4045,7 +4045,7 @@ body::before {
         📚 ACADEMY
       </button>
       <button class="main-nav-btn token-btn" id="nav-token" onclick="switchTab('token')">
-        🪙 $TRUSTY
+        🪙 Token
       </button>
     </div>
 
@@ -7799,6 +7799,10 @@ function switchTab(tab) {
   document.getElementById('tab-' + tab).classList.add('active');
   document.getElementById('nav-' + tab).classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  // lazy render academy sections
+  if (tab === 'academy') {
+    if (!document.getElementById('inline-narratives').hasChildNodes()) renderInlineNarratives();
+  }
 }
 
 function copyTrustyCA() {
@@ -7815,9 +7819,14 @@ function copyTrustyCA() {
 
 // ── INLINE ACADEMY ──
 function showAcademySection(id, btn) {
-  document.querySelectorAll('.academy-section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.academy-section-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('asec-' + id).classList.add('active');
+  // scope to tab-academy only
+  const tab = document.getElementById('tab-academy');
+  if (tab) {
+    tab.querySelectorAll('.academy-section').forEach(s => s.classList.remove('active'));
+    tab.querySelectorAll('.academy-section-btn').forEach(b => b.classList.remove('active'));
+  }
+  const sec = document.getElementById('asec-' + id);
+  if (sec) sec.classList.add('active');
   if (btn) btn.classList.add('active');
 
   // Lazy load content
