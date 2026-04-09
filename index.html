@@ -8660,13 +8660,20 @@ function renderInlineGlossary(query) {
 
 // Inline narrative rendering
 const inlineNarrativeData = [
-  { emoji: '🐶', title: 'Dog Meta — The OG', sub: 'DOGE · SHIB · WIF · BONK · NEIRO', body: 'The foundation of all meme coins. DOGE alone makes up <strong>47.3%</strong> of the entire meme coin market cap. Dog coins move together — when one pumps, the others follow. WIF delivered 100,000x for early holders. BONK saved the Solana ecosystem. Dogs run hardest during peak bull euphoria.<br><br><strong>When to ape:</strong> Early in a bull cycle, when Elon tweets, when BTC breaks ATH. <strong>Avoid:</strong> After DOGE already 3x'd, in bear markets.' },
-  { emoji: '🐱', title: 'Cat Meta — The Challenger', sub: 'POPCAT · MOG · MEW · MICHI', body: 'The highest-beta play in animal memes. <strong>POPCAT delivered 23,895%</strong> in 2024 vs DOGE's 300% in the same period. Every time dogs spiked, cats followed at higher multipliers. This is the beta rotation trade — one of the most consistent patterns in meme coin history.<br><br><strong>When to ape:</strong> After dog meta has been running 2-4 weeks. Find cats lagging while dogs pump — that's the entry.' },
-  { emoji: "📱", title: "TikTok Meta — The Normie Pipeline", sub: "CHILLGUY · PENGUIN · PUNCH · PENGU', body: 'Fastest and most dangerous meta. CHILLGUY went $10M→$500M in 48 hours. PENGUIN went $387K→$173M after the White House posted "Embrace the penguin." PUNCH hit 80,000% gains from a viral baby monkey story.<br><br><strong>Golden entry:</strong> After social media explosion but BEFORE crypto press coverage. Once CoinDesk writes about it — you're exit liquidity.' },
-  { emoji: '🤖', title: 'AI Agents — The 2024/25 Wave', sub: 'GOAT · AI16Z · ZEREBRO · GRIFFAIN · MOLT', body: 'Started when an actual AI (Truth Terminal) promoted GOAT — which hit $1.22B market cap. AI16Z hit $800M in two months. ZEREBRO released an actual album on Spotify. MOLT surged 7,000% then hit $93M from a Reddit-for-AI-agents platform called Moltbook.<br><br><strong>Key signal:</strong> Find AI projects with verifiable autonomous activity. Real activity = real narrative longevity.' },
-  { emoji: '🎭', title: 'Mascot Meta — The Stickiest', sub: 'PEPE · BRETT · WIF · PENGU', body: 'Most durable meta. PEPE has 15+ years of internet history — it existed before any token. WIF plushies exist in the real world. Pudgy Penguins sold 1M+ toys at Walmart and Target.<br><br><strong>Key signal:</strong> Character existed BEFORE the coin. Organic fan art and merch without the team pushing it — highest conviction signal.' },
-  { emoji: '🟡', title: 'CZ Meta — The BNB Season', sub: 'GIGGLE · $4 · PAUL · SZN', body: 'CZ is the most influential person in BNB Chain meme history. GIGGLE raised $1.3M in donations for his Giggle Academy in 12 hours. He posted the number "4" and $4 pumped 349% weekly — one trader made $10M. When CZ declared "Meme Coin SZN is here," BNB Chain DEX volume hit $6.05B in a day.<br><br><strong>Key signal:</strong> Follow @cz_binance. Any post about a project or charity is a potential trigger.' },
-  { emoji: '🇺🇸', title: 'Political Meta — The Event Trader', sub: 'TRUMP · MELANIA · BODEN · MAGA', body: 'Tied directly to real-world events. TRUMP launch coincided with a $150.6B meme coin ATH. These are pure momentum trades — enter before the event peaks, exit ruthlessly when the news cycle moves on.<br><br><strong>Risk:</strong> Extreme. The window is hours not days. If you're not in before the tweet goes viral, you're exit liquidity.' },
+  { emoji: "🐶", title: "Dog Meta — The OG", sub: "DOGE · SHIB · WIF · BONK · NEIRO",
+    body: "The foundation of all meme coins. DOGE alone makes up 47.3% of the entire meme coin market cap. Dog coins move together — when one pumps, others follow. WIF delivered 100,000x for early holders. BONK saved Solana. When to ape: Early bull cycle, Elon tweets, BTC ATH. Avoid: After DOGE already 3x, in bear markets." },
+  { emoji: "🐱", title: "Cat Meta — The Challenger", sub: "POPCAT · MOG · MEW · MICHI",
+    body: "The highest-beta play in animal memes. POPCAT delivered 23,895% in 2024 vs DOGE 300% same period. Every time dogs spiked, cats followed at higher multipliers — the beta rotation trade. When to ape: After dog meta has been running 2-4 weeks. Find cats lagging while dogs pump." },
+  { emoji: "📱", title: "TikTok Meta — The Normie Pipeline", sub: "CHILLGUY · PENGUIN · PUNCH · PENGU",
+    body: "Fastest and most dangerous meta. CHILLGUY went $10M to $500M in 48 hours. PENGUIN went $387K to $173M after the White House posted Embrace the penguin. PUNCH hit 80,000% gains from a viral baby monkey story. Golden entry: After social media explosion but BEFORE crypto press coverage." },
+  { emoji: "🤖", title: "AI Agents — The 2024/25 Wave", sub: "GOAT · AI16Z · ZEREBRO · GRIFFAIN · MOLT",
+    body: "Started when an actual AI promoted GOAT — which hit $1.22B market cap. AI16Z hit $800M in two months. ZEREBRO released an actual album on Spotify. MOLT surged 7,000% then hit $93M from a Reddit-for-AI-agents platform. Key signal: Find AI projects with verifiable autonomous activity." },
+  { emoji: "🎭", title: "Mascot Meta — The Stickiest", sub: "PEPE · BRETT · WIF · PENGU",
+    body: "Most durable meta. PEPE has 15+ years of internet history. WIF plushies exist in the real world. Pudgy Penguins sold 1M+ toys at Walmart and Target. Key signal: Character existed BEFORE the coin. Organic fan art and merch are the highest conviction signal." },
+  { emoji: "🟡", title: "CZ Meta — The BNB Season", sub: "GIGGLE · $4 · PAUL · SZN",
+    body: "CZ is the most influential person in BNB Chain meme history. GIGGLE raised $1.3M in donations in 12 hours. He posted the number 4 and $4 pumped 349% weekly — one trader made $10M. When CZ declared Meme Coin SZN is here, BNB Chain DEX volume hit $6.05B in one day." },
+  { emoji: "🇺🇸", title: "Political Meta — The Event Trader", sub: "TRUMP · MELANIA · BODEN · MAGA",
+    body: "Tied directly to real-world events. TRUMP launch coincided with a $150.6B meme coin ATH. These are pure momentum trades — enter before the event peaks, exit ruthlessly. Risk: Extreme. The window is hours not days. If you are not in before the tweet goes viral, you are exit liquidity." },
 ];
 
 function renderInlineNarratives() {
@@ -8731,17 +8738,11 @@ function openTerms() {
 }
 
 // Auto-render narratives when academy tab opens
-const origSwitchTab = switchTab;
 
-// Init tabs on page load
+// Init on page load
 document.addEventListener('DOMContentLoaded', function() {
-  // Ensure only scanner is visible on load
-  var tabs = ['scanner','academy','token'];
-  for (var i = 0; i < tabs.length; i++) {
-    var tp = document.getElementById('tab-' + tabs[i]);
-    if (tp) tp.style.display = tabs[i] === 'scanner' ? 'block' : 'none';
-  }
-  setTimeout(renderInlineNarratives, 800);
+  checkOnboarding();
+  loadTrendingData();
 });
 
 
