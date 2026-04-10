@@ -4242,20 +4242,29 @@ body::before {
 <div class="wallet-modal-overlay" id="walletModal" onclick="if(event.target===this)closeWalletModal()">
   <div class="wallet-modal">
     <h3>Connect Wallet</h3>
-    <p>Choose how to connect to BNB Smart Chain</p>
-    <button class="wallet-modal-btn" id="wmExtensionBtn" onclick="connectViaExtension()">
-      <span class="wm-icon">🦊</span>
-      <span class="wm-label">Browser Wallet<br><span class="wm-sub">Trust Wallet, MetaMask, etc.</span></span>
-    </button>
+    <p>Choose your wallet to connect to BSC</p>
+    <div id="walletProviderList"></div>
     <button class="wallet-modal-btn" onclick="connectViaWC()">
       <span class="wm-icon">📱</span>
       <span class="wm-label">WalletConnect<br><span class="wm-sub">Scan QR with mobile wallet</span></span>
     </button>
     <button class="wallet-modal-btn" onclick="connectViaManual()">
       <span class="wm-icon">📋</span>
-      <span class="wm-label">Paste Address<br><span class="wm-sub">Read-only mode (view only)</span></span>
+      <span class="wm-label">Paste Address<br><span class="wm-sub">Read-only mode</span></span>
     </button>
     <button class="wallet-modal-close" onclick="closeWalletModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ── TRADE MODAL (DCA / Limit / Swap) ── -->
+<div class="wallet-modal-overlay" id="tradeModal" onclick="if(event.target===this)closeTradeModal()">
+  <div class="wallet-modal" style="max-width:420px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 id="tradeModalTitle" style="margin:0;">📈 DCA</h3>
+      <button onclick="closeTradeModal()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
+    </div>
+    <div id="tradeTokenInfo" style="font-size:13px;color:var(--yellow);margin-bottom:14px;font-weight:700;"></div>
+    <div id="tradeFormContent"></div>
   </div>
 </div>
 
@@ -6548,18 +6557,58 @@ body::before {
 <script>
 window._wcReady = true;
 
+// ── DETECT ALL WALLET PROVIDERS ──
+function getWalletProviders() {
+  var wallets = [];
+  // Check for Trust Wallet specifically
+  if (window.trustwallet && window.trustwallet.isTrust) {
+    wallets.push({ name: 'Trust Wallet', icon: '🛡️', provider: window.trustwallet });
+  }
+  // Check for multiple providers (EIP-5749)
+  if (window.ethereum && window.ethereum.providers && window.ethereum.providers.length) {
+    window.ethereum.providers.forEach(function(p) {
+      if (p.isTrust && !wallets.find(w => w.name === 'Trust Wallet')) {
+        wallets.push({ name: 'Trust Wallet', icon: '🛡️', provider: p });
+      } else if (p.isMetaMask && !wallets.find(w => w.name === 'MetaMask')) {
+        wallets.push({ name: 'MetaMask', icon: '🦊', provider: p });
+      } else if (p.isBinance || p.bbcSignTx) {
+        wallets.push({ name: 'Binance Wallet', icon: '🟡', provider: p });
+      } else if (!p.isTrust && !p.isMetaMask) {
+        wallets.push({ name: 'Browser Wallet', icon: '🔗', provider: p });
+      }
+    });
+  } else if (window.ethereum) {
+    // Single provider
+    var p = window.ethereum;
+    var name = p.isTrust ? 'Trust Wallet' : p.isMetaMask ? 'MetaMask' : (p.isBinance || p.bbcSignTx) ? 'Binance Wallet' : 'Browser Wallet';
+    var icon = p.isTrust ? '🛡️' : p.isMetaMask ? '🦊' : (p.isBinance || p.bbcSignTx) ? '🟡' : '🔗';
+    if (!wallets.find(w => w.name === name)) {
+      wallets.push({ name: name, icon: icon, provider: p });
+    }
+  }
+  // Check BNB Chain Wallet
+  if (window.BinanceChain && !wallets.find(w => w.name === 'Binance Wallet')) {
+    wallets.push({ name: 'Binance Wallet', icon: '🟡', provider: window.BinanceChain });
+  }
+  return wallets;
+}
+
 // ── WALLET MODAL ──
 function openWalletModal() {
   var modal = document.getElementById('walletModal');
-  var extBtn = document.getElementById('wmExtensionBtn');
-  // Show/grey out extension button based on availability
-  if (!(window.trustwallet || window.ethereum)) {
-    extBtn.style.opacity = '0.4';
-    extBtn.querySelector('.wm-sub').textContent = 'Not detected — install extension';
+  var list = document.getElementById('walletProviderList');
+  var wallets = getWalletProviders();
+  list.innerHTML = '';
+  if (wallets.length === 0) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;padding:10px;border:1px dashed var(--border);border-radius:10px;">No browser wallet detected. Install <a href="https://trustwallet.com/browser-extension" target="_blank" style="color:var(--blue2);">Trust Wallet</a> or <a href="https://metamask.io" target="_blank" style="color:var(--blue2);">MetaMask</a>.</div>';
   } else {
-    extBtn.style.opacity = '1';
-    var name = window.trustwallet ? 'Trust Wallet' : 'MetaMask / Extension';
-    extBtn.querySelector('.wm-sub').textContent = name + ' detected';
+    wallets.forEach(function(w, i) {
+      var btn = document.createElement('button');
+      btn.className = 'wallet-modal-btn';
+      btn.innerHTML = '<span class="wm-icon">' + w.icon + '</span><span class="wm-label">' + w.name + '<br><span class="wm-sub">Browser extension</span></span>';
+      btn.onclick = function() { connectViaProvider(w.provider, w.name); };
+      list.appendChild(btn);
+    });
   }
   modal.classList.add('open');
 }
@@ -6568,17 +6617,14 @@ function closeWalletModal() {
   resetConnectBtns();
 }
 
-// ── EXTENSION CONNECT ──
-async function connectViaExtension() {
-  var provider = window.trustwallet || window.ethereum;
-  if (!provider) { alert('No wallet extension detected. Install Trust Wallet or MetaMask.'); return; }
+// ── CONNECT VIA SPECIFIC PROVIDER ──
+async function connectViaProvider(provider, name) {
   closeWalletModal();
   try {
-    // Request accounts — wallet popup lets user choose which account
+    console.log('🔗 Connecting to ' + name + '...');
     var accounts = await provider.request({ method: 'eth_requestAccounts' });
     if (accounts && accounts.length > 0) {
       var address = accounts[0];
-      // Switch to BSC
       try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] }); }
       catch (e) {
         if (e.code === 4902) {
@@ -6589,8 +6635,15 @@ async function connectViaExtension() {
       window._connectedProvider = provider;
       showConnected(address);
       fetchBalance(address, provider);
+      console.log('✅ Connected to ' + name + ':', address);
     }
-  } catch (err) { console.error('Extension error:', err); resetConnectBtns(); }
+  } catch (err) { console.error(name + ' error:', err); resetConnectBtns(); }
+}
+
+// Legacy function kept for compatibility
+async function connectViaExtension() {
+  var provider = window.trustwallet || window.ethereum;
+  if (provider) connectViaProvider(provider, 'Wallet');
 }
 
 // ── WALLETCONNECT ──
@@ -9432,15 +9485,121 @@ function showSidebarStrategy(tokenName, tokenAddress) {
   if (tradeBtns) tradeBtns.style.display = 'block';
 }
 
-// Called from sidebar — checks if a token has been scanned first
+// Called from sidebar — opens trade modal
 function sidebarTrade(type) {
   if (!currentTokenAddress) {
-    // No token scanned yet — update speech bubble
     var tip = document.getElementById('trustyTip');
     if (tip) tip.innerHTML = 'Scan a CA first fren! Paste a contract address above, then come back to trade 🔍';
     return;
   }
-  scrollToStrategy(type);
+  openTradeModal(type);
+}
+
+function openTradeModal(type) {
+  var modal = document.getElementById('tradeModal');
+  var title = document.getElementById('tradeModalTitle');
+  var tokenInfo = document.getElementById('tradeTokenInfo');
+  var content = document.getElementById('tradeFormContent');
+  var tokenName = document.getElementById('sidebarTokenName');
+  var tn = tokenName ? tokenName.textContent : 'Token';
+
+  tokenInfo.textContent = tn + (currentTokenAddress ? ' — ' + currentTokenAddress.slice(0,6) + '...' + currentTokenAddress.slice(-4) : '');
+
+  if (type === 'dca') {
+    title.innerHTML = '📈 DCA Strategy';
+    content.innerHTML = '' +
+      '<div style="margin-bottom:12px;">' +
+        '<label style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;">AMOUNT PER BUY (USD)</label>' +
+        '<input id="tm-dca-amount" type="number" placeholder="10" min="1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;margin-top:4px;" />' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;margin-bottom:12px;">' +
+        '<div style="flex:1;">' +
+          '<label style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;">EVERY X DAYS</label>' +
+          '<input id="tm-dca-interval" type="number" placeholder="7" min="1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;margin-top:4px;" />' +
+        '</div>' +
+        '<div style="flex:1;">' +
+          '<label style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;">NUMBER OF BUYS</label>' +
+          '<input id="tm-dca-buys" type="number" placeholder="4" min="1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;margin-top:4px;" />' +
+        '</div>' +
+      '</div>' +
+      '<button onclick="submitTradeModal(\'dca\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#22C55E,#16A34A);color:white;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--display);letter-spacing:1px;">🛡️ SET DCA STRATEGY</button>';
+  } else if (type === 'limit') {
+    title.innerHTML = '🎯 Limit Order';
+    content.innerHTML = '' +
+      '<div style="display:flex;gap:10px;margin-bottom:12px;">' +
+        '<div style="flex:1;">' +
+          '<label style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;">BUY AMOUNT (USD)</label>' +
+          '<input id="tm-limit-amount" type="number" placeholder="50" min="1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;margin-top:4px;" />' +
+        '</div>' +
+        '<div style="flex:1;">' +
+          '<label style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;">TARGET PRICE (USD)</label>' +
+          '<input id="tm-limit-price" type="number" placeholder="0.00001" step="any" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;margin-top:4px;" />' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:14px;">' +
+        '<button id="tm-dir-below" onclick="tmSetDir(\'below\')" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--blue);background:rgba(59,130,246,0.15);color:var(--blue2);font-weight:700;cursor:pointer;">📉 Buy Below</button>' +
+        '<button id="tm-dir-above" onclick="tmSetDir(\'above\')" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg3);color:var(--muted);font-weight:700;cursor:pointer;">📈 Buy Above</button>' +
+      '</div>' +
+      '<button onclick="submitTradeModal(\'limit\')" style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#000;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--display);letter-spacing:1px;">🎯 SET LIMIT ORDER</button>';
+    window._tmLimitDir = 'buy_below';
+  } else if (type === 'swap') {
+    title.innerHTML = '⚡ Buy Now';
+    content.innerHTML = '' +
+      '<div style="margin-bottom:14px;">' +
+        '<label style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;">AMOUNT TO BUY (USD)</label>' +
+        '<input id="tm-swap-amount" type="number" placeholder="25" min="1" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:16px;margin-top:4px;" />' +
+      '</div>' +
+      '<button onclick="submitTradeModal(\'swap\')" style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,#3B82F6,#2563EB);color:white;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--display);letter-spacing:1px;">⚡ BUY NOW</button>';
+  }
+  modal.classList.add('open');
+}
+
+function closeTradeModal() {
+  document.getElementById('tradeModal').classList.remove('open');
+}
+
+function tmSetDir(dir) {
+  window._tmLimitDir = dir === 'below' ? 'buy_below' : 'buy_above';
+  var below = document.getElementById('tm-dir-below');
+  var above = document.getElementById('tm-dir-above');
+  if (dir === 'below') {
+    below.style.borderColor = 'var(--blue)'; below.style.background = 'rgba(59,130,246,0.15)'; below.style.color = 'var(--blue2)';
+    above.style.borderColor = 'var(--border)'; above.style.background = 'var(--bg3)'; above.style.color = 'var(--muted)';
+  } else {
+    above.style.borderColor = 'var(--blue)'; above.style.background = 'rgba(59,130,246,0.15)'; above.style.color = 'var(--blue2)';
+    below.style.borderColor = 'var(--border)'; below.style.background = 'var(--bg3)'; below.style.color = 'var(--muted)';
+  }
+}
+
+async function submitTradeModal(type) {
+  if (!connectedWallet) { alert('Connect your wallet first!'); return; }
+  if (type === 'dca') {
+    var amount = document.getElementById('tm-dca-amount').value;
+    var interval = document.getElementById('tm-dca-interval').value;
+    var buys = document.getElementById('tm-dca-buys').value;
+    if (!amount || !interval || !buys) { alert('Fill in all fields fren'); return; }
+    // Also update the original form and submit
+    var oa = document.getElementById('dca-amount'); if(oa) oa.value = amount;
+    var oi = document.getElementById('dca-interval'); if(oi) oi.value = interval;
+    var ob = document.getElementById('dca-buys'); if(ob) ob.value = buys;
+    closeTradeModal();
+    if (typeof submitDCA === 'function') submitDCA();
+  } else if (type === 'limit') {
+    var amount = document.getElementById('tm-limit-amount').value;
+    var price = document.getElementById('tm-limit-price').value;
+    if (!amount || !price) { alert('Fill in amount and price fren'); return; }
+    var oa = document.getElementById('limit-amount'); if(oa) oa.value = amount;
+    var op = document.getElementById('limit-price'); if(op) op.value = price;
+    limitDirection = window._tmLimitDir || 'buy_below';
+    closeTradeModal();
+    if (typeof submitLimit === 'function') submitLimit();
+  } else if (type === 'swap') {
+    var amount = document.getElementById('tm-swap-amount').value;
+    if (!amount) { alert('Enter an amount fren'); return; }
+    var oa = document.getElementById('swap-amount'); if(oa) oa.value = amount;
+    closeTradeModal();
+    if (typeof submitSwap === 'function') submitSwap();
+  }
 }
 
 function scrollToStrategy(type) {
