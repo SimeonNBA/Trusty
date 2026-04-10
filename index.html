@@ -59,22 +59,15 @@ body::before {
 
 .app {
   display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  gap: 20px;
+  flex-direction: column;
   position: relative;
-  align-items: flex-start;
   flex: 1;
+  padding-right: 200px;
 }
 
 .main-col {
   flex: 1;
   min-width: 0;
-  order: 1;
-}
-
-.trusty-sidebar {
-  order: 2;
 }
 
 /* ── HEADER ── */
@@ -616,21 +609,22 @@ body::before {
 
 .reset-btn:hover { color: var(--text); border-color: var(--blue); }
 
-/* ── TRUSTY SIDEBAR ── */
+/* ── TRUSTY SIDEBAR (fixed right panel) ── */
 .trusty-sidebar {
-  width: 180px;
-  flex-shrink: 0;
-  position: sticky;
-  top: 20px;
-  height: fit-content;
-  max-height: calc(100vh - 40px);
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 190px;
+  height: 100vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
-  align-self: flex-start;
-  order: 2;
+  padding: 20px 10px;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  z-index: 100;
 }
 
 .trusty-figure {
@@ -1474,19 +1468,35 @@ body::before {
 /* ── MOBILE ── */
 @media (max-width: 600px) {
   .app-wrapper { padding: 16px 14px 0; }
-  .app { flex-direction: column; padding: 0 0 20px; }
-  .trusty-sidebar { 
-    width: 100%; 
-    flex-direction: row; 
-    align-items: flex-start; 
-    position: relative; 
-    top: 0;
-    max-height: none;
-    overflow-y: visible;
-    order: -1;
+  .app { padding: 0 0 20px; padding-right: 0; }
+  .trusty-sidebar {
+    position: fixed;
+    bottom: 0;
+    top: auto;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: auto;
+    max-height: 60px;
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    overflow: hidden;
+    z-index: 200;
   }
-  .trusty-figure { width: 80px; flex-shrink: 0; }
-  #trustyFig { width: 140px; flex-shrink: 0; border-radius: 16px; display: block; margin: 0 auto; }
+  .trusty-sidebar #trustyFig,
+  .trusty-sidebar .speech-bubble,
+  .trusty-sidebar .search-history-panel,
+  .trusty-sidebar #sidebarConnected,
+  .trusty-sidebar .sidebar-strategy-token { display: none !important; }
+  .trusty-sidebar .history-btn { font-size: 10px; padding: 6px 10px; }
+  .trusty-sidebar .sidebar-strategy { padding: 0; gap: 4px; border: none; background: transparent; margin: 0; }
+  .trusty-sidebar .sidebar-strat-btn { padding: 6px 10px; font-size: 10px; }
+  .trusty-sidebar #sidebarConnectBtn { padding: 6px 12px; font-size: 10px; margin: 0; }
+  #trustyFig { width: 140px; flex-shrink: 0; border-radius: 16px; display: none; }
   .speech-bubble { border-radius: 4px 14px 14px 14px; }
   .age-grid { grid-template-columns: repeat(2, 1fr); }
   .result-grid { grid-template-columns: 1fr; }
@@ -3347,14 +3357,10 @@ body::before {
   .header-title { font-size: 24px; }
   .header-sub { font-size: 10px; }
 
-  /* ── SIDEBAR on mobile — compact row ── */
-  .trusty-sidebar { gap: 8px; }
-  #trustyFig { width: 140px !important; height: 140px !important;
-               object-fit: contain; flex-shrink: 0; border-radius: 16px; display: block; margin: 0 auto; }
-  .speech-bubble { font-size: 11px; min-height: 56px; padding: 8px 10px; }
-  .trusty-tip-label { font-size: 8px; }
+  /* ── SIDEBAR on mobile — bottom bar ── */
+  .trusty-sidebar { gap: 6px; }
   .glossary-btn { font-size: 11px; padding: 8px 10px; }
-  .history-btn { font-size: 11px; padding: 8px 10px; }
+  .history-btn { font-size: 10px; padding: 6px 8px; }
 
   /* ── HERO SECTION ── */
   .trusty-hero { padding: 12px 0 16px; gap: 12px; }
