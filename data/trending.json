@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-04-10T19:57:17.783Z",
+  "updatedAt": "2026-04-10T21:58:45.902Z",
   "categories": {
     "memes": [
       {
@@ -8,21 +8,10 @@
         "symbol": "币安人生",
         "chain": "bsc",
         "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38590.png",
-        "priceUsd": 0.11584262893314085,
-        "priceChange24h": 46.98994545,
-        "marketCapUsd": 115842628.93,
-        "volume24hUsd": 55753201.20966319
-      },
-      {
-        "assetId": "c501_tDf6yfrKC8kZE3KNkrHERKzAetSxbrWeniQfyJY4Jpump",
-        "name": "Just a chill guy",
-        "symbol": "CHILLGUY",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/Df6yfrKC8kZE3KNkrHERKzAetSxbrWeniQfyJY4Jpump/logo.png",
-        "priceUsd": 0.01308481982707658,
-        "priceChange24h": 27.41455748,
-        "marketCapUsd": 13084107.78,
-        "volume24hUsd": 13268047.67154274
+        "priceUsd": 0.11859564958391472,
+        "priceChange24h": 47.52172357,
+        "marketCapUsd": 118595649.58,
+        "volume24hUsd": 58025986.48075853
       },
       {
         "assetId": "c501_t8x5VqbHA8D7NkD52uNuS5nnt3PwA8pLD34ymskeSo2Wn",
@@ -30,10 +19,10 @@
         "symbol": "ZEREBRO",
         "chain": "solana",
         "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/8x5VqbHA8D7NkD52uNuS5nnt3PwA8pLD34ymskeSo2Wn/logo.png",
-        "priceUsd": 0.010121757001382183,
-        "priceChange24h": 21.07527716,
-        "marketCapUsd": 10121255.49,
-        "volume24hUsd": 12131917.69594768
+        "priceUsd": 0.010194707086172195,
+        "priceChange24h": 22.35795343,
+        "marketCapUsd": 10194201.96,
+        "volume24hUsd": 12373940.60658632
       },
       {
         "assetId": "c501_tDz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
@@ -41,10 +30,21 @@
         "symbol": "USELESS",
         "chain": "solana",
         "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36828.png",
-        "priceUsd": 0.04208291408448009,
-        "priceChange24h": 12.12386523,
-        "marketCapUsd": 42044460.23,
-        "volume24hUsd": 12390457.86653056
+        "priceUsd": 0.042800165064863685,
+        "priceChange24h": 13.83752251,
+        "marketCapUsd": 42761055.82,
+        "volume24hUsd": 12452103.73856408
+      },
+      {
+        "assetId": "c501_tHgBRWfYxEfvPhtqkaeymCQtHCrKE46qQ43pKe8HCpump",
+        "name": "Bertram The Pomeranian",
+        "symbol": "BERT",
+        "chain": "solana",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/HgBRWfYxEfvPhtqkaeymCQtHCrKE46qQ43pKe8HCpump/logo.png",
+        "priceUsd": 0.009457042844781261,
+        "priceChange24h": 9.6419417,
+        "marketCapUsd": 9142589.91,
+        "volume24hUsd": 1731128.35617093
       },
       {
         "assetId": "c20000714_t0x0A43fC31a73013089DF59194872Ecae4cAe14444",
@@ -52,21 +52,10 @@
         "symbol": "4",
         "chain": "bsc",
         "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38557.png",
-        "priceUsd": 0.018048018144242825,
-        "priceChange24h": 10.0381961,
-        "marketCapUsd": 18048018.14,
-        "volume24hUsd": 13021415.28954209
-      },
-      {
-        "assetId": "c60_t0x8eD97a637A790Be1feff5e888d43629dc05408F6",
-        "name": "Non-Playable Coin",
-        "symbol": "NPC",
-        "chain": "ethereum",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/ethereum/assets/0x8eD97a637A790Be1feff5e888d43629dc05408F6/logo.png",
-        "priceUsd": 0.007741538007209544,
-        "priceChange24h": 9.52467116,
-        "marketCapUsd": 58451998.14,
-        "volume24hUsd": 5254599.57304646
+        "priceUsd": 0.017800160248766107,
+        "priceChange24h": 8.07670088,
+        "marketCapUsd": 17800160.25,
+        "volume24hUsd": 12679792.95227297
       },
       {
         "assetId": "c20000714_t0x20d6015660b3fe52e6690a889b5C51F69902cE0e",
@@ -74,10 +63,10 @@
         "symbol": "GIGGLE",
         "chain": "bsc",
         "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38470.png",
-        "priceUsd": 27.42324597607079,
-        "priceChange24h": 6.24374771,
-        "marketCapUsd": 27212575.7,
-        "volume24hUsd": 19366689.16235034
+        "priceUsd": 27.797728875641113,
+        "priceChange24h": 7.68372397,
+        "marketCapUsd": 27584181.76,
+        "volume24hUsd": 20999657.28243278
       },
       {
         "assetId": "c20000714_t0x92aa03137385F18539301349dcfC9EbC923fFb10",
@@ -85,168 +74,10 @@
         "symbol": "SKYAI",
         "chain": "bsc",
         "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36300.png",
-        "priceUsd": 0.0733846390851531,
-        "priceChange24h": 6.10463991,
-        "marketCapUsd": 73384639.09,
-        "volume24hUsd": 7427321.19453497
-      },
-      {
-        "assetId": "c20000714_t0x0DF0587216a4a1bB7d5082fdc491d93d2dD4B413",
-        "name": "Cheems",
-        "symbol": "Cheems",
-        "chain": "bsc",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/smartchain/assets/0x0DF0587216a4a1bB7d5082fdc491d93d2dD4B413/logo.png",
-        "priceUsd": 4.689761034821223e-7,
-        "priceChange24h": 5.99448954,
-        "marketCapUsd": 87930690.83,
-        "volume24hUsd": 2372903.34408538
-      },
-      {
-        "assetId": "c60_t0xE0f63A424a4439cBE457D80E4f4b51aD25b2c56C",
-        "name": "SPX6900",
-        "symbol": "SPX",
-        "chain": "ethereum",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/ethereum/assets/0xE0f63A424a4439cBE457D80E4f4b51aD25b2c56C/logo.png",
-        "priceUsd": 0.3241968515247141,
-        "priceChange24h": 5.75827424,
-        "marketCapUsd": 301825028.59,
-        "volume24hUsd": 7341585.70072936
-      }
-    ],
-    "bnb": [
-      {
-        "assetId": "c20000714_t0x924fa68a0FC644485b8df8AbfA0A41C2e7744444",
-        "name": "币安人生",
-        "symbol": "币安人生",
-        "chain": "bsc",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38590.png",
-        "priceUsd": 0.11584262893314085,
-        "priceChange24h": 46.98994545,
-        "marketCapUsd": 115842628.93,
-        "volume24hUsd": 55753201.20966319
-      },
-      {
-        "assetId": "c20000714_t0x5d3A12c42E5372B2CC3264AB3cdcF660a1555238",
-        "name": "AriaAI",
-        "symbol": "ARIA",
-        "chain": "bsc",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38102.png",
-        "priceUsd": 0.5342925453949903,
-        "priceChange24h": 34.25553229,
-        "marketCapUsd": 166847688.87,
-        "volume24hUsd": 84618974.32756077
-      },
-      {
-        "assetId": "c20000714_t0x7ec43Cf65F1663F820427C62A5780b8f2E25593A",
-        "name": "LAB",
-        "symbol": "LAB",
-        "chain": "bsc",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/33223.png",
-        "priceUsd": 0.4958839505518176,
-        "priceChange24h": 17.65936524,
-        "marketCapUsd": 114251662.21,
-        "volume24hUsd": 38836870.45397321
-      },
-      {
-        "assetId": "c20000714_t0xb9E1Fd5A02D3A33b25a14d661414E6ED6954a721",
-        "name": "SOON",
-        "symbol": "SOON",
-        "chain": "bsc",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36542.png",
-        "priceUsd": 0.12028742096895396,
-        "priceChange24h": 12.65235847,
-        "marketCapUsd": 55468725.74,
-        "volume24hUsd": 10178824.04665696
-      },
-      {
-        "assetId": "c20000714_t0x8dEdf84656fa932157e27C060D8613824e7979e3",
-        "name": "STBL",
-        "symbol": "STBL",
-        "chain": "bsc",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38359.png",
-        "priceUsd": 0.03567925694676843,
-        "priceChange24h": 10.17352838,
-        "marketCapUsd": 17839628.47,
-        "volume24hUsd": 4984666.78473934
-      },
-      {
-        "assetId": "c20000714_t0x0A43fC31a73013089DF59194872Ecae4cAe14444",
-        "name": "4",
-        "symbol": "4",
-        "chain": "bsc",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38557.png",
-        "priceUsd": 0.018048018144242825,
-        "priceChange24h": 10.0381961,
-        "marketCapUsd": 18048018.14,
-        "volume24hUsd": 13021415.28954209
-      },
-      {
-        "assetId": "c20000714_t0x5b73A93b4E5e4f1FD27D8b3F8C97D69908b5E284",
-        "name": "Four",
-        "symbol": "FORM",
-        "chain": "bsc",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/23635.png",
-        "priceUsd": 0.22538653289760122,
-        "priceChange24h": 8.18998852,
-        "marketCapUsd": 86067736.66,
-        "volume24hUsd": 20377838.47669977
-      },
-      {
-        "assetId": "c20000714_t0x92aa03137385F18539301349dcfC9EbC923fFb10",
-        "name": "SKYAI",
-        "symbol": "SKYAI",
-        "chain": "bsc",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36300.png",
-        "priceUsd": 0.0733846390851531,
-        "priceChange24h": 6.10463991,
-        "marketCapUsd": 73384639.09,
-        "volume24hUsd": 7427321.19453497
-      },
-      {
-        "assetId": "c20000714_t0x53EC33Cd4fA46b9ecED9cA3f6dB626C5FfCd55cC",
-        "name": "DeAgentAI",
-        "symbol": "AIA",
-        "chain": "bsc",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38430.png",
-        "priceUsd": 0.14817638081947557,
-        "priceChange24h": 5.03026952,
-        "marketCapUsd": 27998149.42,
-        "volume24hUsd": 12891973.01579264
-      },
-      {
-        "assetId": "c20000714_t0xFf7d6A96ae471BbCD7713aF9CB1fEeB16cf56B41",
-        "name": "Bedrock",
-        "symbol": "BR",
-        "chain": "bsc",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/smartchain/assets/0xFf7d6A96ae471BbCD7713aF9CB1fEeB16cf56B41/logo.png",
-        "priceUsd": 0.11716801847307431,
-        "priceChange24h": 4.27758005,
-        "marketCapUsd": 30610144.83,
-        "volume24hUsd": 3621497.56701444
-      }
-    ],
-    "sol": [
-      {
-        "assetId": "c501_tHgBRWfYxEfvPhtqkaeymCQtHCrKE46qQ43pKe8HCpump",
-        "name": "Bertram The Pomeranian",
-        "symbol": "BERT",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/HgBRWfYxEfvPhtqkaeymCQtHCrKE46qQ43pKe8HCpump/logo.png",
-        "priceUsd": 0.009426760896706363,
-        "priceChange24h": 10.41512053,
-        "marketCapUsd": 9113314.86,
-        "volume24hUsd": 1472328.59492899
-      },
-      {
-        "assetId": "c501_tGrass7B4RdKfBCjTKgSqnXkqjwiGvQyFbuSCUJr3XXjs",
-        "name": "Grass",
-        "symbol": "Grass",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/Grass7B4RdKfBCjTKgSqnXkqjwiGvQyFbuSCUJr3XXjs/logo.png",
-        "priceUsd": 0.34432399705796274,
-        "priceChange24h": 9.48805877,
-        "marketCapUsd": 83982375.84,
-        "volume24hUsd": 18255187.77955763
+        "priceUsd": 0.07330704483555855,
+        "priceChange24h": 6.67071369,
+        "marketCapUsd": 73307044.84,
+        "volume24hUsd": 6885578.80666638
       },
       {
         "assetId": "c501_t9PR7nCP9DpcUotnDPVLUBUZKu5WAYkwrCUx9wDnSpump",
@@ -254,133 +85,111 @@
         "symbol": "Ban",
         "chain": "solana",
         "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/9PR7nCP9DpcUotnDPVLUBUZKu5WAYkwrCUx9wDnSpump/logo.png",
-        "priceUsd": 0.05773809264229502,
-        "priceChange24h": 5.63592955,
-        "marketCapUsd": 57735890.45,
-        "volume24hUsd": 5533953.79606868
+        "priceUsd": 0.057600895065151834,
+        "priceChange24h": 5.83021602,
+        "marketCapUsd": 57598698.11,
+        "volume24hUsd": 5597276.45825597
       },
       {
-        "assetId": "c501_t9wX6Qz1Y5YQe71dfnFYFfZYXZhKqjYKQwdqfrRkmYUSX",
-        "name": "GMX",
-        "symbol": "GMX",
-        "chain": "solana",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/11857.png",
-        "priceUsd": 5.997816708716061,
-        "priceChange24h": 5.29661772,
-        "marketCapUsd": 62278569.56,
-        "volume24hUsd": 7665711.34073048
+        "assetId": "c20000714_t0x0DF0587216a4a1bB7d5082fdc491d93d2dD4B413",
+        "name": "Cheems",
+        "symbol": "Cheems",
+        "chain": "bsc",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/smartchain/assets/0x0DF0587216a4a1bB7d5082fdc491d93d2dD4B413/logo.png",
+        "priceUsd": 4.6932622817042325e-7,
+        "priceChange24h": 4.64432037,
+        "marketCapUsd": 87996337.47,
+        "volume24hUsd": 2266839.01414299
       },
       {
-        "assetId": "c501_t4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
-        "name": "Raydium",
-        "symbol": "RAY",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R/logo.png",
-        "priceUsd": 0.6708712006094134,
-        "priceChange24h": 5.16978277,
-        "marketCapUsd": 180263103.83,
-        "volume24hUsd": 46601613.87504806
-      },
-      {
-        "assetId": "c501_tAiXxRGmRc5oDiFXbEeRX9obPpr3Zir7rks1ef2NjddiF",
-        "name": "Ai Xovia",
-        "symbol": "AIX",
-        "chain": "solana",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/37257.png",
-        "priceUsd": 1.999184104046749,
-        "priceChange24h": 4.2331236,
-        "marketCapUsd": 7244153.56,
-        "volume24hUsd": 1383672.45920116
-      },
-      {
-        "assetId": "c501_tDriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7",
-        "name": "DRIFT",
-        "symbol": "DRIFT",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7/logo.png",
-        "priceUsd": 0.028956224734537694,
-        "priceChange24h": 3.50960803,
-        "marketCapUsd": 17707189.63,
-        "volume24hUsd": 15889868.86253271
-      },
-      {
-        "assetId": "c501_t2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv",
-        "name": "Pudgy Penguins",
-        "symbol": "PENGU",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv/logo.png",
-        "priceUsd": 0.006875085395964131,
-        "priceChange24h": 3.46496619,
-        "marketCapUsd": 432170591.14,
-        "volume24hUsd": 113732423.19273545
-      },
-      {
-        "assetId": "c501_tXsueG8BtpquVJX9LVLLEGuViXUungE6WmK5YZ3p3bd1",
-        "name": "Circle tokenized stock (xStock)",
-        "symbol": "CRCLX",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/XsueG8BtpquVJX9LVLLEGuViXUungE6WmK5YZ3p3bd1/logo.png",
-        "priceUsd": 88.0019188654496,
-        "priceChange24h": 3.04033439,
-        "marketCapUsd": 149199455.38,
-        "volume24hUsd": 20111817.31051316
-      },
-      {
-        "assetId": "c501_t7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr",
-        "name": "POPCAT",
-        "symbol": "POPCAT",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr/logo.png",
-        "priceUsd": 0.05267675757049071,
-        "priceChange24h": 2.91656606,
-        "marketCapUsd": 51619914.55,
-        "volume24hUsd": 11343058.61918091
+        "assetId": "c60_t0xE0f63A424a4439cBE457D80E4f4b51aD25b2c56C",
+        "name": "SPX6900",
+        "symbol": "SPX",
+        "chain": "ethereum",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/ethereum/assets/0xE0f63A424a4439cBE457D80E4f4b51aD25b2c56C/logo.png",
+        "priceUsd": 0.3255029990468784,
+        "priceChange24h": 4.35115251,
+        "marketCapUsd": 303041042.91,
+        "volume24hUsd": 7098052.90529873
       }
     ],
-    "ai": [
+    "bnb": [
       {
-        "assetId": "c501_t8x5VqbHA8D7NkD52uNuS5nnt3PwA8pLD34ymskeSo2Wn",
-        "name": "Zerebro",
-        "symbol": "ZEREBRO",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/8x5VqbHA8D7NkD52uNuS5nnt3PwA8pLD34ymskeSo2Wn/logo.png",
-        "priceUsd": 0.010121757001382183,
-        "priceChange24h": 21.07527716,
-        "marketCapUsd": 10121255.49,
-        "volume24hUsd": 12131917.69594768
+        "assetId": "c20000714_t0x5d3A12c42E5372B2CC3264AB3cdcF660a1555238",
+        "name": "AriaAI",
+        "symbol": "ARIA",
+        "chain": "bsc",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38102.png",
+        "priceUsd": 0.6093176415195292,
+        "priceChange24h": 61.80771936,
+        "marketCapUsd": 190276359.18,
+        "volume24hUsd": 79646980.50594099
       },
       {
-        "assetId": "c60_t0x58b6A8A3302369DAEc383334672404Ee733aB239",
-        "name": "Livepeer Token",
-        "symbol": "LPT",
-        "chain": "ethereum",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/ethereum/assets/0x58b6A8A3302369DAEc383334672404Ee733aB239/logo.png",
-        "priceUsd": 2.2994193710351327,
-        "priceChange24h": 13.68206396,
-        "marketCapUsd": 114255744.62,
-        "volume24hUsd": 143952327.11412948
+        "assetId": "c20000714_t0x924fa68a0FC644485b8df8AbfA0A41C2e7744444",
+        "name": "币安人生",
+        "symbol": "币安人生",
+        "chain": "bsc",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38590.png",
+        "priceUsd": 0.11859564958391472,
+        "priceChange24h": 47.52172357,
+        "marketCapUsd": 118595649.58,
+        "volume24hUsd": 58025986.48075853
       },
       {
-        "assetId": "c60_t0xde4EE8057785A7e8e800Db58F9784845A5C2Cbd6",
-        "name": "DeXe",
-        "symbol": "DEXE",
-        "chain": "ethereum",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/ethereum/assets/0xde4EE8057785A7e8e800Db58F9784845A5C2Cbd6/logo.png",
-        "priceUsd": 9.3716565107057,
-        "priceChange24h": 11.14363611,
-        "marketCapUsd": 784723298.7,
-        "volume24hUsd": 35918233.05849773
+        "assetId": "c20000714_t0x0F0df6cB17ee5E883eddFEf9153fC6036BDB4e37",
+        "name": "BNB Attestation Service",
+        "symbol": "BAS",
+        "chain": "bsc",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/37387.png",
+        "priceUsd": 0.008835207147312228,
+        "priceChange24h": 31.89727703,
+        "marketCapUsd": 22088017.87,
+        "volume24hUsd": 19661757.52555501
       },
       {
-        "assetId": "c501_tGrass7B4RdKfBCjTKgSqnXkqjwiGvQyFbuSCUJr3XXjs",
-        "name": "Grass",
-        "symbol": "Grass",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/Grass7B4RdKfBCjTKgSqnXkqjwiGvQyFbuSCUJr3XXjs/logo.png",
-        "priceUsd": 0.34432399705796274,
-        "priceChange24h": 9.48805877,
-        "marketCapUsd": 83982375.84,
-        "volume24hUsd": 18255187.77955763
+        "assetId": "c20000714_t0x7ec43Cf65F1663F820427C62A5780b8f2E25593A",
+        "name": "LAB",
+        "symbol": "LAB",
+        "chain": "bsc",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/33223.png",
+        "priceUsd": 0.5131216522164783,
+        "priceChange24h": 27.41534271,
+        "marketCapUsd": 118223228.67,
+        "volume24hUsd": 39315600.64173079
+      },
+      {
+        "assetId": "c20000714_t0x2c3a8Ee94dDD97244a93Bc48298f97d2C412F7Db",
+        "name": "AKEDO",
+        "symbol": "AKE",
+        "chain": "bsc",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38127.png",
+        "priceUsd": 0.0004685477708199608,
+        "priceChange24h": 20.24005524,
+        "marketCapUsd": 10681132.12,
+        "volume24hUsd": 7047842.91567686
+      },
+      {
+        "assetId": "c20000714_t0x0A43fC31a73013089DF59194872Ecae4cAe14444",
+        "name": "4",
+        "symbol": "4",
+        "chain": "bsc",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38557.png",
+        "priceUsd": 0.017800160248766107,
+        "priceChange24h": 8.07670088,
+        "marketCapUsd": 17800160.25,
+        "volume24hUsd": 12679792.95227297
+      },
+      {
+        "assetId": "c20000714_t0x20d6015660b3fe52e6690a889b5C51F69902cE0e",
+        "name": "Giggle Fund",
+        "symbol": "GIGGLE",
+        "chain": "bsc",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38470.png",
+        "priceUsd": 27.797728875641113,
+        "priceChange24h": 7.68372397,
+        "marketCapUsd": 27584181.76,
+        "volume24hUsd": 20999657.28243278
       },
       {
         "assetId": "c20000714_t0x92aa03137385F18539301349dcfC9EbC923fFb10",
@@ -388,54 +197,21 @@
         "symbol": "SKYAI",
         "chain": "bsc",
         "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36300.png",
-        "priceUsd": 0.0733846390851531,
-        "priceChange24h": 6.10463991,
-        "marketCapUsd": 73384639.09,
-        "volume24hUsd": 7427321.19453497
+        "priceUsd": 0.07330704483555855,
+        "priceChange24h": 6.67071369,
+        "marketCapUsd": 73307044.84,
+        "volume24hUsd": 6885578.80666638
       },
       {
-        "assetId": "c20000714_t0x53EC33Cd4fA46b9ecED9cA3f6dB626C5FfCd55cC",
-        "name": "DeAgentAI",
-        "symbol": "AIA",
+        "assetId": "c20000714_t0x5b73A93b4E5e4f1FD27D8b3F8C97D69908b5E284",
+        "name": "Four",
+        "symbol": "FORM",
         "chain": "bsc",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38430.png",
-        "priceUsd": 0.14817638081947557,
-        "priceChange24h": 5.03026952,
-        "marketCapUsd": 27998149.42,
-        "volume24hUsd": 12891973.01579264
-      },
-      {
-        "assetId": "c60_t0x40e3d1A4B2C47d9AA61261F5606136ef73E28042",
-        "name": "OpenServ",
-        "symbol": "SERV",
-        "chain": "ethereum",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/33964.png",
-        "priceUsd": 0.019076179834706386,
-        "priceChange24h": 4.91335734,
-        "marketCapUsd": 14307134.88,
-        "volume24hUsd": 2983044.45400017
-      },
-      {
-        "assetId": "c20000714_t0xF00600eBC7633462BC4F9C61eA2cE99F5AAEBd4a",
-        "name": "Oasis",
-        "symbol": "ROSE",
-        "chain": "bsc",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/7653.png",
-        "priceUsd": 0.010591541879055567,
-        "priceChange24h": 4.22858772,
-        "marketCapUsd": 79989250.29,
-        "volume24hUsd": 8486343.47452906
-      },
-      {
-        "assetId": "c60_t0xe28b3B32B6c345A34Ff64674606124Dd5Aceca30",
-        "name": "Injective",
-        "symbol": "INJ",
-        "chain": "ethereum",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/ethereum/assets/0xe28b3B32B6c345A34Ff64674606124Dd5Aceca30/logo.png",
-        "priceUsd": 3.0647631635057864,
-        "priceChange24h": 2.74877111,
-        "marketCapUsd": 306387240.27,
-        "volume24hUsd": 61096449.66976223
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/23635.png",
+        "priceUsd": 0.22203769771957715,
+        "priceChange24h": 5.61697901,
+        "marketCapUsd": 84788926.17,
+        "volume24hUsd": 24870080.01608835
       },
       {
         "assetId": "c20000714_t0xF3d5b4c34Ed623478cc5141861776E6cf7AE3A1E",
@@ -443,10 +219,234 @@
         "symbol": "KGEN",
         "chain": "bsc",
         "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/smartchain/assets/0xF3d5b4c34Ed623478cc5141861776E6cf7AE3A1E/logo.png",
-        "priceUsd": 0.16183637311956078,
-        "priceChange24h": 2.7041873,
-        "marketCapUsd": 34160832.86,
-        "volume24hUsd": 3462348.03560469
+        "priceUsd": 0.16740593298236983,
+        "priceChange24h": 4.20885189,
+        "marketCapUsd": 35336469.71,
+        "volume24hUsd": 3574667.19077994
+      }
+    ],
+    "sol": [
+      {
+        "assetId": "c501_tDf6yfrKC8kZE3KNkrHERKzAetSxbrWeniQfyJY4Jpump",
+        "name": "Just a chill guy",
+        "symbol": "CHILLGUY",
+        "chain": "solana",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/Df6yfrKC8kZE3KNkrHERKzAetSxbrWeniQfyJY4Jpump/logo.png",
+        "priceUsd": 0.013075581592706602,
+        "priceChange24h": 30.6911893,
+        "marketCapUsd": 13074870.05,
+        "volume24hUsd": 13385150.08503758
+      },
+      {
+        "assetId": "c501_t5UUH9RTDiSpq6HKS6bp4NdU9PNJpXRXuiw6ShBTBhgH2",
+        "name": "TROLL (SOL)",
+        "symbol": "TROLL",
+        "chain": "solana",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36313.png",
+        "priceUsd": 0.015477323383587469,
+        "priceChange24h": 29.88028704,
+        "marketCapUsd": 15460026.3,
+        "volume24hUsd": 2064845.23681911
+      },
+      {
+        "assetId": "c501_t8x5VqbHA8D7NkD52uNuS5nnt3PwA8pLD34ymskeSo2Wn",
+        "name": "Zerebro",
+        "symbol": "ZEREBRO",
+        "chain": "solana",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/8x5VqbHA8D7NkD52uNuS5nnt3PwA8pLD34ymskeSo2Wn/logo.png",
+        "priceUsd": 0.010194707086172195,
+        "priceChange24h": 22.35795343,
+        "marketCapUsd": 10194201.96,
+        "volume24hUsd": 12373940.60658632
+      },
+      {
+        "assetId": "c501_tDz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk",
+        "name": "Useless Coin",
+        "symbol": "USELESS",
+        "chain": "solana",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36828.png",
+        "priceUsd": 0.042800165064863685,
+        "priceChange24h": 13.83752251,
+        "marketCapUsd": 42761055.82,
+        "volume24hUsd": 12452103.73856408
+      },
+      {
+        "assetId": "c501_tDriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7",
+        "name": "DRIFT",
+        "symbol": "DRIFT",
+        "chain": "solana",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7/logo.png",
+        "priceUsd": 0.030190539082832146,
+        "priceChange24h": 9.98034803,
+        "marketCapUsd": 18461992.39,
+        "volume24hUsd": 15853672.45295544
+      },
+      {
+        "assetId": "c501_tHgBRWfYxEfvPhtqkaeymCQtHCrKE46qQ43pKe8HCpump",
+        "name": "Bertram The Pomeranian",
+        "symbol": "BERT",
+        "chain": "solana",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/HgBRWfYxEfvPhtqkaeymCQtHCrKE46qQ43pKe8HCpump/logo.png",
+        "priceUsd": 0.009457042844781261,
+        "priceChange24h": 9.6419417,
+        "marketCapUsd": 9142589.91,
+        "volume24hUsd": 1731128.35617093
+      },
+      {
+        "assetId": "c501_tGrass7B4RdKfBCjTKgSqnXkqjwiGvQyFbuSCUJr3XXjs",
+        "name": "Grass",
+        "symbol": "Grass",
+        "chain": "solana",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/Grass7B4RdKfBCjTKgSqnXkqjwiGvQyFbuSCUJr3XXjs/logo.png",
+        "priceUsd": 0.34329923153587555,
+        "priceChange24h": 5.88660762,
+        "marketCapUsd": 83732430.31,
+        "volume24hUsd": 18287015.572817
+      },
+      {
+        "assetId": "c501_t9PR7nCP9DpcUotnDPVLUBUZKu5WAYkwrCUx9wDnSpump",
+        "name": "Comedian",
+        "symbol": "Ban",
+        "chain": "solana",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/9PR7nCP9DpcUotnDPVLUBUZKu5WAYkwrCUx9wDnSpump/logo.png",
+        "priceUsd": 0.057600895065151834,
+        "priceChange24h": 5.83021602,
+        "marketCapUsd": 57598698.11,
+        "volume24hUsd": 5597276.45825597
+      },
+      {
+        "assetId": "c501_tDitHyRMQiSDhn5cnKMJV2CDDt6sVct96YrECiM49pump",
+        "name": "Housecoin",
+        "symbol": "HOUSE",
+        "chain": "solana",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36356.png",
+        "priceUsd": 0.0017568687214996933,
+        "priceChange24h": 5.6229518,
+        "marketCapUsd": 1754387.6,
+        "volume24hUsd": 2118611.95657505
+      },
+      {
+        "assetId": "c501_t9wX6Qz1Y5YQe71dfnFYFfZYXZhKqjYKQwdqfrRkmYUSX",
+        "name": "GMX",
+        "symbol": "GMX",
+        "chain": "solana",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/11857.png",
+        "priceUsd": 6.096224553148819,
+        "priceChange24h": 5.49310555,
+        "marketCapUsd": 63300414.59,
+        "volume24hUsd": 7455875.30263327
+      }
+    ],
+    "ai": [
+      {
+        "assetId": "c60_t0xde4EE8057785A7e8e800Db58F9784845A5C2Cbd6",
+        "name": "DeXe",
+        "symbol": "DEXE",
+        "chain": "ethereum",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/ethereum/assets/0xde4EE8057785A7e8e800Db58F9784845A5C2Cbd6/logo.png",
+        "priceUsd": 9.34863639873598,
+        "priceChange24h": 12.65068353,
+        "marketCapUsd": 782795739.98,
+        "volume24hUsd": 36830554.74594228
+      },
+      {
+        "assetId": "c60_t0x40e3d1A4B2C47d9AA61261F5606136ef73E28042",
+        "name": "OpenServ",
+        "symbol": "SERV",
+        "chain": "ethereum",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/33964.png",
+        "priceUsd": 0.019483432878527288,
+        "priceChange24h": 6.692818,
+        "marketCapUsd": 14612574.66,
+        "volume24hUsd": 3214811.12032617
+      },
+      {
+        "assetId": "c20000714_t0x92aa03137385F18539301349dcfC9EbC923fFb10",
+        "name": "SKYAI",
+        "symbol": "SKYAI",
+        "chain": "bsc",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36300.png",
+        "priceUsd": 0.07330704483555855,
+        "priceChange24h": 6.67071369,
+        "marketCapUsd": 73307044.84,
+        "volume24hUsd": 6885578.80666638
+      },
+      {
+        "assetId": "c60_t0xf94e7d0710709388bCe3161C32B4eEA56d3f91CC",
+        "name": "Destra Network",
+        "symbol": "DSync",
+        "chain": "ethereum",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/ethereum/assets/0xf94e7d0710709388bCe3161C32B4eEA56d3f91CC/logo.png",
+        "priceUsd": 0.016320531615167683,
+        "priceChange24h": 6.09019073,
+        "marketCapUsd": 15911664.93,
+        "volume24hUsd": 2695657.6446574
+      },
+      {
+        "assetId": "c501_tGrass7B4RdKfBCjTKgSqnXkqjwiGvQyFbuSCUJr3XXjs",
+        "name": "Grass",
+        "symbol": "Grass",
+        "chain": "solana",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/Grass7B4RdKfBCjTKgSqnXkqjwiGvQyFbuSCUJr3XXjs/logo.png",
+        "priceUsd": 0.34329923153587555,
+        "priceChange24h": 5.88660762,
+        "marketCapUsd": 83732430.31,
+        "volume24hUsd": 18287015.572817
+      },
+      {
+        "assetId": "c20000714_t0xF3d5b4c34Ed623478cc5141861776E6cf7AE3A1E",
+        "name": "KGEN",
+        "symbol": "KGEN",
+        "chain": "bsc",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/smartchain/assets/0xF3d5b4c34Ed623478cc5141861776E6cf7AE3A1E/logo.png",
+        "priceUsd": 0.16740593298236983,
+        "priceChange24h": 4.20885189,
+        "marketCapUsd": 35336469.71,
+        "volume24hUsd": 3574667.19077994
+      },
+      {
+        "assetId": "c501_t61V8vBaqAGMpgDQi4JcAwo1dmBGHsyhzodcPqnEVpump",
+        "name": "AI Rig Complex",
+        "symbol": "arc",
+        "chain": "solana",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/61V8vBaqAGMpgDQi4JcAwo1dmBGHsyhzodcPqnEVpump/logo.png",
+        "priceUsd": 0.07113325213744802,
+        "priceChange24h": 4.03476574,
+        "marketCapUsd": 71133132.56,
+        "volume24hUsd": 9130696.53701471
+      },
+      {
+        "assetId": "c20000714_t0xF00600eBC7633462BC4F9C61eA2cE99F5AAEBd4a",
+        "name": "Oasis",
+        "symbol": "ROSE",
+        "chain": "bsc",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/7653.png",
+        "priceUsd": 0.010463970171255572,
+        "priceChange24h": 2.79012861,
+        "marketCapUsd": 79025872.81,
+        "volume24hUsd": 8226113.4477318
+      },
+      {
+        "assetId": "c501_tGJAFwWjJ3vnTsrQVabjBVK2TYB1YtRCQXRDfDgUnpump",
+        "name": "The AI Prophecy",
+        "symbol": "ACT",
+        "chain": "solana",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/GJAFwWjJ3vnTsrQVabjBVK2TYB1YtRCQXRDfDgUnpump/logo.png",
+        "priceUsd": 0.012817346872111448,
+        "priceChange24h": 2.63018126,
+        "marketCapUsd": 12153940.7,
+        "volume24hUsd": 9201922.4199862
+      },
+      {
+        "assetId": "c60_t0x56A3BA04E95d34268A19b2a4474DC979baBDaf76",
+        "name": "Sentient",
+        "symbol": "SENT",
+        "chain": "ethereum",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/38868.png",
+        "priceUsd": 0.016282523118373693,
+        "priceChange24h": 2.42250869,
+        "marketCapUsd": 117850930.31,
+        "volume24hUsd": 22797814.5174123
       }
     ],
     "pumpfun": [
@@ -456,10 +456,10 @@
         "symbol": "CHILLGUY",
         "chain": "solana",
         "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/Df6yfrKC8kZE3KNkrHERKzAetSxbrWeniQfyJY4Jpump/logo.png",
-        "priceUsd": 0.013099286677530535,
-        "priceChange24h": 28.15085245,
-        "marketCapUsd": 13098573.84,
-        "volume24hUsd": 13268828.53328816
+        "priceUsd": 0.013075581592706602,
+        "priceChange24h": 30.6911893,
+        "marketCapUsd": 13074870.05,
+        "volume24hUsd": 13385150.08503758
       },
       {
         "assetId": "c501_t5UUH9RTDiSpq6HKS6bp4NdU9PNJpXRXuiw6ShBTBhgH2",
@@ -467,21 +467,10 @@
         "symbol": "TROLL",
         "chain": "solana",
         "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36313.png",
-        "priceUsd": 0.013502062110145008,
-        "priceChange24h": 14.67585442,
-        "marketCapUsd": 13486972.53,
-        "volume24hUsd": 1038351.26307123
-      },
-      {
-        "assetId": "c501_tHgBRWfYxEfvPhtqkaeymCQtHCrKE46qQ43pKe8HCpump",
-        "name": "Bertram The Pomeranian",
-        "symbol": "BERT",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/HgBRWfYxEfvPhtqkaeymCQtHCrKE46qQ43pKe8HCpump/logo.png",
-        "priceUsd": 0.009426760896706363,
-        "priceChange24h": 10.41512053,
-        "marketCapUsd": 9113314.86,
-        "volume24hUsd": 1472328.59492899
+        "priceUsd": 0.015477323383587469,
+        "priceChange24h": 29.88028704,
+        "marketCapUsd": 15460026.3,
+        "volume24hUsd": 2064845.23681911
       },
       {
         "assetId": "c501_tDtR4D9FtVoTX2569gaL837ZgrB6wNjj6tkmnX9Rdk9B2",
@@ -489,10 +478,21 @@
         "symbol": "aura",
         "chain": "solana",
         "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/DtR4D9FtVoTX2569gaL837ZgrB6wNjj6tkmnX9Rdk9B2/logo.png",
-        "priceUsd": 0.00832853125130569,
-        "priceChange24h": 8.78471251,
-        "marketCapUsd": 8022779.38,
-        "volume24hUsd": 707958.10538343
+        "priceUsd": 0.008450818940675571,
+        "priceChange24h": 10.75694558,
+        "marketCapUsd": 8140577.72,
+        "volume24hUsd": 722335.09838629
+      },
+      {
+        "assetId": "c501_tHgBRWfYxEfvPhtqkaeymCQtHCrKE46qQ43pKe8HCpump",
+        "name": "Bertram The Pomeranian",
+        "symbol": "BERT",
+        "chain": "solana",
+        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/HgBRWfYxEfvPhtqkaeymCQtHCrKE46qQ43pKe8HCpump/logo.png",
+        "priceUsd": 0.009457042844781261,
+        "priceChange24h": 9.6419417,
+        "marketCapUsd": 9142589.91,
+        "volume24hUsd": 1731128.35617093
       },
       {
         "assetId": "c501_ty1AZt42vceCmStjW4zetK3VoNarC1VxJ5iDjpiupump",
@@ -500,21 +500,21 @@
         "symbol": "FARTBOY",
         "chain": "solana",
         "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/y1AZt42vceCmStjW4zetK3VoNarC1VxJ5iDjpiupump/logo.png",
-        "priceUsd": 0.00792725695319135,
-        "priceChange24h": 7.71997418,
-        "marketCapUsd": 7922821.31,
-        "volume24hUsd": 389220.01526498
+        "priceUsd": 0.007955886823100394,
+        "priceChange24h": 8.05039204,
+        "marketCapUsd": 7951435.16,
+        "volume24hUsd": 449067.23800159
       },
       {
-        "assetId": "c501_teL5fUxj2J4CiQsmW85k5FG9DvuQjjUoBHoQBi2Kpump",
-        "name": "Unicorn Fart Dust",
-        "symbol": "UFD",
+        "assetId": "c501_t38PgzpJYu2HkiYvV8qePFakB8tuobPdGm2FFEn7Dpump",
+        "name": "New XAI gork",
+        "symbol": "gork",
         "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/eL5fUxj2J4CiQsmW85k5FG9DvuQjjUoBHoQBi2Kpump/logo.png",
-        "priceUsd": 0.008884777483597029,
-        "priceChange24h": 6.12253356,
-        "marketCapUsd": 8884777.48,
-        "volume24hUsd": 1919991.61454095
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36390.png",
+        "priceUsd": 0.0017482919749003253,
+        "priceChange24h": 6.47227642,
+        "marketCapUsd": 1748281.3,
+        "volume24hUsd": 246169.23806126
       },
       {
         "assetId": "c501_t9PR7nCP9DpcUotnDPVLUBUZKu5WAYkwrCUx9wDnSpump",
@@ -522,32 +522,10 @@
         "symbol": "Ban",
         "chain": "solana",
         "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/9PR7nCP9DpcUotnDPVLUBUZKu5WAYkwrCUx9wDnSpump/logo.png",
-        "priceUsd": 0.05773809264229502,
-        "priceChange24h": 5.63592955,
-        "marketCapUsd": 57735890.45,
-        "volume24hUsd": 5533953.79606868
-      },
-      {
-        "assetId": "c501_t1xdtu7y3LkkrVCAbm5KGKfYzq1qgKhxxk5AaJBqpump",
-        "name": "Mansory",
-        "symbol": "MNSRY",
-        "chain": "solana",
-        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36078.png",
-        "priceUsd": 0.009025543102902071,
-        "priceChange24h": 5.02355616,
-        "marketCapUsd": 8122882.54,
-        "volume24hUsd": 377356.9767871
-      },
-      {
-        "assetId": "c501_t4Cnk9EPnW5ixfLZatCPJjDB1PUtcRpVVgTQukm9epump",
-        "name": "DADDY TATE",
-        "symbol": "DADDY",
-        "chain": "solana",
-        "logoUrl": "https://assets-cdn.trustwallet.com/blockchains/solana/assets/4Cnk9EPnW5ixfLZatCPJjDB1PUtcRpVVgTQukm9epump/logo.png",
-        "priceUsd": 0.010842877196949714,
-        "priceChange24h": 4.63039116,
-        "marketCapUsd": 6501615.88,
-        "volume24hUsd": 430920.82262631
+        "priceUsd": 0.057600895065151834,
+        "priceChange24h": 5.83021602,
+        "marketCapUsd": 57598698.11,
+        "volume24hUsd": 5597276.45825597
       },
       {
         "assetId": "c501_tDitHyRMQiSDhn5cnKMJV2CDDt6sVct96YrECiM49pump",
@@ -555,10 +533,32 @@
         "symbol": "HOUSE",
         "chain": "solana",
         "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36356.png",
-        "priceUsd": 0.001745589264604996,
-        "priceChange24h": 4.29111046,
-        "marketCapUsd": 1743124.07,
-        "volume24hUsd": 2095530.78363248
+        "priceUsd": 0.0017568687214996933,
+        "priceChange24h": 5.6229518,
+        "marketCapUsd": 1754387.6,
+        "volume24hUsd": 2118611.95657505
+      },
+      {
+        "assetId": "c501_t1xdtu7y3LkkrVCAbm5KGKfYzq1qgKhxxk5AaJBqpump",
+        "name": "Mansory",
+        "symbol": "MNSRY",
+        "chain": "solana",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/36078.png",
+        "priceUsd": 0.009037866063379855,
+        "priceChange24h": 5.16419625,
+        "marketCapUsd": 8133973.06,
+        "volume24hUsd": 381779.47469654
+      },
+      {
+        "assetId": "c501_tDQnkBM4eYYMnVE8Qy2K3BB7uts1fh2EwBVktEz6jpump",
+        "name": "DOWGE",
+        "symbol": "DJI6930",
+        "chain": "solana",
+        "logoUrl": "https://s2.coinmarketcap.com/static/img/coins/200x200/37279.png",
+        "priceUsd": 0.0038582205684075835,
+        "priceChange24h": 4.62765439,
+        "marketCapUsd": 3858138.1,
+        "volume24hUsd": 118435.72284854
       }
     ]
   }
