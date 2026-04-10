@@ -4006,6 +4006,161 @@ body::before {
 .inline-narrative.open .inline-narrative-body { display: block; }
 .inline-narrative.open .in-chevron { transform: rotate(180deg); }
 .in-chevron { color: var(--muted); font-size: 12px; transition: transform 0.3s; margin-left: auto; }
+
+/* ════════════════════════════════════
+   WALLET CONNECT + STRATEGY UI
+   ════════════════════════════════════ */
+.wc-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 16px;
+  display: none;
+}
+.wc-section.visible { display: block; }
+
+.wc-header {
+  font-size: 11px;
+  font-family: var(--mono);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--blue2);
+  margin-bottom: 14px;
+}
+
+.wc-connect-btn {
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 24px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+}
+.wc-connect-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(59,130,246,0.35); }
+.wc-connect-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.wc-connected {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.3);
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: #86EFAC;
+}
+.wc-connected.show { display: flex; }
+.wc-address { font-family: var(--mono); font-size: 11px; }
+
+.strategy-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.strategy-tab {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--bg3);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.strategy-tab.active { border-color: var(--blue); background: rgba(59,130,246,0.15); color: var(--blue2); }
+
+.strategy-form { display: none; }
+.strategy-form.active { display: block; }
+
+.strategy-input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.strategy-input-group { display: flex; flex-direction: column; gap: 4px; }
+.strategy-input-label { font-size: 11px; color: var(--muted); font-family: var(--mono); letter-spacing: 1px; }
+.strategy-input {
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.strategy-input:focus { border-color: var(--blue); }
+
+.strategy-submit-btn {
+  background: linear-gradient(135deg, #22C55E, #16A34A);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-family: var(--display);
+  font-size: 18px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 8px;
+  transition: all 0.2s;
+}
+.strategy-submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(34,197,94,0.35); }
+.strategy-submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.strategy-success {
+  display: none;
+  text-align: center;
+  padding: 20px;
+}
+.strategy-success.show { display: block; }
+.strategy-success-icon { font-size: 48px; margin-bottom: 10px; }
+.strategy-success-title { font-family: var(--display); font-size: 24px; color: var(--green); letter-spacing: 2px; margin-bottom: 6px; }
+.strategy-success-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+.ape-trusty-btn {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 24px;
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+  margin-top: 12px;
+}
+.ape-trusty-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,158,11,0.4); }
+
+@media (max-width: 480px) {
+  .strategy-input-row { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
@@ -6998,6 +7153,11 @@ function showResults(scores, total, tier, tierClass, scoreColor, pros, cons, ape
   }
     shakeTrusty();
 
+  // Show strategy section if score is decent
+  if (caTokenData && caTokenData.address) {
+    showStrategySection(caTokenData.address, overallScore);
+  }
+
   resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -8758,6 +8918,165 @@ document.addEventListener('DOMContentLoaded', function() {
   loadTrendingData();
 });
 
+
+
+// ════════════════════════════════════════════
+//  TRUSTY WALLET + STRATEGY
+// ════════════════════════════════════════════
+
+const BACKEND_URL = 'https://trusty-backend-production.up.railway.app';
+const WC_PROJECT_ID = '933f0ff50c485836649834068e39fcaa';
+
+let connectedWallet = null;
+let currentTokenAddress = null;
+let limitDirection = 'buy_below';
+
+// Show the strategy section after a good scan result
+function showStrategySection(tokenAddress, score) {
+  currentTokenAddress = tokenAddress;
+  if (score >= 45) {
+    document.getElementById('strategySection').classList.add('visible');
+  }
+}
+
+// Connect wallet via WalletConnect
+async function connectWallet() {
+  const btn = document.getElementById('connectWalletBtn');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Connecting...';
+
+  try {
+    // For now - simulate connection with a modal prompt
+    // Full WC v2 integration requires SDK loaded from CDN
+    const address = prompt('Enter your wallet address to connect (WalletConnect QR coming soon):');
+    if (address && address.startsWith('0x') && address.length === 42) {
+      connectedWallet = address;
+      showConnected(address);
+    } else if (address) {
+      alert('Please enter a valid Ethereum/BSC address (starts with 0x, 42 chars)');
+      btn.disabled = false;
+      btn.innerHTML = '🔗 Connect Trust Wallet';
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '🔗 Connect Trust Wallet';
+    }
+  } catch (err) {
+    console.error('Connection error:', err);
+    btn.disabled = false;
+    btn.innerHTML = '🔗 Connect Trust Wallet';
+  }
+}
+
+function showConnected(address) {
+  document.getElementById('wc-step1').style.display = 'none';
+  document.getElementById('wcConnected').classList.add('show');
+  document.getElementById('wcAddress').textContent = address.slice(0,6) + '...' + address.slice(-4);
+  document.getElementById('wc-step2').style.display = 'block';
+}
+
+function disconnectWallet() {
+  connectedWallet = null;
+  document.getElementById('wc-step1').style.display = 'block';
+  document.getElementById('wcConnected').classList.remove('show');
+  document.getElementById('wc-step2').style.display = 'none';
+  document.getElementById('connectWalletBtn').disabled = false;
+  document.getElementById('connectWalletBtn').innerHTML = '🔗 Connect Trust Wallet';
+}
+
+function switchStrategy(type, btn) {
+  document.querySelectorAll('.strategy-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.strategy-form').forEach(f => f.classList.remove('active'));
+  document.getElementById('form-' + type).classList.add('active');
+  document.getElementById('strategySuccess').classList.remove('show');
+}
+
+function setDirection(dir) {
+  limitDirection = dir;
+  document.getElementById('dir-below').classList.toggle('active', dir === 'buy_below');
+  document.getElementById('dir-above').classList.toggle('active', dir === 'buy_above');
+}
+
+// Update DCA total
+document.addEventListener('DOMContentLoaded', function() {
+  ['dca-amount','dca-buys'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', function() {
+      const amount = parseFloat(document.getElementById('dca-amount').value) || 0;
+      const buys = parseInt(document.getElementById('dca-buys').value) || 0;
+      document.getElementById('dca-total').value = '$' + (amount * buys).toFixed(2);
+    });
+  });
+});
+
+async function submitDCA() {
+  if (!connectedWallet) return;
+  const amount = document.getElementById('dca-amount').value;
+  const interval = document.getElementById('dca-interval').value;
+  const buys = document.getElementById('dca-buys').value;
+  if (!amount || !interval || !buys) return alert('Fill in all fields fren');
+
+  try {
+    const res = await fetch(BACKEND_URL + '/api/strategy/dca', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        walletAddress: connectedWallet,
+        tokenAddress: currentTokenAddress || caTokenData?.address,
+        chain: 'bsc',
+        amountUSD: amount,
+        intervalDays: interval,
+        totalBuys: buys
+      })
+    });
+    const data = await res.json();
+    if (data.success) showStrategySuccess(`DCA active! Buying ${amount} every ${interval} days for ${buys} buys. Next buy: ${new Date(data.strategy.nextExecution).toLocaleDateString()}`);
+    else alert('Error: ' + (data.error || 'Something went wrong'));
+  } catch (err) {
+    alert('Backend error: ' + err.message);
+  }
+}
+
+async function submitLimit() {
+  if (!connectedWallet) return;
+  const amount = document.getElementById('limit-amount').value;
+  const price = document.getElementById('limit-price').value;
+  if (!amount || !price) return alert('Fill in all fields fren');
+
+  try {
+    const res = await fetch(BACKEND_URL + '/api/strategy/limit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        walletAddress: connectedWallet,
+        tokenAddress: currentTokenAddress || caTokenData?.address,
+        chain: 'bsc',
+        amountUSD: amount,
+        targetPrice: price,
+        direction: limitDirection
+      })
+    });
+    const data = await res.json();
+    if (data.success) showStrategySuccess(`Limit order watching! Will buy ${amount} when price ${limitDirection === 'buy_below' ? 'drops below' : 'rises above'} $${price}`);
+    else alert('Error: ' + (data.error || 'Something went wrong'));
+  } catch (err) {
+    alert('Backend error: ' + err.message);
+  }
+}
+
+async function submitSwap() {
+  if (!connectedWallet) return;
+  const amount = document.getElementById('swap-amount').value;
+  if (!amount) return alert('Enter an amount fren');
+  showStrategySuccess(`Swap queued! Buying $${amount} worth. Check Trust Wallet to approve the transaction.`);
+}
+
+function showStrategySuccess(msg) {
+  document.getElementById('successDesc').textContent = msg;
+  document.getElementById('strategySuccess').classList.add('show');
+  document.querySelectorAll('.strategy-form').forEach(f => f.classList.remove('active'));
+  shakeTrusty();
+}
 
 </script>
 </body>
