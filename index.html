@@ -53,14 +53,15 @@ body::before {
   min-height: 100vh;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 24px 20px 80px;
-  gap: 24px;
+  padding: 24px 20px 60px;
+  gap: 0;
   position: relative;
 }
 
 .main-col {
   flex: 1;
   min-width: 0;
+  margin-right: 220px;
 }
 
 /* ── HEADER ── */
@@ -606,14 +607,17 @@ body::before {
 .trusty-sidebar {
   width: 200px;
   flex-shrink: 0;
-  position: sticky;
-  top: 24px;
+  position: fixed;
+  top: 20px;
+  right: calc((100vw - 1100px) / 2 + 10px);
   height: fit-content;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
-  align-self: flex-start;
+  z-index: 100;
 }
 
 .trusty-figure {
@@ -969,18 +973,15 @@ body::before {
 /* ── FOOTER ── */
 .app-footer {
   position: relative;
-  bottom: auto;
-  left: auto;
-  right: auto;
-  z-index: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 10px 20px;
-  background: rgba(5, 8, 15, 0.92);
-  backdrop-filter: blur(12px);
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  background: transparent;
   border-top: 1px solid var(--border);
-  gap: 28px;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 .footer-link {
@@ -1513,7 +1514,16 @@ body::before {
 /* ── MOBILE ── */
 @media (max-width: 600px) {
   .app { flex-direction: column; padding: 16px 14px 100px; }
-  .trusty-sidebar { width: 100%; flex-direction: row; align-items: flex-start; position: relative; top: 0; }
+  .trusty-sidebar { 
+    width: 100%; 
+    flex-direction: row; 
+    align-items: flex-start; 
+    position: relative; 
+    top: 0; 
+    right: auto;
+    max-height: none;
+  }
+  .main-col { margin-right: 0; }
   .trusty-figure { width: 80px; flex-shrink: 0; }
   #trustyFig { width: 140px; flex-shrink: 0; border-radius: 16px; display: block; margin: 0 auto; }
   .speech-bubble { border-radius: 4px 14px 14px 14px; }
