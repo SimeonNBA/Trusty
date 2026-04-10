@@ -4019,6 +4019,9 @@ body::before {
   margin-top: 16px;
   display: none;
 }
+.wc-section.visible {
+  display: block !important;
+}
 .wc-section.visible { display: block; }
 
 .wc-header {
@@ -9086,7 +9089,10 @@ let limitDirection = 'buy_below';
 function showStrategySection(tokenAddress, score) {
   currentTokenAddress = tokenAddress;
   var el = document.getElementById('strategySection');
-  if (el) el.classList.add('visible');
+  if (el) {
+    el.classList.add('visible');
+    el.style.display = 'block';
+  }
 }
 
 // Connect wallet via WalletConnect
@@ -9231,10 +9237,10 @@ function showStrategySuccess(msg) {
 
 // Show sidebar strategy after scan
 function showSidebarStrategy(tokenName, tokenAddress) {
-  const panel = document.getElementById('sidebarStrategy');
-  const nameEl = document.getElementById('sidebarTokenName');
+  var panel = document.getElementById('sidebarStrategy');
+  var nameEl = document.getElementById('sidebarTokenName');
   if (panel && nameEl) {
-    nameEl.innerHTML = '🪙 ' + (tokenName || tokenAddress.slice(0,6) + '...' + tokenAddress.slice(-4));
+    nameEl.innerHTML = '🪙 ' + (tokenName || (tokenAddress ? tokenAddress.slice(0,6) + '...' + tokenAddress.slice(-4) : 'Token'));
     panel.style.display = 'block';
   }
 }
