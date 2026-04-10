@@ -1514,7 +1514,7 @@ body::before {
   .app { flex-direction: column; padding: 16px 14px 100px; }
   .trusty-sidebar { width: 100%; flex-direction: row; align-items: flex-start; position: relative; top: 0; }
   .trusty-figure { width: 80px; flex-shrink: 0; }
-  #trustyFig { width: 80px; flex-shrink: 0; border-radius: 10px; }
+  #trustyFig { width: 140px; flex-shrink: 0; border-radius: 16px; display: block; margin: 0 auto; }
   .speech-bubble { border-radius: 4px 14px 14px 14px; }
   .age-grid { grid-template-columns: repeat(2, 1fr); }
   .result-grid { grid-template-columns: 1fr; }
@@ -3378,8 +3378,8 @@ body::before {
 
   /* ── SIDEBAR on mobile — compact row ── */
   .trusty-sidebar { gap: 8px; }
-  #trustyFig { width: 72px !important; height: 72px !important;
-               object-fit: contain; flex-shrink: 0; border-radius: 10px; }
+  #trustyFig { width: 140px !important; height: 140px !important;
+               object-fit: contain; flex-shrink: 0; border-radius: 16px; display: block; margin: 0 auto; }
   .speech-bubble { font-size: 11px; min-height: 56px; padding: 8px 10px; }
   .trusty-tip-label { font-size: 8px; }
   .glossary-btn { font-size: 11px; padding: 8px 10px; }
@@ -4161,6 +4161,55 @@ body::before {
 @media (max-width: 480px) {
   .strategy-input-row { grid-template-columns: 1fr; }
 }
+
+/* ── SIDEBAR STRATEGY ── */
+.sidebar-strategy {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 10px;
+  width: 100%;
+}
+.sidebar-strategy-title {
+  font-size: 10px;
+  font-family: var(--mono);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--blue2);
+  margin-bottom: 10px;
+}
+.sidebar-strategy-token {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sidebar-strat-btn {
+  width: 100%;
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sidebar-strat-btn:hover { border-color: var(--blue); color: var(--text); background: var(--card2); }
+.sidebar-strat-btn.dca { border-color: rgba(34,197,94,0.4); color: #86EFAC; background: rgba(34,197,94,0.08); }
+.sidebar-strat-btn.limit { border-color: rgba(251,191,36,0.4); color: #FDE68A; background: rgba(251,191,36,0.08); }
+.sidebar-strat-btn.swap { border-color: rgba(59,130,246,0.4); color: var(--blue2); background: rgba(59,130,246,0.08); }
 </style>
 </head>
 <body>
@@ -4857,6 +4906,21 @@ body::before {
       <span>🕐 RECENT SCANS</span>
       <span id="historyCount" style="background:var(--blue);color:white;border-radius:10px;padding:1px 7px;font-size:10px;font-family:var(--mono)">0</span>
     </button>
+
+    <!-- ── SIDEBAR STRATEGY ── -->
+    <div class="sidebar-strategy" id="sidebarStrategy" style="display:none;">
+      <div class="sidebar-strategy-title">🤖 APE WITH TRUSTY</div>
+      <div class="sidebar-strategy-token" id="sidebarTokenName">—</div>
+      <button class="sidebar-strat-btn dca" onclick="scrollToStrategy('dca')">
+        📈 DCA — Buy on schedule
+      </button>
+      <button class="sidebar-strat-btn limit" onclick="scrollToStrategy('limit')">
+        🎯 Limit — Buy at price
+      </button>
+      <button class="sidebar-strat-btn swap" onclick="scrollToStrategy('swap')">
+        ⚡ Swap — Buy now
+      </button>
+    </div>
 
     <div class="search-history-panel" id="searchHistoryPanel">
       <div class="sh-header">
@@ -7156,6 +7220,7 @@ function showResults(scores, total, tier, tierClass, scoreColor, pros, cons, ape
   // Show strategy section if score is decent
   if (caTokenData && caTokenData.address) {
     showStrategySection(caTokenData.address, overallScore);
+    showSidebarStrategy(caTokenData.name || caTokenData.symbol, caTokenData.address);
   }
 
   resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -9076,6 +9141,36 @@ function showStrategySuccess(msg) {
   document.getElementById('strategySuccess').classList.add('show');
   document.querySelectorAll('.strategy-form').forEach(f => f.classList.remove('active'));
   shakeTrusty();
+}
+
+
+// Show sidebar strategy after scan
+function showSidebarStrategy(tokenName, tokenAddress) {
+  const panel = document.getElementById('sidebarStrategy');
+  const nameEl = document.getElementById('sidebarTokenName');
+  if (panel && nameEl) {
+    nameEl.innerHTML = '🪙 ' + (tokenName || tokenAddress.slice(0,6) + '...' + tokenAddress.slice(-4));
+    panel.style.display = 'block';
+  }
+}
+
+function scrollToStrategy(type) {
+  // Switch to that strategy tab and scroll to it
+  const section = document.getElementById('strategySection');
+  if (section) {
+    section.classList.add('visible');
+    section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Switch to correct tab
+    const tabs = document.querySelectorAll('.strategy-tab');
+    const forms = document.querySelectorAll('.strategy-form');
+    tabs.forEach(t => t.classList.remove('active'));
+    forms.forEach(f => f.classList.remove('active'));
+    const typeMap = { dca: 0, limit: 1, swap: 2 };
+    const idx = typeMap[type] || 0;
+    if (tabs[idx]) tabs[idx].classList.add('active');
+    const targetForm = document.getElementById('form-' + type);
+    if (targetForm) targetForm.classList.add('active');
+  }
 }
 
 </script>
