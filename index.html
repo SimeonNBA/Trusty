@@ -6476,77 +6476,86 @@ body::before {
 
 
 
-<!-- WalletConnect Modal Sign (official CDN bundle) -->
-<script type="module">
-try {
-  const { WalletConnectModalSign } = await import(
-    "https://cdn.jsdelivr.net/npm/@walletconnect/modal-sign-html@2.7.0/dist/cdn/bundle.js"
-  );
+<!-- Wallet Connection: Trust Wallet extension + WalletConnect fallback -->
+<script>
+// Detect injected wallet (Trust Wallet, MetaMask, etc.)
+window._wcReady = true;
 
-  const projectId = '933f0ff50c485836649834068e39fcaa';
-
-  const web3modal = new WalletConnectModalSign({
-    projectId,
-    metadata: {
-      name: 'Trusty AI',
-      description: 'Meme Coin Scanner & Education',
-      url: 'https://trustyai.tech',
-      icons: ['https://trustyai.tech/favicon.ico']
-    },
-    modalOptions: {
-      themeMode: 'dark',
-      themeVariables: { '--wcm-accent-color': '#3B82F6' },
-    }
-  });
-
-  // Expose connect function
-  window._wcConnect = async function() {
+window._wcConnect = async function() {
+  // Method 1: Browser extension (Trust Wallet, MetaMask, etc.)
+  const provider = window.trustwallet || window.ethereum;
+  if (provider) {
     try {
-      const session = await web3modal.connect({
-        requiredNamespaces: {
-          eip155: {
-            methods: ['eth_sendTransaction', 'personal_sign'],
-            chains: ['eip155:56'],
-            events: ['chainChanged', 'accountsChanged']
+      console.log('🔗 Connecting via browser wallet...');
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
+      if (accounts && accounts.length > 0) {
+        const address = accounts[0];
+        // Try to switch to BSC
+        try {
+          await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x38' }] // BSC = 56 = 0x38
+          });
+        } catch (switchErr) {
+          // BSC not added, try to add it
+          if (switchErr.code === 4902) {
+            await provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x38',
+                chainName: 'BNB Smart Chain',
+                nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                rpcUrls: ['https://bsc-dataseed.binance.org'],
+                blockExplorerUrls: ['https://bscscan.com']
+              }]
+            });
           }
         }
-      });
-      // Extract address from session
-      const accounts = session.namespaces.eip155.accounts;
-      if (accounts && accounts.length > 0) {
-        // Format: "eip155:56:0xAddress"
-        const address = accounts[0].split(':')[2];
         window.connectedWallet = address;
-        window._wcSession = session;
         if (typeof window.showConnected === 'function') window.showConnected(address);
         console.log('✅ Wallet connected:', address);
+        return address;
       }
-      return session;
     } catch (err) {
-      console.error('Connection rejected or failed:', err);
-      return null;
+      console.error('Extension connection failed:', err);
+      if (err.code === 4001) return null; // User rejected
     }
-  };
+  }
 
-  // Expose disconnect function
-  window._wcDisconnect = async function() {
-    try {
-      if (window._wcSession) {
-        await web3modal.disconnect({
-          topic: window._wcSession.topic,
-          reason: { code: 6000, message: 'User disconnected' }
-        });
-      }
-    } catch(e) { console.error('Disconnect error:', e); }
-    window._wcSession = null;
-  };
+  // Method 2: No extension — prompt for manual entry (mobile users should use Trust Wallet browser)
+  var address = prompt(
+    'No wallet extension detected.\n\n' +
+    'Option 1: Install Trust Wallet extension for Chrome\n' +
+    'Option 2: Open trustyai.tech in Trust Wallet mobile browser\n\n' +
+    'Or paste your BSC wallet address below (0x...):'
+  );
+  if (address && address.startsWith('0x') && address.length === 42) {
+    window.connectedWallet = address;
+    if (typeof window.showConnected === 'function') window.showConnected(address);
+    return address;
+  }
+  return null;
+};
 
-  window._wcReady = true;
-  console.log('✅ WalletConnect SDK loaded');
-} catch (err) {
-  console.error('❌ WalletConnect failed to load:', err);
-  window._wcReady = false;
+window._wcDisconnect = async function() {
+  window.connectedWallet = null;
+};
+
+// Listen for account changes from extension
+if (window.trustwallet || window.ethereum) {
+  var p = window.trustwallet || window.ethereum;
+  p.on && p.on('accountsChanged', function(accounts) {
+    if (accounts.length === 0) {
+      if (typeof window.disconnectWalletUI === 'function') window.disconnectWalletUI();
+    } else {
+      window.connectedWallet = accounts[0];
+      if (typeof window.showConnected === 'function') window.showConnected(accounts[0]);
+    }
+  });
+  p.on && p.on('chainChanged', function() { console.log('Chain changed'); });
 }
+
+console.log('✅ Wallet connector ready', window.trustwallet ? '(Trust Wallet)' : window.ethereum ? '(MetaMask/Extension)' : '(Manual)');
 </script>
 
 <script>
@@ -9135,28 +9144,23 @@ function showStrategySection(tokenAddress, score) {
   currentTokenAddress = tokenAddress;
 }
 
-// Connect wallet via WalletConnect v2 modal
+// Connect wallet
 async function connectWallet() {
   const btn = document.getElementById('connectWalletBtn');
   const sideBtn = document.getElementById('sidebarConnectBtn');
 
-  // Check if WC SDK loaded
-  if (!window._wcReady || !window._wcConnect) {
-    const address = prompt('WalletConnect is still loading. Enter your BSC wallet address manually (0x...):');
-    if (address && address.startsWith('0x') && address.length === 42) {
-      connectedWallet = address;
-      showConnected(address);
-    }
-    return;
-  }
-
   if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Connecting...'; }
   if (sideBtn) { sideBtn.disabled = true; sideBtn.innerHTML = '⏳...'; }
 
-  const session = await window._wcConnect();
-
-  // Re-enable buttons if connection failed/cancelled
-  if (!session) {
+  try {
+    const result = await window._wcConnect();
+    if (!result) {
+      // Connection cancelled or failed
+      if (btn) { btn.disabled = false; btn.innerHTML = '🔗 Connect Trust Wallet'; }
+      if (sideBtn) { sideBtn.disabled = false; sideBtn.innerHTML = '🔗 Connect Wallet'; }
+    }
+  } catch(e) {
+    console.error('Connect error:', e);
     if (btn) { btn.disabled = false; btn.innerHTML = '🔗 Connect Trust Wallet'; }
     if (sideBtn) { sideBtn.disabled = false; sideBtn.innerHTML = '🔗 Connect Wallet'; }
   }
