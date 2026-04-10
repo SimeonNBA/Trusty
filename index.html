@@ -6471,88 +6471,75 @@ body::before {
 
 
 
-<!-- WalletConnect v2 via CDN -->
+<!-- WalletConnect v2 via CDN (jsdelivr ESM) -->
 <script type="module">
-import {
-  EthereumClient,
-  w3mConnectors,
-  w3mProvider,
-  WagmiCore,
-  WagmiCoreChains,
-} from "https://unpkg.com/@web3modal/ethereum@2.7.1";
-import { Web3Modal } from "https://unpkg.com/@web3modal/html@2.7.1";
+try {
+  const { EthereumClient, w3mConnectors, w3mProvider, WagmiCore, WagmiCoreChains } =
+    await import("https://cdn.jsdelivr.net/npm/@web3modal/ethereum@2.7.1/+esm");
+  const { Web3Modal } =
+    await import("https://cdn.jsdelivr.net/npm/@web3modal/html@2.7.1/+esm");
 
-const projectId = '933f0ff50c485836649834068e39fcaa';
+  const projectId = '933f0ff50c485836649834068e39fcaa';
 
-// BSC chain config
-const bsc = {
-  id: 56,
-  name: 'BNB Smart Chain',
-  network: 'bsc',
-  nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-  rpcUrls: {
-    default: { http: ['https://bsc-dataseed.binance.org'] },
-    public: { http: ['https://bsc-dataseed.binance.org'] },
-  },
-  blockExplorers: {
-    default: { name: 'BscScan', url: 'https://bscscan.com' },
-  },
-};
+  // BSC chain
+  const bsc = {
+    id: 56, name: 'BNB Smart Chain', network: 'bsc',
+    nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+    rpcUrls: {
+      default: { http: ['https://bsc-dataseed.binance.org'] },
+      public: { http: ['https://bsc-dataseed.binance.org'] },
+    },
+    blockExplorers: { default: { name: 'BscScan', url: 'https://bscscan.com' } },
+  };
 
-const chains = [bsc];
-const { configureChains, createConfig, watchAccount, getAccount, disconnect: wagmiDisconnect } = WagmiCore;
-const { publicClient } = configureChains(chains, [w3mProvider({ projectId })]);
+  const chains = [bsc];
+  const { configureChains, createConfig, watchAccount, getAccount, disconnect: wagmiDisconnect } = WagmiCore;
+  const { publicClient } = configureChains(chains, [w3mProvider({ projectId })]);
 
-const wagmiConfig = createConfig({
-  autoConnect: true,
-  connectors: w3mConnectors({ chains, version: 2, projectId }),
-  publicClient,
-});
+  const wagmiConfig = createConfig({
+    autoConnect: true,
+    connectors: w3mConnectors({ chains, version: 2, projectId }),
+    publicClient,
+  });
 
-const ethereumClient = new EthereumClient(wagmiConfig, chains);
+  const ethereumClient = new EthereumClient(wagmiConfig, chains);
 
-const web3modal = new Web3Modal({
-  projectId,
-  themeMode: 'dark',
-  themeVariables: {
-    '--w3m-accent-color': '#3B82F6',
-    '--w3m-background-color': '#0a1120',
-  },
-  defaultChain: bsc,
-}, ethereumClient);
+  const web3modal = new Web3Modal({
+    projectId,
+    themeMode: 'dark',
+    themeVariables: { '--w3m-accent-color': '#3B82F6', '--w3m-background-color': '#0a1120' },
+    defaultChain: bsc,
+  }, ethereumClient);
 
-// Watch for account changes
-watchAccount((account) => {
-  if (account.isConnected && account.address) {
-    window._wcAddress = account.address;
-    window.connectedWallet = account.address;
-    if (typeof window.showConnected === 'function') {
-      window.showConnected(account.address);
+  // Watch for account changes
+  watchAccount((account) => {
+    if (account.isConnected && account.address) {
+      window.connectedWallet = account.address;
+      if (typeof window.showConnected === 'function') window.showConnected(account.address);
+    } else if (account.isDisconnected) {
+      window.connectedWallet = null;
+      if (typeof window.disconnectWalletUI === 'function') window.disconnectWalletUI();
     }
-  } else if (account.isDisconnected) {
-    window._wcAddress = null;
-    window.connectedWallet = null;
-    if (typeof window.disconnectWalletUI === 'function') {
-      window.disconnectWalletUI();
-    }
-  }
-});
+  });
 
-// Check if already connected on load
-setTimeout(() => {
-  const acc = getAccount();
-  if (acc.isConnected && acc.address) {
-    window._wcAddress = acc.address;
-    window.connectedWallet = acc.address;
-    if (typeof window.showConnected === 'function') {
-      window.showConnected(acc.address);
+  // Check if already connected on load
+  setTimeout(() => {
+    const acc = getAccount();
+    if (acc.isConnected && acc.address) {
+      window.connectedWallet = acc.address;
+      if (typeof window.showConnected === 'function') window.showConnected(acc.address);
     }
-  }
-}, 1000);
+  }, 1500);
 
-// Expose to global scope for onclick handlers
-window._web3modal = web3modal;
-window._wagmiDisconnect = wagmiDisconnect;
+  // Expose to global scope
+  window._web3modal = web3modal;
+  window._wagmiDisconnect = wagmiDisconnect;
+  window._wcReady = true;
+  console.log('✅ WalletConnect loaded successfully');
+} catch (err) {
+  console.error('❌ WalletConnect failed to load:', err);
+  window._wcReady = false;
+}
 </script>
 
 <script>
@@ -9145,23 +9132,31 @@ function showStrategySection(tokenAddress, score) {
 async function connectWallet() {
   const btn = document.getElementById('connectWalletBtn');
   const sideBtn = document.getElementById('sidebarConnectBtn');
+
+  // Check if WC SDK loaded
+  if (!window._web3modal || !window._wcReady) {
+    // SDK not loaded yet or failed — show manual fallback
+    const address = prompt('WalletConnect is still loading. Enter your BSC wallet address manually (0x...):');
+    if (address && address.startsWith('0x') && address.length === 42) {
+      connectedWallet = address;
+      showConnected(address);
+    }
+    return;
+  }
+
   if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Opening...'; }
   if (sideBtn) { sideBtn.disabled = true; sideBtn.innerHTML = '⏳ Opening...'; }
 
   try {
-    if (window._web3modal) {
-      await window._web3modal.openModal();
-    } else {
-      alert('WalletConnect is loading, please try again in a moment.');
-    }
+    await window._web3modal.openModal();
   } catch (err) {
     console.error('Connection error:', err);
   }
-  // Re-enable buttons (modal handles the rest via watchAccount)
+  // Re-enable buttons after a short delay (modal handles connection via watchAccount)
   setTimeout(() => {
     if (btn && !connectedWallet) { btn.disabled = false; btn.innerHTML = '🔗 Connect Trust Wallet'; }
     if (sideBtn && !connectedWallet) { sideBtn.disabled = false; sideBtn.innerHTML = '🔗 Connect Wallet'; }
-  }, 1000);
+  }, 1500);
 }
 
 function showConnected(address) {
