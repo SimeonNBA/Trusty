@@ -968,11 +968,11 @@ body::before {
 
 /* ── FOOTER ── */
 .app-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 200;
+  position: relative;
+  bottom: auto;
+  left: auto;
+  right: auto;
+  z-index: 1;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -4663,6 +4663,84 @@ body::before {
         <div id="trusty-final" style="font-size:14px; line-height:1.7; color: var(--text);"></div>
       </div>
 
+      <!-- ══ APE WITH TRUSTY ══ -->
+      <div class="wc-section" id="strategySection">
+        <div class="wc-header">🤖 APE WITH TRUSTY</div>
+        <div id="wc-step1">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5;">
+            Connect your Trust Wallet and let Trusty set a DCA, limit order or one-time swap. You approve every transaction.
+          </div>
+          <button class="wc-connect-btn" id="connectWalletBtn" onclick="connectWallet()">
+            🔗 Connect Trust Wallet
+          </button>
+        </div>
+        <div class="wc-connected" id="wcConnected">
+          <span>🟢</span>
+          <span>Connected:</span>
+          <span class="wc-address" id="wcAddress">0x0000...0000</span>
+          <span style="margin-left:auto;cursor:pointer;color:var(--muted);font-size:11px;" onclick="disconnectWallet()">Disconnect</span>
+        </div>
+        <div id="wc-step2" style="display:none;">
+          <div class="strategy-tabs">
+            <div class="strategy-tab active" onclick="switchStrategy('dca',this)">📈 DCA</div>
+            <div class="strategy-tab" onclick="switchStrategy('limit',this)">🎯 Limit</div>
+            <div class="strategy-tab" onclick="switchStrategy('swap',this)">⚡ Buy Now</div>
+          </div>
+          <div class="strategy-form active" id="form-dca">
+            <div class="strategy-input-row">
+              <div class="strategy-input-group">
+                <div class="strategy-input-label">AMOUNT PER BUY (USD)</div>
+                <input class="strategy-input" id="dca-amount" type="number" placeholder="10" min="1" />
+              </div>
+              <div class="strategy-input-group">
+                <div class="strategy-input-label">EVERY X DAYS</div>
+                <input class="strategy-input" id="dca-interval" type="number" placeholder="7" min="1" />
+              </div>
+            </div>
+            <div class="strategy-input-row">
+              <div class="strategy-input-group">
+                <div class="strategy-input-label">NUMBER OF BUYS</div>
+                <input class="strategy-input" id="dca-buys" type="number" placeholder="4" min="1" />
+              </div>
+              <div class="strategy-input-group">
+                <div class="strategy-input-label">TOTAL</div>
+                <input class="strategy-input" id="dca-total" type="text" placeholder="$40" disabled style="opacity:0.5;" />
+              </div>
+            </div>
+            <button class="strategy-submit-btn" onclick="submitDCA()">🛡️ SET DCA STRATEGY</button>
+          </div>
+          <div class="strategy-form" id="form-limit">
+            <div class="strategy-input-row">
+              <div class="strategy-input-group">
+                <div class="strategy-input-label">BUY AMOUNT (USD)</div>
+                <input class="strategy-input" id="limit-amount" type="number" placeholder="50" min="1" />
+              </div>
+              <div class="strategy-input-group">
+                <div class="strategy-input-label">TARGET PRICE (USD)</div>
+                <input class="strategy-input" id="limit-price" type="number" placeholder="0.00001" step="any" />
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+              <button class="strategy-tab active" id="dir-below" onclick="setDirection('buy_below')" style="flex:1;">📉 Below</button>
+              <button class="strategy-tab" id="dir-above" onclick="setDirection('buy_above')" style="flex:1;">📈 Above</button>
+            </div>
+            <button class="strategy-submit-btn" onclick="submitLimit()">🎯 SET LIMIT ORDER</button>
+          </div>
+          <div class="strategy-form" id="form-swap">
+            <div class="strategy-input-group" style="margin-bottom:10px;">
+              <div class="strategy-input-label">AMOUNT TO BUY (USD)</div>
+              <input class="strategy-input" id="swap-amount" type="number" placeholder="25" min="1" />
+            </div>
+            <button class="strategy-submit-btn" style="background:linear-gradient(135deg,#3B82F6,#2563EB);" onclick="submitSwap()">⚡ BUY NOW</button>
+          </div>
+          <div class="strategy-success" id="strategySuccess">
+            <div class="strategy-success-icon">🛡️</div>
+            <div class="strategy-success-title">STRATEGY SET!</div>
+            <div class="strategy-success-desc" id="successDesc">Your strategy is active.</div>
+          </div>
+        </div>
+      </div>
+
       <button class="reset-btn" onclick="resetAll()">🔄 Evaluate Another Coin</button>
 
     </div><!-- end results -->
@@ -6720,6 +6798,11 @@ function renderTokenData(pair, ca) {
   // DexScreener link
   const dexLink = document.getElementById('tokenDexLink');
   dexLink.href = pair.url || `https://dexscreener.com/search?q=${ca}`;
+
+  // Show strategy section
+  var tokenName = (pair.baseToken && (pair.baseToken.name || pair.baseToken.symbol)) || 'Token';
+  showSidebarStrategy(tokenName, ca);
+  showStrategySection(ca, 50);
 }
 
 function autoFillFromCA(pair) {
@@ -7218,10 +7301,12 @@ function showResults(scores, total, tier, tierClass, scoreColor, pros, cons, ape
   }
     shakeTrusty();
 
-  // Show strategy section if score is decent
-  if (caTokenData && caTokenData.address) {
-    showStrategySection(caTokenData && caTokenData.address ? caTokenData.address : "", total);
-    showSidebarStrategy(caTokenData && (caTokenData.name || caTokenData.symbol) ? (caTokenData.name || caTokenData.symbol) : "Token", caTokenData && caTokenData.address ? caTokenData.address : "");
+  // Show strategy section after CA scan
+  if (caTokenData) {
+    var _addr = (caTokenData.baseToken && caTokenData.baseToken.address) || caTokenData.pairAddress || '';
+    var _name = (caTokenData.baseToken && (caTokenData.baseToken.name || caTokenData.baseToken.symbol)) || 'Token';
+    showStrategySection(_addr, total);
+    showSidebarStrategy(_name, _addr);
   }
 
   resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
