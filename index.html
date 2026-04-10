@@ -4001,6 +4001,9 @@ body::before {
   border-radius: 16px;
   padding: 20px;
   margin-top: 16px;
+  display: none;
+}
+.wc-section.visible {
   display: block;
 }
 
@@ -4214,6 +4217,7 @@ body::before {
   border:1.5px solid var(--border2); background:var(--bg3); color:var(--text);
   font-family:var(--font); font-size:14px; font-weight:600; cursor:pointer;
   display:flex; align-items:center; gap:12px; transition:all 0.2s;
+  position:relative; z-index:1; touch-action:manipulation; -webkit-tap-highlight-color:rgba(59,130,246,0.3);
 }
 .wallet-modal-btn:hover { border-color:var(--blue); background:var(--card2); }
 .wallet-modal-btn .wm-icon { font-size:22px; }
@@ -4922,7 +4926,7 @@ body::before {
     </div><!-- end tab-token -->
 
     <!-- ══ APE WITH TRUSTY (always visible) ══ -->
-    <div class="wc-section visible" id="strategySection" style="display:block;">
+    <div class="wc-section" id="strategySection">
       <div class="wc-header">🤖 APE WITH TRUSTY</div>
       <div id="wc-step1">
         <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5;">
@@ -5037,16 +5041,18 @@ body::before {
         <div class="sidebar-balance" id="sidebarBalance"></div>
         <button onclick="disconnectWallet()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:9px;padding:3px 10px;cursor:pointer;font-family:var(--mono);margin-top:4px;">Disconnect</button>
       </div>
-      <div class="sidebar-strategy-token" id="sidebarTokenName" style="display:none;">—</div>
-      <button class="sidebar-strat-btn dca" onclick="scrollToStrategy('dca')">
-        📈 DCA
-      </button>
-      <button class="sidebar-strat-btn limit" onclick="scrollToStrategy('limit')">
-        🎯 Limit
-      </button>
-      <button class="sidebar-strat-btn swap" onclick="scrollToStrategy('swap')">
-        ⚡ Swap
-      </button>
+      <div id="sidebarTradeBtns" style="display:none;">
+        <div class="sidebar-strategy-token" id="sidebarTokenName" style="margin-bottom:6px;">—</div>
+        <button class="sidebar-strat-btn dca" onclick="sidebarTrade('dca')">
+          📈 DCA
+        </button>
+        <button class="sidebar-strat-btn limit" onclick="sidebarTrade('limit')">
+          🎯 Limit
+        </button>
+        <button class="sidebar-strat-btn swap" onclick="sidebarTrade('swap')">
+          ⚡ Swap
+        </button>
+      </div>
     </div>
 
     <div class="search-history-panel" id="searchHistoryPanel">
@@ -9263,9 +9269,11 @@ let connectedWallet = null;
 let currentTokenAddress = null;
 let limitDirection = 'buy_below';
 
-// Update the strategy section with the scanned token
+// Show strategy section after scanning a token
 function showStrategySection(tokenAddress, score) {
   currentTokenAddress = tokenAddress;
+  var el = document.getElementById('strategySection');
+  if (el) { el.classList.add('visible'); }
 }
 
 // Connect wallet — open chooser modal
@@ -9417,10 +9425,22 @@ function showStrategySuccess(msg) {
 // Show sidebar strategy after scan
 function showSidebarStrategy(tokenName, tokenAddress) {
   var nameEl = document.getElementById('sidebarTokenName');
+  var tradeBtns = document.getElementById('sidebarTradeBtns');
   if (nameEl) {
     nameEl.innerHTML = '🪙 ' + (tokenName || (tokenAddress ? tokenAddress.slice(0,6) + '...' + tokenAddress.slice(-4) : 'Token'));
-    nameEl.style.display = 'block';
   }
+  if (tradeBtns) tradeBtns.style.display = 'block';
+}
+
+// Called from sidebar — checks if a token has been scanned first
+function sidebarTrade(type) {
+  if (!currentTokenAddress) {
+    // No token scanned yet — update speech bubble
+    var tip = document.getElementById('trustyTip');
+    if (tip) tip.innerHTML = 'Scan a CA first fren! Paste a contract address above, then come back to trade 🔍';
+    return;
+  }
+  scrollToStrategy(type);
 }
 
 function scrollToStrategy(type) {
