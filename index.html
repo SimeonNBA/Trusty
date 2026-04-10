@@ -604,7 +604,7 @@ body::before {
 
 /* ── TRUSTY SIDEBAR ── */
 .trusty-sidebar {
-  width: 220px;
+  width: 200px;
   flex-shrink: 0;
   position: sticky;
   top: 24px;
@@ -613,6 +613,7 @@ body::before {
   flex-direction: column;
   align-items: center;
   gap: 0;
+  align-self: flex-start;
 }
 
 .trusty-figure {
@@ -1510,7 +1511,7 @@ body::before {
 }
 
 /* ── MOBILE ── */
-@media (max-width: 700px) {
+@media (max-width: 600px) {
   .app { flex-direction: column; padding: 16px 14px 100px; }
   .trusty-sidebar { width: 100%; flex-direction: row; align-items: flex-start; position: relative; top: 0; }
   .trusty-figure { width: 80px; flex-shrink: 0; }
@@ -7219,8 +7220,8 @@ function showResults(scores, total, tier, tierClass, scoreColor, pros, cons, ape
 
   // Show strategy section if score is decent
   if (caTokenData && caTokenData.address) {
-    showStrategySection(caTokenData.address, overallScore);
-    showSidebarStrategy(caTokenData.name || caTokenData.symbol, caTokenData.address);
+    showStrategySection(caTokenData && caTokenData.address ? caTokenData.address : "", total);
+    showSidebarStrategy(caTokenData && (caTokenData.name || caTokenData.symbol) ? (caTokenData.name || caTokenData.symbol) : "Token", caTokenData && caTokenData.address ? caTokenData.address : "");
   }
 
   resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -8999,9 +9000,8 @@ let limitDirection = 'buy_below';
 // Show the strategy section after a good scan result
 function showStrategySection(tokenAddress, score) {
   currentTokenAddress = tokenAddress;
-  if (score >= 45) {
-    document.getElementById('strategySection').classList.add('visible');
-  }
+  var el = document.getElementById('strategySection');
+  if (el) el.classList.add('visible');
 }
 
 // Connect wallet via WalletConnect
