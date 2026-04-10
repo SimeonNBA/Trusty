@@ -48,21 +48,32 @@ body::before {
 }
 
 /* ── LAYOUT ── */
-.app {
+.app-wrapper {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   min-height: 100vh;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 24px 20px 60px;
+  padding: 24px 20px 0;
+}
+
+.app {
+  display: flex;
+  flex-direction: row;
   gap: 20px;
   position: relative;
   align-items: flex-start;
+  flex: 1;
 }
 
 .main-col {
   flex: 1;
   min-width: 0;
+  order: 1;
+}
+
+.trusty-sidebar {
+  order: 2;
 }
 
 /* ── HEADER ── */
@@ -618,6 +629,7 @@ body::before {
   align-items: center;
   gap: 0;
   align-self: flex-start;
+  order: 2;
 }
 
 .trusty-figure {
@@ -977,11 +989,12 @@ body::before {
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
-  padding: 12px 20px;
+  padding: 16px 20px;
   background: transparent;
   border-top: 1px solid var(--border);
   gap: 12px;
-  margin-top: 24px;
+  margin-top: 32px;
+  width: 100%;
 }
 
 .footer-link {
@@ -1513,7 +1526,8 @@ body::before {
 
 /* ── MOBILE ── */
 @media (max-width: 600px) {
-  .app { flex-direction: column; padding: 16px 14px 100px; }
+  .app-wrapper { padding: 16px 14px 0; }
+  .app { flex-direction: column; padding: 0 0 20px; }
   .trusty-sidebar { 
     width: 100%; 
     flex-direction: row; 
@@ -1522,6 +1536,7 @@ body::before {
     top: 0;
     max-height: none;
     overflow-y: visible;
+    order: -1;
   }
   .trusty-figure { width: 80px; flex-shrink: 0; }
   #trustyFig { width: 140px; flex-shrink: 0; border-radius: 16px; display: block; margin: 0 auto; }
@@ -4230,6 +4245,7 @@ body::before {
 <!-- ══════════════════════════════════════════════════════ -->
 <!--  MAIN EVALUATOR APP                                   -->
 <!-- ══════════════════════════════════════════════════════ -->
+<div class="app-wrapper">
 <div class="app" id="main-app">
 
   <div class="main-col">
@@ -5038,6 +5054,7 @@ body::before {
   <span class="footer-dot" style="width:4px;height:4px;border-radius:50%;background:var(--border2);display:inline-block;"></span>
   <span style="color:var(--muted);font-size:10px;font-family:var(--mono);">Not financial advice 🙏</span>
 </footer>
+</div><!-- end app-wrapper -->
 
 <!-- ══════════════════════════════════════════════════════ -->
 <!--  HISTORY PAGE (full-screen overlay)                   -->
