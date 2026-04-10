@@ -50,18 +50,19 @@ body::before {
 /* ── LAYOUT ── */
 .app {
   display: flex;
+  flex-direction: row;
   min-height: 100vh;
   max-width: 1100px;
   margin: 0 auto;
   padding: 24px 20px 60px;
-  gap: 0;
+  gap: 20px;
   position: relative;
+  align-items: flex-start;
 }
 
 .main-col {
   flex: 1;
   min-width: 0;
-  margin-right: 220px;
 }
 
 /* ── HEADER ── */
@@ -605,11 +606,10 @@ body::before {
 
 /* ── TRUSTY SIDEBAR ── */
 .trusty-sidebar {
-  width: 200px;
+  width: 180px;
   flex-shrink: 0;
-  position: fixed;
+  position: sticky;
   top: 20px;
-  right: calc((100vw - 1100px) / 2 + 10px);
   height: fit-content;
   max-height: calc(100vh - 40px);
   overflow-y: auto;
@@ -617,7 +617,7 @@ body::before {
   flex-direction: column;
   align-items: center;
   gap: 0;
-  z-index: 100;
+  align-self: flex-start;
 }
 
 .trusty-figure {
@@ -1519,11 +1519,10 @@ body::before {
     flex-direction: row; 
     align-items: flex-start; 
     position: relative; 
-    top: 0; 
-    right: auto;
+    top: 0;
     max-height: none;
+    overflow-y: visible;
   }
-  .main-col { margin-right: 0; }
   .trusty-figure { width: 80px; flex-shrink: 0; }
   #trustyFig { width: 140px; flex-shrink: 0; border-radius: 16px; display: block; margin: 0 auto; }
   .speech-bubble { border-radius: 4px 14px 14px 14px; }
