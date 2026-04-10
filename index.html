@@ -6471,6 +6471,90 @@ body::before {
 
 
 
+<!-- WalletConnect v2 via CDN -->
+<script type="module">
+import {
+  EthereumClient,
+  w3mConnectors,
+  w3mProvider,
+  WagmiCore,
+  WagmiCoreChains,
+} from "https://unpkg.com/@web3modal/ethereum@2.7.1";
+import { Web3Modal } from "https://unpkg.com/@web3modal/html@2.7.1";
+
+const projectId = '933f0ff50c485836649834068e39fcaa';
+
+// BSC chain config
+const bsc = {
+  id: 56,
+  name: 'BNB Smart Chain',
+  network: 'bsc',
+  nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://bsc-dataseed.binance.org'] },
+    public: { http: ['https://bsc-dataseed.binance.org'] },
+  },
+  blockExplorers: {
+    default: { name: 'BscScan', url: 'https://bscscan.com' },
+  },
+};
+
+const chains = [bsc];
+const { configureChains, createConfig, watchAccount, getAccount, disconnect: wagmiDisconnect } = WagmiCore;
+const { publicClient } = configureChains(chains, [w3mProvider({ projectId })]);
+
+const wagmiConfig = createConfig({
+  autoConnect: true,
+  connectors: w3mConnectors({ chains, version: 2, projectId }),
+  publicClient,
+});
+
+const ethereumClient = new EthereumClient(wagmiConfig, chains);
+
+const web3modal = new Web3Modal({
+  projectId,
+  themeMode: 'dark',
+  themeVariables: {
+    '--w3m-accent-color': '#3B82F6',
+    '--w3m-background-color': '#0a1120',
+  },
+  defaultChain: bsc,
+}, ethereumClient);
+
+// Watch for account changes
+watchAccount((account) => {
+  if (account.isConnected && account.address) {
+    window._wcAddress = account.address;
+    window.connectedWallet = account.address;
+    if (typeof window.showConnected === 'function') {
+      window.showConnected(account.address);
+    }
+  } else if (account.isDisconnected) {
+    window._wcAddress = null;
+    window.connectedWallet = null;
+    if (typeof window.disconnectWalletUI === 'function') {
+      window.disconnectWalletUI();
+    }
+  }
+});
+
+// Check if already connected on load
+setTimeout(() => {
+  const acc = getAccount();
+  if (acc.isConnected && acc.address) {
+    window._wcAddress = acc.address;
+    window.connectedWallet = acc.address;
+    if (typeof window.showConnected === 'function') {
+      window.showConnected(acc.address);
+    }
+  }
+}, 1000);
+
+// Expose to global scope for onclick handlers
+window._web3modal = web3modal;
+window._wagmiDisconnect = wagmiDisconnect;
+</script>
+
 <script>
 
 
@@ -9057,32 +9141,27 @@ function showStrategySection(tokenAddress, score) {
   currentTokenAddress = tokenAddress;
 }
 
-// Connect wallet via WalletConnect
+// Connect wallet via WalletConnect v2 modal
 async function connectWallet() {
   const btn = document.getElementById('connectWalletBtn');
-  btn.disabled = true;
-  btn.innerHTML = '⏳ Connecting...';
+  const sideBtn = document.getElementById('sidebarConnectBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Opening...'; }
+  if (sideBtn) { sideBtn.disabled = true; sideBtn.innerHTML = '⏳ Opening...'; }
 
   try {
-    // For now - simulate connection with a modal prompt
-    // Full WC v2 integration requires SDK loaded from CDN
-    const address = prompt('Enter your wallet address to connect (WalletConnect QR coming soon):');
-    if (address && address.startsWith('0x') && address.length === 42) {
-      connectedWallet = address;
-      showConnected(address);
-    } else if (address) {
-      alert('Please enter a valid Ethereum/BSC address (starts with 0x, 42 chars)');
-      btn.disabled = false;
-      btn.innerHTML = '🔗 Connect Trust Wallet';
+    if (window._web3modal) {
+      await window._web3modal.openModal();
     } else {
-      btn.disabled = false;
-      btn.innerHTML = '🔗 Connect Trust Wallet';
+      alert('WalletConnect is loading, please try again in a moment.');
     }
   } catch (err) {
     console.error('Connection error:', err);
-    btn.disabled = false;
-    btn.innerHTML = '🔗 Connect Trust Wallet';
   }
+  // Re-enable buttons (modal handles the rest via watchAccount)
+  setTimeout(() => {
+    if (btn && !connectedWallet) { btn.disabled = false; btn.innerHTML = '🔗 Connect Trust Wallet'; }
+    if (sideBtn && !connectedWallet) { sideBtn.disabled = false; sideBtn.innerHTML = '🔗 Connect Wallet'; }
+  }, 1000);
 }
 
 function showConnected(address) {
@@ -9098,7 +9177,16 @@ function showConnected(address) {
   if (sideConn) { sideConn.style.display = 'block'; document.getElementById('sidebarWalletAddr').textContent = shortAddr; }
 }
 
-function disconnectWallet() {
+async function disconnectWallet() {
+  // Disconnect from WalletConnect
+  try {
+    if (window._wagmiDisconnect) await window._wagmiDisconnect();
+  } catch(e) { console.error('Disconnect error:', e); }
+  disconnectWalletUI();
+}
+
+// UI-only disconnect (called by watchAccount when wallet disconnects)
+function disconnectWalletUI() {
   connectedWallet = null;
   document.getElementById('wc-step1').style.display = 'block';
   document.getElementById('wcConnected').classList.remove('show');
