@@ -982,53 +982,6 @@ body::before {
 }
 .glink:hover { color: var(--text); border-bottom-color: var(--text); }
 
-/* ── FOOTER ── */
-.app-footer {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  padding: 16px 20px;
-  background: transparent;
-  border-top: 1px solid var(--border);
-  gap: 12px;
-  margin-top: 32px;
-  width: 100%;
-}
-
-.footer-link {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  cursor: pointer;
-  transition: color 0.2s;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.footer-link:hover { color: var(--blue2); }
-
-.footer-link .footer-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--border2);
-}
-
-.footer-brand {
-  font-family: var(--display);
-  font-size: 13px;
-  letter-spacing: 2px;
-  background: linear-gradient(135deg, #60A5FA, #3B82F6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
 
 /* ── HISTORY PAGE MODAL ── */
 #history-page {
@@ -1550,7 +1503,6 @@ body::before {
   .facts-grid { grid-template-columns: repeat(2, 1fr); }
   .history-hero { flex-direction: column; text-align: center; }
   .history-headline { font-size: 32px; }
-  .app-footer { gap: 16px; }
 }
 
 /* ── FADE IN ── */
@@ -4041,12 +3993,8 @@ body::before {
   border-radius: 16px;
   padding: 20px;
   margin-top: 16px;
-  display: none;
+  display: block;
 }
-.wc-section.visible {
-  display: block !important;
-}
-.wc-section.visible { display: block; }
 
 .wc-header {
   font-size: 11px;
@@ -4691,84 +4639,6 @@ body::before {
         <div id="trusty-final" style="font-size:14px; line-height:1.7; color: var(--text);"></div>
       </div>
 
-      <!-- ══ APE WITH TRUSTY ══ -->
-      <div class="wc-section" id="strategySection">
-        <div class="wc-header">🤖 APE WITH TRUSTY</div>
-        <div id="wc-step1">
-          <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5;">
-            Connect your Trust Wallet and let Trusty set a DCA, limit order or one-time swap. You approve every transaction.
-          </div>
-          <button class="wc-connect-btn" id="connectWalletBtn" onclick="connectWallet()">
-            🔗 Connect Trust Wallet
-          </button>
-        </div>
-        <div class="wc-connected" id="wcConnected">
-          <span>🟢</span>
-          <span>Connected:</span>
-          <span class="wc-address" id="wcAddress">0x0000...0000</span>
-          <span style="margin-left:auto;cursor:pointer;color:var(--muted);font-size:11px;" onclick="disconnectWallet()">Disconnect</span>
-        </div>
-        <div id="wc-step2" style="display:none;">
-          <div class="strategy-tabs">
-            <div class="strategy-tab active" onclick="switchStrategy('dca',this)">📈 DCA</div>
-            <div class="strategy-tab" onclick="switchStrategy('limit',this)">🎯 Limit</div>
-            <div class="strategy-tab" onclick="switchStrategy('swap',this)">⚡ Buy Now</div>
-          </div>
-          <div class="strategy-form active" id="form-dca">
-            <div class="strategy-input-row">
-              <div class="strategy-input-group">
-                <div class="strategy-input-label">AMOUNT PER BUY (USD)</div>
-                <input class="strategy-input" id="dca-amount" type="number" placeholder="10" min="1" />
-              </div>
-              <div class="strategy-input-group">
-                <div class="strategy-input-label">EVERY X DAYS</div>
-                <input class="strategy-input" id="dca-interval" type="number" placeholder="7" min="1" />
-              </div>
-            </div>
-            <div class="strategy-input-row">
-              <div class="strategy-input-group">
-                <div class="strategy-input-label">NUMBER OF BUYS</div>
-                <input class="strategy-input" id="dca-buys" type="number" placeholder="4" min="1" />
-              </div>
-              <div class="strategy-input-group">
-                <div class="strategy-input-label">TOTAL</div>
-                <input class="strategy-input" id="dca-total" type="text" placeholder="$40" disabled style="opacity:0.5;" />
-              </div>
-            </div>
-            <button class="strategy-submit-btn" onclick="submitDCA()">🛡️ SET DCA STRATEGY</button>
-          </div>
-          <div class="strategy-form" id="form-limit">
-            <div class="strategy-input-row">
-              <div class="strategy-input-group">
-                <div class="strategy-input-label">BUY AMOUNT (USD)</div>
-                <input class="strategy-input" id="limit-amount" type="number" placeholder="50" min="1" />
-              </div>
-              <div class="strategy-input-group">
-                <div class="strategy-input-label">TARGET PRICE (USD)</div>
-                <input class="strategy-input" id="limit-price" type="number" placeholder="0.00001" step="any" />
-              </div>
-            </div>
-            <div style="display:flex;gap:8px;margin-bottom:10px;">
-              <button class="strategy-tab active" id="dir-below" onclick="setDirection('buy_below')" style="flex:1;">📉 Below</button>
-              <button class="strategy-tab" id="dir-above" onclick="setDirection('buy_above')" style="flex:1;">📈 Above</button>
-            </div>
-            <button class="strategy-submit-btn" onclick="submitLimit()">🎯 SET LIMIT ORDER</button>
-          </div>
-          <div class="strategy-form" id="form-swap">
-            <div class="strategy-input-group" style="margin-bottom:10px;">
-              <div class="strategy-input-label">AMOUNT TO BUY (USD)</div>
-              <input class="strategy-input" id="swap-amount" type="number" placeholder="25" min="1" />
-            </div>
-            <button class="strategy-submit-btn" style="background:linear-gradient(135deg,#3B82F6,#2563EB);" onclick="submitSwap()">⚡ BUY NOW</button>
-          </div>
-          <div class="strategy-success" id="strategySuccess">
-            <div class="strategy-success-icon">🛡️</div>
-            <div class="strategy-success-title">STRATEGY SET!</div>
-            <div class="strategy-success-desc" id="successDesc">Your strategy is active.</div>
-          </div>
-        </div>
-      </div>
-
       <button class="reset-btn" onclick="resetAll()">🔄 Evaluate Another Coin</button>
 
     </div><!-- end results -->
@@ -4986,6 +4856,84 @@ body::before {
       </div>
     </div><!-- end tab-token -->
 
+    <!-- ══ APE WITH TRUSTY (always visible) ══ -->
+    <div class="wc-section visible" id="strategySection" style="display:block;">
+      <div class="wc-header">🤖 APE WITH TRUSTY</div>
+      <div id="wc-step1">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5;">
+          Connect your Trust Wallet and let Trusty set a DCA, limit order or one-time swap. You approve every transaction.
+        </div>
+        <button class="wc-connect-btn" id="connectWalletBtn" onclick="connectWallet()">
+          🔗 Connect Trust Wallet
+        </button>
+      </div>
+      <div class="wc-connected" id="wcConnected">
+        <span>🟢</span>
+        <span>Connected:</span>
+        <span class="wc-address" id="wcAddress">0x0000...0000</span>
+        <span style="margin-left:auto;cursor:pointer;color:var(--muted);font-size:11px;" onclick="disconnectWallet()">Disconnect</span>
+      </div>
+      <div id="wc-step2" style="display:none;">
+        <div class="strategy-tabs">
+          <div class="strategy-tab active" onclick="switchStrategy('dca',this)">📈 DCA</div>
+          <div class="strategy-tab" onclick="switchStrategy('limit',this)">🎯 Limit</div>
+          <div class="strategy-tab" onclick="switchStrategy('swap',this)">⚡ Buy Now</div>
+        </div>
+        <div class="strategy-form active" id="form-dca">
+          <div class="strategy-input-row">
+            <div class="strategy-input-group">
+              <div class="strategy-input-label">AMOUNT PER BUY (USD)</div>
+              <input class="strategy-input" id="dca-amount" type="number" placeholder="10" min="1" />
+            </div>
+            <div class="strategy-input-group">
+              <div class="strategy-input-label">EVERY X DAYS</div>
+              <input class="strategy-input" id="dca-interval" type="number" placeholder="7" min="1" />
+            </div>
+          </div>
+          <div class="strategy-input-row">
+            <div class="strategy-input-group">
+              <div class="strategy-input-label">NUMBER OF BUYS</div>
+              <input class="strategy-input" id="dca-buys" type="number" placeholder="4" min="1" />
+            </div>
+            <div class="strategy-input-group">
+              <div class="strategy-input-label">TOTAL</div>
+              <input class="strategy-input" id="dca-total" type="text" placeholder="$40" disabled style="opacity:0.5;" />
+            </div>
+          </div>
+          <button class="strategy-submit-btn" onclick="submitDCA()">🛡️ SET DCA STRATEGY</button>
+        </div>
+        <div class="strategy-form" id="form-limit">
+          <div class="strategy-input-row">
+            <div class="strategy-input-group">
+              <div class="strategy-input-label">BUY AMOUNT (USD)</div>
+              <input class="strategy-input" id="limit-amount" type="number" placeholder="50" min="1" />
+            </div>
+            <div class="strategy-input-group">
+              <div class="strategy-input-label">TARGET PRICE (USD)</div>
+              <input class="strategy-input" id="limit-price" type="number" placeholder="0.00001" step="any" />
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <button class="strategy-tab active" id="dir-below" onclick="setDirection('buy_below')" style="flex:1;">📉 Below</button>
+            <button class="strategy-tab" id="dir-above" onclick="setDirection('buy_above')" style="flex:1;">📈 Above</button>
+          </div>
+          <button class="strategy-submit-btn" onclick="submitLimit()">🎯 SET LIMIT ORDER</button>
+        </div>
+        <div class="strategy-form" id="form-swap">
+          <div class="strategy-input-group" style="margin-bottom:10px;">
+            <div class="strategy-input-label">AMOUNT TO BUY (USD)</div>
+            <input class="strategy-input" id="swap-amount" type="number" placeholder="25" min="1" />
+          </div>
+          <button class="strategy-submit-btn" style="background:linear-gradient(135deg,#3B82F6,#2563EB);" onclick="submitSwap()">⚡ BUY NOW</button>
+        </div>
+        <div class="strategy-success" id="strategySuccess">
+          <div class="strategy-success-icon">🛡️</div>
+          <div class="strategy-success-title">STRATEGY SET!</div>
+          <div class="strategy-success-desc" id="successDesc">Your strategy is active.</div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- end main-col -->
 
   <!-- ── TRUSTY SIDEBAR ── -->
@@ -5042,18 +4990,6 @@ body::before {
 
 </div><!-- end app -->
 
-<!-- ══════════════════════════════════════════════════════ -->
-<!--  FOOTER (always visible)                              -->
-<!-- ══════════════════════════════════════════════════════ -->
-<footer class="app-footer">
-  <span class="footer-brand">🛡️ TRUSTY AI © 2026</span>
-  <span class="footer-dot" style="width:4px;height:4px;border-radius:50%;background:var(--border2);display:inline-block;"></span>
-  <a href="https://x.com/Trusty_BNB" target="_blank" class="footer-link">𝕏 @Trusty_BNB</a>
-  <span class="footer-dot" style="width:4px;height:4px;border-radius:50%;background:var(--border2);display:inline-block;"></span>
-  <span class="footer-link" onclick="openTerms()" style="cursor:pointer;">Terms of Use</span>
-  <span class="footer-dot" style="width:4px;height:4px;border-radius:50%;background:var(--border2);display:inline-block;"></span>
-  <span style="color:var(--muted);font-size:10px;font-family:var(--mono);">Not financial advice 🙏</span>
-</footer>
 </div><!-- end app-wrapper -->
 
 <!-- ══════════════════════════════════════════════════════ -->
@@ -9111,14 +9047,9 @@ let connectedWallet = null;
 let currentTokenAddress = null;
 let limitDirection = 'buy_below';
 
-// Show the strategy section after a good scan result
+// Update the strategy section with the scanned token
 function showStrategySection(tokenAddress, score) {
   currentTokenAddress = tokenAddress;
-  var el = document.getElementById('strategySection');
-  if (el) {
-    el.classList.add('visible');
-    el.style.display = 'block';
-  }
 }
 
 // Connect wallet via WalletConnect
