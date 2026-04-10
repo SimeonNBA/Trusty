@@ -49,7 +49,7 @@ body::before {
   inset:0;
   background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
   pointer-events:none;
-  z-index:1000;
+  z-index:0;
 }
 
 /* ── LAYOUT ── */
@@ -4194,9 +4194,66 @@ body::before {
 .sidebar-strat-btn.dca { border-color: rgba(34,197,94,0.4); color: #86EFAC; background: rgba(34,197,94,0.08); }
 .sidebar-strat-btn.limit { border-color: rgba(251,191,36,0.4); color: #FDE68A; background: rgba(251,191,36,0.08); }
 .sidebar-strat-btn.swap { border-color: rgba(59,130,246,0.4); color: var(--blue2); background: rgba(59,130,246,0.08); }
+/* ── WALLET CHOOSER MODAL ── */
+.wallet-modal-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7);
+  z-index:9999; align-items:center; justify-content:center;
+}
+.wallet-modal-overlay.open { display:flex; }
+.wallet-modal {
+  background:var(--card); border:1px solid var(--border2); border-radius:20px;
+  padding:28px 24px; max-width:360px; width:90%; text-align:center;
+}
+.wallet-modal h3 {
+  font-family:var(--display); font-size:20px; letter-spacing:1px;
+  color:var(--text); margin-bottom:6px;
+}
+.wallet-modal p { font-size:12px; color:var(--muted); margin-bottom:20px; }
+.wallet-modal-btn {
+  width:100%; padding:14px; margin-bottom:10px; border-radius:12px;
+  border:1.5px solid var(--border2); background:var(--bg3); color:var(--text);
+  font-family:var(--font); font-size:14px; font-weight:600; cursor:pointer;
+  display:flex; align-items:center; gap:12px; transition:all 0.2s;
+}
+.wallet-modal-btn:hover { border-color:var(--blue); background:var(--card2); }
+.wallet-modal-btn .wm-icon { font-size:22px; }
+.wallet-modal-btn .wm-label { text-align:left; }
+.wallet-modal-btn .wm-sub { font-size:10px; color:var(--muted); font-weight:400; }
+.wallet-modal-close {
+  margin-top:8px; background:none; border:none; color:var(--muted);
+  font-size:12px; cursor:pointer; font-family:var(--mono);
+}
+.wallet-modal-close:hover { color:var(--text); }
+
+/* ── SIDEBAR BALANCE ── */
+.sidebar-balance {
+  font-size:11px; color:var(--yellow); font-family:var(--mono);
+  margin-bottom:6px; text-align:center;
+}
 </style>
 </head>
 <body>
+
+<!-- ── WALLET CHOOSER MODAL ── -->
+<div class="wallet-modal-overlay" id="walletModal" onclick="if(event.target===this)closeWalletModal()">
+  <div class="wallet-modal">
+    <h3>Connect Wallet</h3>
+    <p>Choose how to connect to BNB Smart Chain</p>
+    <button class="wallet-modal-btn" id="wmExtensionBtn" onclick="connectViaExtension()">
+      <span class="wm-icon">🦊</span>
+      <span class="wm-label">Browser Wallet<br><span class="wm-sub">Trust Wallet, MetaMask, etc.</span></span>
+    </button>
+    <button class="wallet-modal-btn" onclick="connectViaWC()">
+      <span class="wm-icon">📱</span>
+      <span class="wm-label">WalletConnect<br><span class="wm-sub">Scan QR with mobile wallet</span></span>
+    </button>
+    <button class="wallet-modal-btn" onclick="connectViaManual()">
+      <span class="wm-icon">📋</span>
+      <span class="wm-label">Paste Address<br><span class="wm-sub">Read-only mode (view only)</span></span>
+    </button>
+    <button class="wallet-modal-close" onclick="closeWalletModal()">Cancel</button>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════════════════════ -->
 <!--  MAIN EVALUATOR APP                                   -->
@@ -4975,9 +5032,10 @@ body::before {
       <button class="wc-connect-btn" id="sidebarConnectBtn" onclick="connectWallet()" style="width:100%;padding:10px 12px;font-size:12px;margin-bottom:8px;">
         🔗 Connect Wallet
       </button>
-      <div id="sidebarConnected" style="display:none;font-size:11px;color:var(--green);margin-bottom:8px;text-align:center;">
-        🟢 <span id="sidebarWalletAddr">0x00...00</span>
-        <span onclick="disconnectWallet()" style="cursor:pointer;color:var(--muted);margin-left:6px;font-size:9px;" title="Disconnect">✕</span>
+      <div id="sidebarConnected" style="display:none;margin-bottom:8px;text-align:center;">
+        <div style="font-size:11px;color:var(--green);">🟢 <span id="sidebarWalletAddr">0x00...00</span></div>
+        <div class="sidebar-balance" id="sidebarBalance"></div>
+        <button onclick="disconnectWallet()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:9px;padding:3px 10px;cursor:pointer;font-family:var(--mono);margin-top:4px;">Disconnect</button>
       </div>
       <div class="sidebar-strategy-token" id="sidebarTokenName" style="display:none;">—</div>
       <button class="sidebar-strat-btn dca" onclick="scrollToStrategy('dca')">
@@ -6480,60 +6538,129 @@ body::before {
 
 
 
-<!-- Wallet Connection: Extension + WalletConnect -->
+<!-- Wallet Connection Logic -->
 <script>
 window._wcReady = true;
 
-// Connect via browser extension (Trust Wallet, MetaMask, etc.)
-window._connectExtension = async function() {
-  const provider = window.trustwallet || window.ethereum;
-  if (!provider) {
-    alert('No wallet extension detected.\n\nInstall Trust Wallet or MetaMask extension for Chrome.');
-    return null;
+// ── WALLET MODAL ──
+function openWalletModal() {
+  var modal = document.getElementById('walletModal');
+  var extBtn = document.getElementById('wmExtensionBtn');
+  // Show/grey out extension button based on availability
+  if (!(window.trustwallet || window.ethereum)) {
+    extBtn.style.opacity = '0.4';
+    extBtn.querySelector('.wm-sub').textContent = 'Not detected — install extension';
+  } else {
+    extBtn.style.opacity = '1';
+    var name = window.trustwallet ? 'Trust Wallet' : 'MetaMask / Extension';
+    extBtn.querySelector('.wm-sub').textContent = name + ' detected';
   }
+  modal.classList.add('open');
+}
+function closeWalletModal() {
+  document.getElementById('walletModal').classList.remove('open');
+  resetConnectBtns();
+}
+
+// ── EXTENSION CONNECT ──
+async function connectViaExtension() {
+  var provider = window.trustwallet || window.ethereum;
+  if (!provider) { alert('No wallet extension detected. Install Trust Wallet or MetaMask.'); return; }
+  closeWalletModal();
   try {
-    const accounts = await provider.request({ method: 'eth_requestAccounts' });
+    // Request accounts — wallet popup lets user choose which account
+    var accounts = await provider.request({ method: 'eth_requestAccounts' });
     if (accounts && accounts.length > 0) {
-      const address = accounts[0];
-      try {
-        await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] });
-      } catch (switchErr) {
-        if (switchErr.code === 4902) {
-          await provider.request({
-            method: 'wallet_addEthereumChain',
-            params: [{ chainId: '0x38', chainName: 'BNB Smart Chain', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, rpcUrls: ['https://bsc-dataseed.binance.org'], blockExplorerUrls: ['https://bscscan.com'] }]
-          });
+      var address = accounts[0];
+      // Switch to BSC
+      try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] }); }
+      catch (e) {
+        if (e.code === 4902) {
+          await provider.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0x38', chainName: 'BNB Smart Chain', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, rpcUrls: ['https://bsc-dataseed.binance.org'], blockExplorerUrls: ['https://bscscan.com'] }] });
         }
       }
       window.connectedWallet = address;
-      if (typeof window.showConnected === 'function') window.showConnected(address);
-      console.log('✅ Wallet connected:', address);
-      return address;
+      window._connectedProvider = provider;
+      showConnected(address);
+      fetchBalance(address, provider);
     }
-  } catch (err) {
-    console.error('Extension connection failed:', err);
-    return null;
-  }
-};
-
-window._wcDisconnect = async function() {
-  window.connectedWallet = null;
-};
-
-// Listen for account changes from extension
-if (window.trustwallet || window.ethereum) {
-  var p = window.trustwallet || window.ethereum;
-  p.on && p.on('accountsChanged', function(accounts) {
-    if (accounts.length === 0) {
-      if (typeof window.disconnectWalletUI === 'function') window.disconnectWalletUI();
-    } else {
-      window.connectedWallet = accounts[0];
-      if (typeof window.showConnected === 'function') window.showConnected(accounts[0]);
-    }
-  });
+  } catch (err) { console.error('Extension error:', err); resetConnectBtns(); }
 }
 
-console.log('✅ Wallet connector ready', window.trustwallet ? '(Trust Wallet)' : window.ethereum ? '(Extension)' : '(Manual only)');
+// ── WALLETCONNECT ──
+async function connectViaWC() {
+  closeWalletModal();
+  if (window._wcModalReady && window._wcModalSign) {
+    try {
+      var session = await window._wcModalSign.connect({
+        requiredNamespaces: { eip155: { methods: ['eth_sendTransaction','personal_sign'], chains: ['eip155:56'], events: ['chainChanged','accountsChanged'] } }
+      });
+      var accounts = session.namespaces.eip155.accounts;
+      if (accounts && accounts.length > 0) {
+        var address = accounts[0].split(':')[2];
+        window.connectedWallet = address;
+        showConnected(address);
+        fetchBalance(address, null);
+      }
+    } catch(e) { console.error('WC error:', e); resetConnectBtns(); }
+  } else {
+    alert('WalletConnect is loading, try again in a few seconds.');
+    resetConnectBtns();
+  }
+}
+
+// ── MANUAL CONNECT ──
+function connectViaManual() {
+  closeWalletModal();
+  var address = prompt('Paste your BSC wallet address (0x...):');
+  if (address && address.startsWith('0x') && address.length === 42) {
+    window.connectedWallet = address;
+    showConnected(address);
+    fetchBalance(address, null);
+  } else if (address) {
+    alert('Invalid address. Must start with 0x and be 42 characters.');
+  }
+}
+
+// ── FETCH BALANCE ──
+async function fetchBalance(address, provider) {
+  var balEl = document.getElementById('sidebarBalance');
+  if (!balEl) return;
+  balEl.textContent = '⏳ Loading...';
+  try {
+    var balance;
+    if (provider) {
+      // Use connected provider
+      balance = await provider.request({ method: 'eth_getBalance', params: [address, 'latest'] });
+    } else {
+      // Use public RPC
+      var res = await fetch('https://bsc-dataseed.binance.org', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getBalance', params: [address, 'latest'], id: 1 })
+      });
+      var data = await res.json();
+      balance = data.result;
+    }
+    var bnb = parseInt(balance, 16) / 1e18;
+    balEl.textContent = bnb.toFixed(4) + ' BNB';
+  } catch(e) {
+    console.error('Balance error:', e);
+    balEl.textContent = '';
+  }
+}
+
+// ── LISTEN FOR ACCOUNT CHANGES ──
+if (window.trustwallet || window.ethereum) {
+  var p = window.trustwallet || window.ethereum;
+  if (p.on) {
+    p.on('accountsChanged', function(accounts) {
+      if (accounts.length === 0) { if (typeof disconnectWalletUI === 'function') disconnectWalletUI(); }
+      else { window.connectedWallet = accounts[0]; showConnected(accounts[0]); fetchBalance(accounts[0], p); }
+    });
+  }
+}
+
+console.log('✅ Wallet connector ready');
 </script>
 
 <!-- WalletConnect modal (loaded async, non-blocking) -->
@@ -6548,10 +6675,10 @@ try {
     modalOptions: { themeMode: 'dark' }
   });
   window._wcModalReady = true;
-  console.log('✅ WalletConnect modal ready');
+  console.log('✅ WalletConnect QR ready');
 } catch(e) {
   window._wcModalReady = false;
-  console.warn('⚠️ WalletConnect modal failed to load:', e.message);
+  console.warn('⚠️ WalletConnect failed:', e.message);
 }
 </script>
 
@@ -9141,54 +9268,9 @@ function showStrategySection(tokenAddress, score) {
   currentTokenAddress = tokenAddress;
 }
 
-// Connect wallet — show options
-async function connectWallet() {
-  const btn = document.getElementById('connectWalletBtn');
-  const sideBtn = document.getElementById('sidebarConnectBtn');
-  const hasExtension = !!(window.trustwallet || window.ethereum);
-
-  // If extension available, connect directly
-  if (hasExtension) {
-    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Connecting...'; }
-    if (sideBtn) { sideBtn.disabled = true; sideBtn.innerHTML = '⏳...'; }
-    try {
-      const result = await window._connectExtension();
-      if (!result) { resetConnectBtns(); }
-    } catch(e) { console.error(e); resetConnectBtns(); }
-    return;
-  }
-
-  // No extension — try WalletConnect QR or manual
-  if (window._wcModalReady && window._wcModalSign) {
-    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ WalletConnect...'; }
-    if (sideBtn) { sideBtn.disabled = true; sideBtn.innerHTML = '⏳...'; }
-    try {
-      const session = await window._wcModalSign.connect({
-        requiredNamespaces: {
-          eip155: {
-            methods: ['eth_sendTransaction', 'personal_sign'],
-            chains: ['eip155:56'],
-            events: ['chainChanged', 'accountsChanged']
-          }
-        }
-      });
-      const accounts = session.namespaces.eip155.accounts;
-      if (accounts && accounts.length > 0) {
-        const address = accounts[0].split(':')[2];
-        window.connectedWallet = address;
-        if (typeof showConnected === 'function') showConnected(address);
-        console.log('✅ WalletConnect connected:', address);
-      }
-    } catch(e) { console.error('WC connect error:', e); resetConnectBtns(); }
-    return;
-  }
-
-  // Last resort — manual
-  var address = prompt('No wallet detected.\n\nTo connect:\n1. Install Trust Wallet extension\n2. Or open trustyai.tech in Trust Wallet mobile browser\n\nOr paste your BSC address (0x...):');
-  if (address && address.startsWith('0x') && address.length === 42) {
-    connectedWallet = address;
-    showConnected(address);
-  }
+// Connect wallet — open chooser modal
+function connectWallet() {
+  openWalletModal();
 }
 
 function resetConnectBtns() {
@@ -9221,16 +9303,19 @@ async function disconnectWallet() {
 // UI-only disconnect (called by watchAccount when wallet disconnects)
 function disconnectWalletUI() {
   connectedWallet = null;
+  window._connectedProvider = null;
   document.getElementById('wc-step1').style.display = 'block';
   document.getElementById('wcConnected').classList.remove('show');
   document.getElementById('wc-step2').style.display = 'none';
   document.getElementById('connectWalletBtn').disabled = false;
   document.getElementById('connectWalletBtn').innerHTML = '🔗 Connect Trust Wallet';
-  // Reset sidebar wallet status
+  // Reset sidebar
   var sideBtn = document.getElementById('sidebarConnectBtn');
   var sideConn = document.getElementById('sidebarConnected');
+  var balEl = document.getElementById('sidebarBalance');
   if (sideBtn) { sideBtn.style.display = 'block'; sideBtn.disabled = false; sideBtn.innerHTML = '🔗 Connect Wallet'; }
   if (sideConn) sideConn.style.display = 'none';
+  if (balEl) balEl.textContent = '';
 }
 
 function switchStrategy(type, btn) {
