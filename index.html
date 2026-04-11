@@ -9377,24 +9377,33 @@ async function loadPortfolio() {
     } catch(e) { console.warn('Portfolio API error:', e); }
     console.log('📊 BNB:', bnbBalance, 'Tokens found:', holdings.length, holdings.map(h => h.symbol));
 
-    // 3. Get prices from DexScreener
+    // 3. Get prices from DexScreener (with timeout)
     var bnbPrice = 600;
     var priceMap = {};
+    console.log('📊 Fetching prices...');
+    try {
+      // Get BNB price first
+      var bnbPr = await Promise.race([
+        fetch('https://api.dexscreener.com/latest/dex/tokens/0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c').then(r => r.json()),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+      ]);
+      if (bnbPr.pairs && bnbPr.pairs[0]) bnbPrice = parseFloat(bnbPr.pairs[0].priceUsd) || 600;
+      console.log('📊 BNB price: $' + bnbPrice);
+    } catch(e) { console.warn('BNB price fetch failed, using $600:', e.message); }
+
     if (holdings.length > 0) {
-      // Batch addresses (max 30 per call)
       var allAddrs = holdings.map(function(h) { return h.address; });
-      allAddrs.push('0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'); // WBNB for price
-      for (var i = 0; i < allAddrs.length; i += 30) {
-        var batch = allAddrs.slice(i, i + 30).join(',');
+      // Batch in groups of 10 (smaller batches = more reliable)
+      for (var i = 0; i < allAddrs.length; i += 10) {
+        var batch = allAddrs.slice(i, i + 10).join(',');
         try {
-          var pr = await fetch('https://api.dexscreener.com/latest/dex/tokens/' + batch);
-          var pd = await pr.json();
-          if (pd.pairs) {
-            pd.pairs.forEach(function(pair) {
+          var pr = await Promise.race([
+            fetch('https://api.dexscreener.com/latest/dex/tokens/' + batch).then(r => r.json()),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
+          ]);
+          if (pr.pairs) {
+            pr.pairs.forEach(function(pair) {
               var addr = pair.baseToken.address.toLowerCase();
-              if (addr === '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c') {
-                bnbPrice = parseFloat(pair.priceUsd) || 600;
-              }
               if (!priceMap[addr] || (pair.liquidity && pair.liquidity.usd > (priceMap[addr].liquidity || 0))) {
                 priceMap[addr] = {
                   priceUsd: parseFloat(pair.priceUsd) || 0,
@@ -9407,11 +9416,14 @@ async function loadPortfolio() {
               }
             });
           }
-        } catch(e) { console.warn('DexScreener batch error:', e); }
+          console.log('📊 Prices batch', Math.floor(i/10)+1, '- got', Object.keys(priceMap).length, 'prices');
+        } catch(e) { console.warn('DexScreener batch error:', e.message); }
       }
     }
+    console.log('📊 Total prices found:', Object.keys(priceMap).length);
 
     var bnbValue = bnbBalance * bnbPrice;
+    console.log('📊 Rendering portfolio...');
 
     // 4. Enrich with prices and risk
     var enriched = holdings.map(function(t) {
