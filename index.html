@@ -4197,6 +4197,49 @@ body::before {
 .sidebar-strat-btn.dca { border-color: rgba(34,197,94,0.4); color: #86EFAC; background: rgba(34,197,94,0.08); }
 .sidebar-strat-btn.limit { border-color: rgba(251,191,36,0.4); color: #FDE68A; background: rgba(251,191,36,0.08); }
 .sidebar-strat-btn.swap { border-color: rgba(59,130,246,0.4); color: var(--blue2); background: rgba(59,130,246,0.08); }
+/* ── PORTFOLIO ── */
+.portfolio-token {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  transition: border-color 0.2s;
+  cursor: pointer;
+}
+.portfolio-token:hover { border-color: var(--blue); }
+.portfolio-token-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--bg3); display: flex; align-items: center;
+  justify-content: center; font-size: 16px; flex-shrink: 0;
+  overflow: hidden;
+}
+.portfolio-token-icon img { width: 100%; height: 100%; object-fit: cover; }
+.portfolio-token-info { flex: 1; min-width: 0; }
+.portfolio-token-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.portfolio-token-symbol { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.portfolio-token-balance { text-align: right; }
+.portfolio-token-value { font-size: 14px; font-weight: 700; color: var(--text); }
+.portfolio-token-amount { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.portfolio-risk-badge {
+  padding: 3px 10px; border-radius: 20px; font-size: 10px;
+  font-family: var(--mono); font-weight: 700; letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.risk-green { background: rgba(34,197,94,0.15); color: #86EFAC; border: 1px solid rgba(34,197,94,0.3); }
+.risk-yellow { background: rgba(251,191,36,0.15); color: #FDE68A; border: 1px solid rgba(251,191,36,0.3); }
+.risk-orange { background: rgba(249,115,22,0.15); color: #FDBA74; border: 1px solid rgba(249,115,22,0.3); }
+.risk-red { background: rgba(239,68,68,0.15); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.3); }
+.portfolio-dust { opacity: 0.5; }
+.portfolio-scan-btn {
+  background: var(--blue); color: white; border: none; border-radius: 6px;
+  padding: 4px 10px; font-size: 10px; font-family: var(--mono);
+  cursor: pointer; flex-shrink: 0;
+}
+
 /* ── WALLET CHOOSER MODAL ── */
 .wallet-modal-overlay {
   display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7);
@@ -4305,6 +4348,9 @@ body::before {
       </button>
       <button class="main-nav-btn token-btn" id="nav-token" onclick="switchTab('token')">
         🪙 Token
+      </button>
+      <button class="main-nav-btn" id="nav-portfolio" onclick="switchTab('portfolio')">
+        💼 Portfolio
       </button>
     </div>
 
@@ -4933,6 +4979,62 @@ body::before {
 
       </div>
     </div><!-- end tab-token -->
+
+    <!-- ══════════════════════════════
+         TAB: PORTFOLIO
+         ══════════════════════════════ -->
+    <div class="tab-panel" id="tab-portfolio">
+      <div class="token-page" style="padding:8px 0 24px;">
+
+        <div id="portfolio-not-connected" style="text-align:center;padding:60px 20px;">
+          <div style="font-size:48px;margin-bottom:16px;">💼</div>
+          <div style="font-size:20px;font-weight:700;margin-bottom:8px;color:var(--text);">Portfolio Scanner</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;">Connect your wallet to see all your BSC tokens<br>with Trusty risk scores for each holding.</div>
+          <button class="wc-connect-btn" onclick="connectWallet()" style="padding:14px 32px;font-size:14px;">🔗 Connect Wallet</button>
+        </div>
+
+        <div id="portfolio-content" style="display:none;">
+          <!-- Summary Card -->
+          <div class="section-card" style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+              <div>
+                <div style="font-size:10px;font-family:var(--mono);letter-spacing:2px;color:var(--blue2);margin-bottom:4px;">YOUR PORTFOLIO</div>
+                <div style="font-size:24px;font-weight:700;color:var(--text);" id="portfolio-total-value">Loading...</div>
+              </div>
+              <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                <div style="text-align:center;">
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--muted);">TOKENS</div>
+                  <div style="font-size:18px;font-weight:700;color:var(--text);" id="portfolio-token-count">—</div>
+                </div>
+                <div style="text-align:center;">
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--muted);">BNB</div>
+                  <div style="font-size:18px;font-weight:700;color:var(--yellow);" id="portfolio-bnb">—</div>
+                </div>
+                <div style="text-align:center;">
+                  <div style="font-size:10px;font-family:var(--mono);color:var(--muted);">HEALTH</div>
+                  <div style="font-size:18px;font-weight:700;" id="portfolio-health">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loading state -->
+          <div id="portfolio-loading" style="text-align:center;padding:40px;color:var(--muted);">
+            <div style="font-size:32px;margin-bottom:12px;">🔍</div>
+            <div>Scanning your wallet...</div>
+          </div>
+
+          <!-- Token List -->
+          <div id="portfolio-list" style="display:none;"></div>
+
+          <!-- Refresh button -->
+          <div style="text-align:center;margin-top:16px;">
+            <button onclick="loadPortfolio()" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--muted);padding:10px 20px;cursor:pointer;font-family:var(--mono);font-size:11px;">🔄 Refresh Portfolio</button>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- end tab-portfolio -->
 
     <!-- ══ APE WITH TRUSTY (always visible) ══ -->
     <div class="wc-section" id="strategySection">
@@ -9129,7 +9231,7 @@ function playNarrative(id) {
 // ── MAIN TABS ──
 function switchTab(tab) {
   try {
-    var tabs = ['scanner','academy','token'];
+    var tabs = ['scanner','academy','token','portfolio'];
     for (var i = 0; i < tabs.length; i++) {
       var tp = document.getElementById('tab-' + tabs[i]);
       var nb = document.getElementById('nav-' + tabs[i]);
@@ -9145,7 +9247,225 @@ function switchTab(tab) {
       var nr = document.getElementById('inline-narratives');
       if (nr && !nr.hasChildNodes()) renderInlineNarratives();
     }
+    if (tab === 'portfolio') {
+      if (connectedWallet) {
+        document.getElementById('portfolio-not-connected').style.display = 'none';
+        document.getElementById('portfolio-content').style.display = 'block';
+        if (!window._portfolioLoaded) loadPortfolio();
+      } else {
+        document.getElementById('portfolio-not-connected').style.display = 'block';
+        document.getElementById('portfolio-content').style.display = 'none';
+      }
+    }
   } catch(e) { console.error('switchTab error:', e); }
+}
+
+// ══ PORTFOLIO ══
+async function loadPortfolio() {
+  if (!connectedWallet) return;
+  var loading = document.getElementById('portfolio-loading');
+  var list = document.getElementById('portfolio-list');
+  var totalEl = document.getElementById('portfolio-total-value');
+  var countEl = document.getElementById('portfolio-token-count');
+  var bnbEl = document.getElementById('portfolio-bnb');
+  var healthEl = document.getElementById('portfolio-health');
+
+  loading.style.display = 'block';
+  list.style.display = 'none';
+  totalEl.textContent = 'Loading...';
+
+  try {
+    // Fetch portfolio from backend
+    var res = await fetch(BACKEND_URL + '/api/portfolio/bsc/' + connectedWallet);
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    var bnbBalance = data.nativeBalance || 0;
+    var tokens = data.tokens || [];
+
+    // Fetch BNB price
+    var bnbPrice = 0;
+    try {
+      var pr = await fetch('https://api.dexscreener.com/latest/dex/tokens/0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c');
+      var pd = await pr.json();
+      if (pd.pairs && pd.pairs[0]) bnbPrice = parseFloat(pd.pairs[0].priceUsd) || 0;
+    } catch(e) { bnbPrice = 600; } // fallback
+
+    var bnbValue = bnbBalance * bnbPrice;
+
+    // Fetch prices for tokens via DexScreener (batch by 30)
+    var tokenAddresses = tokens.map(t => t.contractAddress);
+    var priceMap = {};
+    for (var i = 0; i < tokenAddresses.length; i += 30) {
+      var batch = tokenAddresses.slice(i, i + 30).join(',');
+      try {
+        var pr2 = await fetch('https://api.dexscreener.com/latest/dex/tokens/' + batch);
+        var pd2 = await pr2.json();
+        if (pd2.pairs) {
+          pd2.pairs.forEach(function(pair) {
+            var addr = pair.baseToken.address.toLowerCase();
+            if (!priceMap[addr] || (pair.liquidity && pair.liquidity.usd > (priceMap[addr].liquidity || 0))) {
+              priceMap[addr] = {
+                priceUsd: parseFloat(pair.priceUsd) || 0,
+                liquidity: pair.liquidity ? pair.liquidity.usd : 0,
+                volume24h: pair.volume ? pair.volume.h24 : 0,
+                pairCreated: pair.pairCreatedAt || 0,
+                fdv: pair.fdv || 0,
+                tokenName: pair.baseToken.name,
+                tokenSymbol: pair.baseToken.symbol,
+                imageUrl: pair.info && pair.info.imageUrl ? pair.info.imageUrl : null
+              };
+            }
+          });
+        }
+      } catch(e) { console.warn('DexScreener batch error:', e); }
+    }
+
+    // Build enriched token list
+    var enriched = tokens.map(function(t) {
+      var addr = t.contractAddress.toLowerCase();
+      var dex = priceMap[addr] || {};
+      var price = dex.priceUsd || 0;
+      var value = t.balance * price;
+      var risk = quickRiskScore(dex);
+      return {
+        address: t.contractAddress,
+        name: dex.tokenName || t.tokenName || 'Unknown',
+        symbol: dex.tokenSymbol || t.tokenSymbol || '???',
+        balance: t.balance,
+        price: price,
+        value: value,
+        risk: risk,
+        imageUrl: dex.imageUrl,
+        liquidity: dex.liquidity || 0,
+        fdv: dex.fdv || 0
+      };
+    });
+
+    // Sort by value descending
+    enriched.sort(function(a, b) { return b.value - a.value; });
+
+    // Calculate totals
+    var totalValue = bnbValue + enriched.reduce(function(sum, t) { return sum + t.value; }, 0);
+    var riskCounts = { green: 0, yellow: 0, orange: 0, red: 0, unknown: 0 };
+    enriched.forEach(function(t) { if (t.value > 1) riskCounts[t.risk.level]++; });
+
+    // Update summary
+    totalEl.textContent = '$' + formatNum(totalValue);
+    countEl.textContent = enriched.filter(function(t) { return t.value > 0.01; }).length;
+    bnbEl.textContent = bnbBalance.toFixed(4);
+
+    // Portfolio health
+    var totalRated = riskCounts.green + riskCounts.yellow + riskCounts.orange + riskCounts.red;
+    if (totalRated === 0) {
+      healthEl.textContent = '—';
+      healthEl.style.color = 'var(--muted)';
+    } else {
+      var healthScore = ((riskCounts.green * 4 + riskCounts.yellow * 3 + riskCounts.orange * 1.5 + riskCounts.red * 0) / (totalRated * 4)) * 100;
+      if (healthScore >= 70) { healthEl.textContent = '🟢 SOLID'; healthEl.style.color = '#86EFAC'; }
+      else if (healthScore >= 45) { healthEl.textContent = '🟡 MIXED'; healthEl.style.color = '#FDE68A'; }
+      else if (healthScore >= 25) { healthEl.textContent = '🟠 RISKY'; healthEl.style.color = '#FDBA74'; }
+      else { healthEl.textContent = '🔴 DEGEN'; healthEl.style.color = '#FCA5A5'; }
+    }
+
+    // Render token list
+    list.innerHTML = '';
+
+    // BNB row first
+    list.innerHTML += '<div class="portfolio-token">' +
+      '<div class="portfolio-token-icon"><img src="https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" onerror="this.parentNode.innerHTML=\'🟡\'" /></div>' +
+      '<div class="portfolio-token-info"><div class="portfolio-token-name">BNB</div><div class="portfolio-token-symbol">Native</div></div>' +
+      '<div class="portfolio-token-balance"><div class="portfolio-token-value">$' + formatNum(bnbValue) + '</div><div class="portfolio-token-amount">' + bnbBalance.toFixed(4) + ' BNB</div></div>' +
+      '<span class="portfolio-risk-badge risk-green">SAFE</span>' +
+      '</div>';
+
+    // Token rows
+    enriched.forEach(function(t) {
+      var isDust = t.value < 1;
+      var iconHtml = t.imageUrl
+        ? '<img src="' + t.imageUrl + '" onerror="this.parentNode.innerHTML=\'🪙\'" />'
+        : '🪙';
+      var riskClass = 'risk-' + t.risk.level;
+      var riskLabel = t.risk.label;
+      if (t.risk.level === 'unknown') { riskClass = 'risk-red'; riskLabel = 'N/A'; }
+
+      list.innerHTML += '<div class="portfolio-token' + (isDust ? ' portfolio-dust' : '') + '" onclick="portfolioScan(\'' + t.address + '\')">' +
+        '<div class="portfolio-token-icon">' + iconHtml + '</div>' +
+        '<div class="portfolio-token-info"><div class="portfolio-token-name">' + t.name + '</div><div class="portfolio-token-symbol">$' + t.symbol + '</div></div>' +
+        '<div class="portfolio-token-balance"><div class="portfolio-token-value">' + (t.value >= 0.01 ? '$' + formatNum(t.value) : '<$0.01') + '</div><div class="portfolio-token-amount">' + formatTokenBal(t.balance) + '</div></div>' +
+        '<span class="portfolio-risk-badge ' + riskClass + '">' + riskLabel + '</span>' +
+        '</div>';
+    });
+
+    if (enriched.length === 0) {
+      list.innerHTML += '<div style="text-align:center;padding:30px;color:var(--muted);">No BEP-20 tokens found in this wallet.</div>';
+    }
+
+    loading.style.display = 'none';
+    list.style.display = 'block';
+    window._portfolioLoaded = true;
+
+  } catch(err) {
+    console.error('Portfolio error:', err);
+    loading.innerHTML = '<div style="color:var(--red);">Failed to load portfolio: ' + err.message + '</div>';
+  }
+}
+
+// Quick risk score based on DexScreener data (no full scan needed)
+function quickRiskScore(dex) {
+  if (!dex || !dex.priceUsd) return { level: 'unknown', label: '?', score: 0 };
+  var score = 50;
+  // Liquidity
+  var liq = dex.liquidity || 0;
+  if (liq > 100000) score += 20;
+  else if (liq > 10000) score += 10;
+  else if (liq > 1000) score += 0;
+  else score -= 20;
+  // Volume
+  var vol = dex.volume24h || 0;
+  if (vol > 50000) score += 10;
+  else if (vol > 5000) score += 5;
+  else score -= 5;
+  // Age
+  var age = dex.pairCreated ? (Date.now() - dex.pairCreated) / (1000 * 60 * 60 * 24) : 0;
+  if (age > 180) score += 15;
+  else if (age > 30) score += 10;
+  else if (age > 7) score += 0;
+  else score -= 15;
+  // FDV sanity
+  var fdv = dex.fdv || 0;
+  if (fdv > 1000000) score += 5;
+  else if (fdv < 10000 && fdv > 0) score -= 10;
+
+  score = Math.max(0, Math.min(100, score));
+  if (score >= 70) return { level: 'green', label: 'SAFE', score: score };
+  if (score >= 50) return { level: 'yellow', label: 'OKAY', score: score };
+  if (score >= 30) return { level: 'orange', label: 'RISKY', score: score };
+  return { level: 'red', label: 'DANGER', score: score };
+}
+
+function formatNum(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(2) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(2) + 'K';
+  return n.toFixed(2);
+}
+
+function formatTokenBal(n) {
+  if (n >= 1000000000) return (n / 1000000000).toFixed(2) + 'B';
+  if (n >= 1000000) return (n / 1000000).toFixed(2) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(2) + 'K';
+  if (n >= 1) return n.toFixed(2);
+  return n.toFixed(6);
+}
+
+function portfolioScan(address) {
+  // Switch to scanner tab and scan this token
+  switchTab('scanner');
+  var input = document.getElementById('caInput');
+  if (input) {
+    input.value = address;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
 }
 
 function copyTrustyCA() {
