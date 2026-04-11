@@ -9340,7 +9340,8 @@ function switchTab(tab) {
 
 // ══ PORTFOLIO (via Chainbase free API) ══
 async function loadPortfolio() {
-  if (!connectedWallet) return;
+  console.log('📊 loadPortfolio called, wallet:', connectedWallet);
+  if (!connectedWallet) { console.warn('No wallet connected'); return; }
   var loading = document.getElementById('portfolio-loading');
   var list = document.getElementById('portfolio-list');
   var totalEl = document.getElementById('portfolio-total-value');
@@ -9374,6 +9375,7 @@ async function loadPortfolio() {
         });
       }
     } catch(e) { console.warn('Portfolio API error:', e); }
+    console.log('📊 BNB:', bnbBalance, 'Tokens found:', holdings.length, holdings.map(h => h.symbol));
 
     // 3. Get prices from DexScreener
     var bnbPrice = 600;
