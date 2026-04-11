@@ -9447,8 +9447,12 @@ async function loadPortfolio() {
 
     enriched.sort(function(a, b) { return b.value - a.value; });
 
-    // Filter: only show tokens worth > $0.50 (hide dust/spam)
-    var visible = enriched.filter(function(t) { return t.value >= 0.50; });
+    // Filter: show tokens with value OR significant balance (hide only true dust)
+    var visible = enriched.filter(function(t) {
+      if (t.value >= 0.01) return true;       // Has USD value
+      if (t.balance >= 1 && t.name !== 'Unknown' && t.symbol !== '???') return true; // Named token with real balance
+      return false;
+    });
     var dustCount = enriched.length - visible.length;
 
     // 5. Totals (use all enriched for total value, but count only visible)
