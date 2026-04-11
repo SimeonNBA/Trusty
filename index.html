@@ -9675,9 +9675,19 @@ function showConnected(address) {
 }
 
 async function disconnectWallet() {
+  // Try to revoke wallet extension permissions so next connect shows chooser
+  if (window._connectedProvider) {
+    try {
+      await window._connectedProvider.request({
+        method: 'wallet_revokePermissions',
+        params: [{ eth_accounts: {} }]
+      });
+    } catch(e) { /* Not all wallets support this */ }
+  }
   try {
     if (window._wcDisconnect) await window._wcDisconnect();
   } catch(e) { console.error('Disconnect error:', e); }
+  window._portfolioLoaded = false;
   disconnectWalletUI();
 }
 
