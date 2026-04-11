@@ -9353,43 +9353,27 @@ async function loadPortfolio() {
   totalEl.textContent = 'Scanning...';
 
   try {
-    // 1. Get BNB balance via RPC
+    // 1. BNB balance comes from backend
     var bnbBalance = 0;
-    try {
-      var bnbRes = await fetch('https://bsc-dataseed.binance.org', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getBalance', params: [connectedWallet, 'latest'], id: 1 })
-      });
-      var bnbData = await bnbRes.json();
-      if (bnbData.result) bnbBalance = parseInt(bnbData.result, 16) / 1e18;
-    } catch(e) { console.warn('BNB balance error:', e); }
 
-    // 2. Get ALL token balances via Chainbase API (free tier)
+    // 2. Get ALL token balances via backend (Chainbase API)
     var holdings = [];
     try {
-      var cbRes = await fetch(
-        'https://api.chainbase.online/v1/account/tokens?chain_id=56&address=' + connectedWallet + '&limit=50',
-        { headers: { 'x-api-key': 'demo' } }
-      );
+      var cbRes = await fetch(BACKEND_URL + '/api/portfolio/bsc/' + connectedWallet);
       var cbData = await cbRes.json();
-      if (cbData.code === 0 && cbData.data) {
-        cbData.data.forEach(function(t) {
-          if (!t.contract_address || !t.balance || t.balance === '0x0') return;
-          var decimals = t.decimals || 18;
-          var rawBal = parseInt(t.balance, 16);
-          var balance = rawBal / Math.pow(10, decimals);
-          if (balance > 0) {
-            holdings.push({
-              address: t.contract_address,
-              symbol: t.symbol || '???',
-              name: t.name || 'Unknown Token',
-              balance: balance,
-              decimals: decimals
-            });
-          }
+      if (cbData.nativeBalance) bnbBalance = cbData.nativeBalance;
+      if (cbData.tokens && cbData.tokens.length > 0) {
+        cbData.tokens.forEach(function(t) {
+          holdings.push({
+            address: t.contractAddress,
+            symbol: t.symbol || '???',
+            name: t.name || 'Unknown Token',
+            balance: t.balance,
+            decimals: t.decimals || 18
+          });
         });
       }
-    } catch(e) { console.warn('Chainbase error:', e); }
+    } catch(e) { console.warn('Portfolio API error:', e); }
 
     // 3. Get prices from DexScreener
     var bnbPrice = 600;
