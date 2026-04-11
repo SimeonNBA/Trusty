@@ -9447,13 +9447,17 @@ async function loadPortfolio() {
 
     enriched.sort(function(a, b) { return b.value - a.value; });
 
-    // 5. Totals
+    // Filter: only show tokens worth > $0.50 (hide dust/spam)
+    var visible = enriched.filter(function(t) { return t.value >= 0.50; });
+    var dustCount = enriched.length - visible.length;
+
+    // 5. Totals (use all enriched for total value, but count only visible)
     var totalValue = bnbValue + enriched.reduce(function(sum, t) { return sum + t.value; }, 0);
     var riskCounts = { green: 0, yellow: 0, orange: 0, red: 0, unknown: 0 };
-    enriched.forEach(function(t) { if (t.value > 0.01) riskCounts[t.risk.level]++; });
+    visible.forEach(function(t) { riskCounts[t.risk.level]++; });
 
     totalEl.textContent = '$' + formatNum(totalValue);
-    countEl.textContent = enriched.filter(function(t) { return t.balance > 0; }).length;
+    countEl.textContent = visible.length;
     bnbEl.textContent = bnbBalance.toFixed(4);
 
     // Portfolio health
@@ -9480,8 +9484,8 @@ async function loadPortfolio() {
       '<span class="portfolio-risk-badge risk-green">SAFE</span>' +
       '</div>';
 
-    enriched.forEach(function(t) {
-      var isDust = t.value < 1 && t.value >= 0;
+    visible.forEach(function(t) {
+      var isDust = false;
       var iconHtml = t.imageUrl
         ? '<img src="' + t.imageUrl + '" onerror="this.parentNode.innerHTML=\'🪙\'" />'
         : '🪙';
@@ -9497,8 +9501,11 @@ async function loadPortfolio() {
         '</div>';
     });
 
-    if (enriched.length === 0 && bnbBalance === 0) {
+    if (visible.length === 0 && bnbBalance === 0) {
       list.innerHTML += '<div style="text-align:center;padding:30px;color:var(--muted);">No tokens found in this wallet.</div>';
+    }
+    if (dustCount > 0) {
+      list.innerHTML += '<div style="text-align:center;padding:12px;color:var(--muted);font-size:11px;font-family:var(--mono);">' + dustCount + ' dust token' + (dustCount > 1 ? 's' : '') + ' hidden (< $0.50)</div>';
     }
 
     loading.style.display = 'none';
