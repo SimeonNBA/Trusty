@@ -4993,7 +4993,7 @@ body::before {
           <button class="wc-connect-btn" onclick="connectWallet()" style="padding:14px 32px;font-size:14px;">🔗 Connect Wallet</button>
         </div>
 
-        <div id="portfolio-content" style="display:none;">
+        <div id="portfolio-content">
           <!-- Summary Card -->
           <div class="section-card" style="margin-bottom:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
@@ -5025,7 +5025,7 @@ body::before {
           </div>
 
           <!-- Token List -->
-          <div id="portfolio-list" style="display:none;"></div>
+          <div id="portfolio-list"></div>
 
           <!-- Refresh button -->
           <div style="text-align:center;margin-top:16px;">
@@ -6743,15 +6743,39 @@ async function connectViaProvider(provider, name) {
 
     if (accounts && accounts.length > 0) {
       var address = accounts[0];
-      try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] }); }
-      catch (e) {
-        if (e.code === 4902) {
-          await provider.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0x38', chainName: 'BNB Smart Chain', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, rpcUrls: ['https://bsc-dataseed.binance.org'], blockExplorerUrls: ['https://bscscan.com'] }] });
+
+      // Binance Wallet may return BEP2 address (bnb1...) — need EVM address
+      if (address && !address.startsWith('0x')) {
+        console.warn('Non-EVM address detected:', address, '— requesting EVM address...');
+        try {
+          // Try switching to BSC first
+          await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] });
+          var evmAccounts = await provider.request({ method: 'eth_accounts' });
+          if (evmAccounts && evmAccounts[0] && evmAccounts[0].startsWith('0x')) {
+            address = evmAccounts[0];
+          } else {
+            alert('Could not get BSC address. Please switch to BNB Smart Chain in your Binance wallet and try again.');
+            resetConnectBtns();
+            return;
+          }
+        } catch(e) {
+          alert('Please switch to BNB Smart Chain in your Binance wallet extension, then reconnect.');
+          resetConnectBtns();
+          return;
+        }
+      } else {
+        // Switch to BSC for EVM wallets
+        try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] }); }
+        catch (e) {
+          if (e.code === 4902) {
+            await provider.request({ method: 'wallet_addEthereumChain', params: [{ chainId: '0x38', chainName: 'BNB Smart Chain', nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }, rpcUrls: ['https://bsc-dataseed.binance.org'], blockExplorerUrls: ['https://bscscan.com'] }] });
+          }
         }
       }
+
       window.connectedWallet = address;
       window._connectedProvider = provider;
-      window._portfolioLoaded = false; // Force portfolio refresh
+      window._portfolioLoaded = false;
       showConnected(address);
       fetchBalance(address, provider);
       console.log('✅ Connected to ' + name + ':', address);
@@ -9533,22 +9557,11 @@ async function loadPortfolio() {
     list.style.display = 'block';
     window._portfolioLoaded = true;
 
-    // Force ALL parent elements visible
-    var content = document.getElementById('portfolio-content');
-    var notConn = document.getElementById('portfolio-not-connected');
-    var tabPanel = document.getElementById('tab-portfolio');
-    if (content) { content.style.display = 'block'; content.style.visibility = 'visible'; content.style.opacity = '1'; content.style.height = 'auto'; content.style.overflow = 'visible'; }
-    if (notConn) notConn.style.display = 'none';
-    if (tabPanel) { tabPanel.style.display = 'block'; tabPanel.style.visibility = 'visible'; tabPanel.style.opacity = '1'; tabPanel.style.height = 'auto'; tabPanel.style.overflow = 'visible'; }
-    if (loading) { loading.style.display = 'none'; }
-    if (list) { list.style.display = 'block'; list.style.visibility = 'visible'; list.style.opacity = '1'; list.style.height = 'auto'; }
-
-    // Force scroll to top of portfolio
-    if (tabPanel) tabPanel.scrollTop = 0;
+    loading.style.display = 'none';
+    window._portfolioLoaded = true;
     window.scrollTo(0, 0);
 
-    console.log('📊 Portfolio rendered!', visible.length, 'tokens shown,', dustCount, 'dust hidden. List HTML length:', list.innerHTML.length);
-    console.log('📊 Visibility check — tabPanel:', tabPanel ? tabPanel.style.display : 'null', '| content:', content ? content.style.display : 'null', '| list:', list ? list.style.display : 'null');
+    console.log('📊 Portfolio rendered!', visible.length, 'tokens shown,', dustCount, 'dust hidden');
 
   } catch(err) {
     console.error('❌ Portfolio error:', err);
