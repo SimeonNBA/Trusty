@@ -9261,6 +9261,17 @@ function switchTab(tab) {
 }
 
 // ══ PORTFOLIO ══
+// Known popular BSC tokens to check balances for
+var BSC_TOKEN_LIST = [
+  { address: '0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56', symbol: 'BUSD', name: 'Binance USD', decimals: 18 },
+  { address: '0x55d398326f99059fF775485246999027B3197955', symbol: 'USDT', name: 'Tether USD', decimals: 18 },
+  { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', symbol: 'USDC', name: 'USD Coin', decimals: 18 },
+  { address: '0x2170Ed0880ac9A755fd29B2688956BD959F933F8', symbol: 'ETH', name: 'Ethereum', decimals: 18 },
+  { address: '0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c', symbol: 'BTCB', name: 'Bitcoin BEP2', decimals: 18 },
+  { address: '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82', symbol: 'CAKE', name: 'PancakeSwap', decimals: 18 },
+  { address: '0x65aea108c21439693468FCD542D81C29E8df4444', symbol: 'TRUSTY', name: 'Trusty', decimals: 18 },
+];
+
 async function loadPortfolio() {
   if (!connectedWallet) return;
   var loading = document.getElementById('portfolio-loading');
@@ -9272,38 +9283,93 @@ async function loadPortfolio() {
 
   loading.style.display = 'block';
   list.style.display = 'none';
-  totalEl.textContent = 'Loading...';
+  totalEl.textContent = 'Scanning...';
 
   try {
-    // Fetch portfolio from backend
-    var res = await fetch(BACKEND_URL + '/api/portfolio/bsc/' + connectedWallet);
-    var data = await res.json();
-    if (data.error) throw new Error(data.error);
-
-    var bnbBalance = data.nativeBalance || 0;
-    var tokens = data.tokens || [];
-
-    // Fetch BNB price
-    var bnbPrice = 0;
+    // 1. Get BNB balance
+    var bnbBalance = 0;
     try {
-      var pr = await fetch('https://api.dexscreener.com/latest/dex/tokens/0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c');
-      var pd = await pr.json();
-      if (pd.pairs && pd.pairs[0]) bnbPrice = parseFloat(pd.pairs[0].priceUsd) || 0;
-    } catch(e) { bnbPrice = 600; } // fallback
+      var bnbRes = await fetch('https://bsc-dataseed.binance.org', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getBalance', params: [connectedWallet, 'latest'], id: 1 })
+      });
+      var bnbData = await bnbRes.json();
+      if (bnbData.result) bnbBalance = parseInt(bnbData.result, 16) / 1e18;
+    } catch(e) { console.warn('BNB balance error:', e); }
 
-    var bnbValue = bnbBalance * bnbPrice;
+    // 2. Get token balances via RPC (balanceOf calls)
+    // Build list: known tokens + tokens from recent scans
+    var tokensToCheck = BSC_TOKEN_LIST.slice();
+    // Add tokens from search history
+    try {
+      var hist = JSON.parse(localStorage.getItem('trusty_search_history') || '[]');
+      hist.forEach(function(h) {
+        if (h.ca && !tokensToCheck.find(function(t) { return t.address.toLowerCase() === h.ca.toLowerCase(); })) {
+          tokensToCheck.push({ address: h.ca, symbol: h.symbol || '???', name: h.name || 'Unknown', decimals: 18 });
+        }
+      });
+    } catch(e) {}
 
-    // Fetch prices for tokens via DexScreener (batch by 30)
-    var tokenAddresses = tokens.map(t => t.contractAddress);
-    var priceMap = {};
-    for (var i = 0; i < tokenAddresses.length; i += 30) {
-      var batch = tokenAddresses.slice(i, i + 30).join(',');
+    // ERC20 balanceOf(address) = 0x70a08231 + padded address
+    var paddedAddr = connectedWallet.slice(2).toLowerCase().padStart(64, '0');
+    var callData = '0x70a08231' + paddedAddr;
+
+    // Batch RPC calls (BSC supports batch JSON-RPC)
+    var batchCalls = tokensToCheck.map(function(token, idx) {
+      return { jsonrpc: '2.0', method: 'eth_call', params: [{ to: token.address, data: callData }, 'latest'], id: idx };
+    });
+
+    var tokenResults = [];
+    // Send in batches of 20
+    for (var i = 0; i < batchCalls.length; i += 20) {
+      var batch = batchCalls.slice(i, i + 20);
       try {
-        var pr2 = await fetch('https://api.dexscreener.com/latest/dex/tokens/' + batch);
-        var pd2 = await pr2.json();
-        if (pd2.pairs) {
-          pd2.pairs.forEach(function(pair) {
+        var batchRes = await fetch('https://bsc-dataseed.binance.org', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(batch)
+        });
+        var batchData = await batchRes.json();
+        if (Array.isArray(batchData)) tokenResults.push(...batchData);
+      } catch(e) { console.warn('Batch RPC error:', e); }
+    }
+
+    // Parse balances
+    var holdings = [];
+    tokenResults.forEach(function(res) {
+      if (res.result && res.result !== '0x' && res.result !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+        var token = tokensToCheck[res.id];
+        if (!token) return;
+        var rawBal = parseInt(res.result, 16);
+        var balance = rawBal / Math.pow(10, token.decimals);
+        if (balance > 0) {
+          holdings.push({
+            address: token.address,
+            symbol: token.symbol,
+            name: token.name,
+            balance: balance,
+            decimals: token.decimals
+          });
+        }
+      }
+    });
+
+    // 3. Get prices from DexScreener
+    var bnbPrice = 600;
+    var priceMap = {};
+    if (holdings.length > 0) {
+      var addrs = holdings.map(function(h) { return h.address; }).join(',');
+      // Add WBNB for price
+      addrs += ',0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
+      try {
+        var pr = await fetch('https://api.dexscreener.com/latest/dex/tokens/' + addrs);
+        var pd = await pr.json();
+        if (pd.pairs) {
+          pd.pairs.forEach(function(pair) {
             var addr = pair.baseToken.address.toLowerCase();
+            // WBNB price
+            if (addr === '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c') {
+              bnbPrice = parseFloat(pair.priceUsd) || 600;
+            }
             if (!priceMap[addr] || (pair.liquidity && pair.liquidity.usd > (priceMap[addr].liquidity || 0))) {
               priceMap[addr] = {
                 priceUsd: parseFloat(pair.priceUsd) || 0,
@@ -9311,27 +9377,26 @@ async function loadPortfolio() {
                 volume24h: pair.volume ? pair.volume.h24 : 0,
                 pairCreated: pair.pairCreatedAt || 0,
                 fdv: pair.fdv || 0,
-                tokenName: pair.baseToken.name,
-                tokenSymbol: pair.baseToken.symbol,
                 imageUrl: pair.info && pair.info.imageUrl ? pair.info.imageUrl : null
               };
             }
           });
         }
-      } catch(e) { console.warn('DexScreener batch error:', e); }
+      } catch(e) { console.warn('DexScreener error:', e); }
     }
 
-    // Build enriched token list
-    var enriched = tokens.map(function(t) {
-      var addr = t.contractAddress.toLowerCase();
-      var dex = priceMap[addr] || {};
+    var bnbValue = bnbBalance * bnbPrice;
+
+    // 4. Enrich holdings with prices and risk
+    var enriched = holdings.map(function(t) {
+      var dex = priceMap[t.address.toLowerCase()] || {};
       var price = dex.priceUsd || 0;
       var value = t.balance * price;
       var risk = quickRiskScore(dex);
       return {
-        address: t.contractAddress,
-        name: dex.tokenName || t.tokenName || 'Unknown',
-        symbol: dex.tokenSymbol || t.tokenSymbol || '???',
+        address: t.address,
+        name: t.name,
+        symbol: t.symbol,
         balance: t.balance,
         price: price,
         value: value,
@@ -9342,15 +9407,13 @@ async function loadPortfolio() {
       };
     });
 
-    // Sort by value descending
     enriched.sort(function(a, b) { return b.value - a.value; });
 
-    // Calculate totals
+    // 5. Calculate totals
     var totalValue = bnbValue + enriched.reduce(function(sum, t) { return sum + t.value; }, 0);
     var riskCounts = { green: 0, yellow: 0, orange: 0, red: 0, unknown: 0 };
-    enriched.forEach(function(t) { if (t.value > 1) riskCounts[t.risk.level]++; });
+    enriched.forEach(function(t) { if (t.value > 0.01) riskCounts[t.risk.level]++; });
 
-    // Update summary
     totalEl.textContent = '$' + formatNum(totalValue);
     countEl.textContent = enriched.filter(function(t) { return t.value > 0.01; }).length;
     bnbEl.textContent = bnbBalance.toFixed(4);
@@ -9368,10 +9431,10 @@ async function loadPortfolio() {
       else { healthEl.textContent = '🔴 DEGEN'; healthEl.style.color = '#FCA5A5'; }
     }
 
-    // Render token list
+    // 6. Render
     list.innerHTML = '';
 
-    // BNB row first
+    // BNB row
     list.innerHTML += '<div class="portfolio-token">' +
       '<div class="portfolio-token-icon"><img src="https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png" onerror="this.parentNode.innerHTML=\'🟡\'" /></div>' +
       '<div class="portfolio-token-info"><div class="portfolio-token-name">BNB</div><div class="portfolio-token-symbol">Native</div></div>' +
@@ -9379,9 +9442,8 @@ async function loadPortfolio() {
       '<span class="portfolio-risk-badge risk-green">SAFE</span>' +
       '</div>';
 
-    // Token rows
     enriched.forEach(function(t) {
-      var isDust = t.value < 1;
+      var isDust = t.value < 1 && t.value > 0;
       var iconHtml = t.imageUrl
         ? '<img src="' + t.imageUrl + '" onerror="this.parentNode.innerHTML=\'🪙\'" />'
         : '🪙';
@@ -9392,13 +9454,13 @@ async function loadPortfolio() {
       list.innerHTML += '<div class="portfolio-token' + (isDust ? ' portfolio-dust' : '') + '" onclick="portfolioScan(\'' + t.address + '\')">' +
         '<div class="portfolio-token-icon">' + iconHtml + '</div>' +
         '<div class="portfolio-token-info"><div class="portfolio-token-name">' + t.name + '</div><div class="portfolio-token-symbol">$' + t.symbol + '</div></div>' +
-        '<div class="portfolio-token-balance"><div class="portfolio-token-value">' + (t.value >= 0.01 ? '$' + formatNum(t.value) : '<$0.01') + '</div><div class="portfolio-token-amount">' + formatTokenBal(t.balance) + '</div></div>' +
+        '<div class="portfolio-token-balance"><div class="portfolio-token-value">' + (t.value >= 0.01 ? '$' + formatNum(t.value) : t.balance > 0 ? '<$0.01' : '$0') + '</div><div class="portfolio-token-amount">' + formatTokenBal(t.balance) + '</div></div>' +
         '<span class="portfolio-risk-badge ' + riskClass + '">' + riskLabel + '</span>' +
         '</div>';
     });
 
-    if (enriched.length === 0) {
-      list.innerHTML += '<div style="text-align:center;padding:30px;color:var(--muted);">No BEP-20 tokens found in this wallet.</div>';
+    if (enriched.length === 0 && bnbBalance === 0) {
+      list.innerHTML += '<div style="text-align:center;padding:30px;color:var(--muted);">No tokens found. Tokens you scan will also be checked here.</div>';
     }
 
     loading.style.display = 'none';
@@ -9675,20 +9737,24 @@ function showConnected(address) {
 }
 
 async function disconnectWallet() {
-  // Try to revoke wallet extension permissions so next connect shows chooser
+  // Try multiple methods to revoke permissions
   if (window._connectedProvider) {
-    try {
-      await window._connectedProvider.request({
-        method: 'wallet_revokePermissions',
-        params: [{ eth_accounts: {} }]
-      });
-    } catch(e) { /* Not all wallets support this */ }
+    try { await window._connectedProvider.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] }); } catch(e) {}
+    try { await window._connectedProvider.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: { requiredMethods: [] } }] }); } catch(e) {}
+    // For MetaMask-like wallets
+    try { if (window._connectedProvider.disconnect) await window._connectedProvider.disconnect(); } catch(e) {}
   }
   try {
     if (window._wcDisconnect) await window._wcDisconnect();
-  } catch(e) { console.error('Disconnect error:', e); }
+  } catch(e) {}
   window._portfolioLoaded = false;
+  window._connectedProvider = null;
   disconnectWalletUI();
+  // Hide portfolio content
+  var pc = document.getElementById('portfolio-content');
+  var pnc = document.getElementById('portfolio-not-connected');
+  if (pc) pc.style.display = 'none';
+  if (pnc) pnc.style.display = 'block';
 }
 
 // UI-only disconnect (called by watchAccount when wallet disconnects)
