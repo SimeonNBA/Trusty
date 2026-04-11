@@ -6724,7 +6724,23 @@ async function connectViaProvider(provider, name) {
   closeWalletModal();
   try {
     console.log('🔗 Connecting to ' + name + '...');
-    var accounts = await provider.request({ method: 'eth_requestAccounts' });
+
+    // Force account chooser popup (not auto-connect)
+    var accounts;
+    try {
+      // wallet_requestPermissions forces the wallet to show the chooser
+      var perms = await provider.request({
+        method: 'wallet_requestPermissions',
+        params: [{ eth_accounts: {} }]
+      });
+      // After permission granted, get the selected account
+      accounts = await provider.request({ method: 'eth_accounts' });
+    } catch(permErr) {
+      // Fallback for wallets that don't support wallet_requestPermissions
+      console.warn('wallet_requestPermissions not supported, using eth_requestAccounts');
+      accounts = await provider.request({ method: 'eth_requestAccounts' });
+    }
+
     if (accounts && accounts.length > 0) {
       var address = accounts[0];
       try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] }); }
@@ -6735,6 +6751,7 @@ async function connectViaProvider(provider, name) {
       }
       window.connectedWallet = address;
       window._connectedProvider = provider;
+      window._portfolioLoaded = false; // Force portfolio refresh
       showConnected(address);
       fetchBalance(address, provider);
       console.log('✅ Connected to ' + name + ':', address);
