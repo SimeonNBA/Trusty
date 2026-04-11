@@ -9512,9 +9512,18 @@ async function loadPortfolio() {
     list.style.display = 'block';
     window._portfolioLoaded = true;
 
+    // Force parent visibility
+    var content = document.getElementById('portfolio-content');
+    var notConn = document.getElementById('portfolio-not-connected');
+    if (content) content.style.display = 'block';
+    if (notConn) notConn.style.display = 'none';
+
+    console.log('📊 Portfolio rendered!', visible.length, 'tokens shown,', dustCount, 'dust hidden. List HTML length:', list.innerHTML.length);
+
   } catch(err) {
-    console.error('Portfolio error:', err);
-    loading.innerHTML = '<div style="color:var(--red);">Failed to load portfolio: ' + err.message + '</div>';
+    console.error('❌ Portfolio error:', err);
+    var loading2 = document.getElementById('portfolio-loading');
+    if (loading2) loading2.innerHTML = '<div style="color:#EF4444;padding:20px;">Failed to load: ' + err.message + '</div>';
   }
 }
 
