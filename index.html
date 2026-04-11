@@ -6747,23 +6747,10 @@ async function connectViaProvider(provider, name) {
 
       // Binance Wallet may return BEP2 address (bnb1...) — need EVM address
       if (address && !address.startsWith('0x')) {
-        console.warn('Non-EVM address detected:', address, '— requesting EVM address...');
-        try {
-          // Try switching to BSC first
-          await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] });
-          var evmAccounts = await provider.request({ method: 'eth_accounts' });
-          if (evmAccounts && evmAccounts[0] && evmAccounts[0].startsWith('0x')) {
-            address = evmAccounts[0];
-          } else {
-            alert('Could not get BSC address. Please switch to BNB Smart Chain in your Binance wallet and try again.');
-            resetConnectBtns();
-            return;
-          }
-        } catch(e) {
-          alert('Please switch to BNB Smart Chain in your Binance wallet extension, then reconnect.');
-          resetConnectBtns();
-          return;
-        }
+        console.warn('Non-EVM address detected:', address, '— skipping, use Trust Wallet or MetaMask instead');
+        resetConnectBtns();
+        openWalletModal();
+        return;
       } else {
         // Switch to BSC for EVM wallets
         try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] }); }
