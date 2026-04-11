@@ -9533,13 +9533,22 @@ async function loadPortfolio() {
     list.style.display = 'block';
     window._portfolioLoaded = true;
 
-    // Force parent visibility
+    // Force ALL parent elements visible
     var content = document.getElementById('portfolio-content');
     var notConn = document.getElementById('portfolio-not-connected');
-    if (content) content.style.display = 'block';
+    var tabPanel = document.getElementById('tab-portfolio');
+    if (content) { content.style.display = 'block'; content.style.visibility = 'visible'; content.style.opacity = '1'; content.style.height = 'auto'; content.style.overflow = 'visible'; }
     if (notConn) notConn.style.display = 'none';
+    if (tabPanel) { tabPanel.style.display = 'block'; tabPanel.style.visibility = 'visible'; tabPanel.style.opacity = '1'; tabPanel.style.height = 'auto'; tabPanel.style.overflow = 'visible'; }
+    if (loading) { loading.style.display = 'none'; }
+    if (list) { list.style.display = 'block'; list.style.visibility = 'visible'; list.style.opacity = '1'; list.style.height = 'auto'; }
+
+    // Force scroll to top of portfolio
+    if (tabPanel) tabPanel.scrollTop = 0;
+    window.scrollTo(0, 0);
 
     console.log('📊 Portfolio rendered!', visible.length, 'tokens shown,', dustCount, 'dust hidden. List HTML length:', list.innerHTML.length);
+    console.log('📊 Visibility check — tabPanel:', tabPanel ? tabPanel.style.display : 'null', '| content:', content ? content.style.display : 'null', '| list:', list ? list.style.display : 'null');
 
   } catch(err) {
     console.error('❌ Portfolio error:', err);
