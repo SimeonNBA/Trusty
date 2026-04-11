@@ -6822,6 +6822,84 @@ if (window.trustwallet || window.ethereum) {
 }
 
 console.log('✅ Wallet connector ready');
+
+// ══ TWAK API CLIENT (HMAC-SHA256 auth) ══
+var TWAK_BASE = 'https://tws.trustwallet.com';
+var TWAK_ID = 'a4c8c6c3307052bfae083e9d89ce523004ad50694e8f083d821915649292c744';
+var TWAK_SECRET = null; // Will be set from env or config
+
+// Load TWAK secret (set via backend proxy endpoint)
+(async function() {
+  try {
+    var r = await fetch('https://trusty-backend-production.up.railway.app/api/twak-config');
+    var d = await r.json();
+    if (d.s) { TWAK_SECRET = d.s; console.log('✅ TWAK configured'); }
+  } catch(e) { console.warn('TWAK config not available'); }
+})();
+
+async function twakSign(method, path, query) {
+  if (!TWAK_SECRET) return null;
+  var nonce = crypto.randomUUID();
+  var date = new Date().toUTCString();
+  var sortedQuery = '';
+  if (query && Object.keys(query).length > 0) {
+    sortedQuery = Object.keys(query).sort().map(function(k) { return k + '=' + query[k]; }).join('&');
+  }
+  var plaintext = [method.toUpperCase(), path, sortedQuery, TWAK_ID, nonce, date].join(';');
+  // HMAC-SHA256 using Web Crypto API
+  var encoder = new TextEncoder();
+  var key = await crypto.subtle.importKey('raw', encoder.encode(TWAK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  var sig = await crypto.subtle.sign('HMAC', key, encoder.encode(plaintext));
+  var signature = btoa(String.fromCharCode.apply(null, new Uint8Array(sig)));
+  return {
+    'X-TW-CREDENTIAL': TWAK_ID,
+    'X-TW-NONCE': nonce,
+    'X-TW-DATE': date,
+    'Authorization': 'HMAC-SHA256 Signature=' + signature,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  };
+}
+
+async function twakGet(path, query) {
+  var headers = await twakSign('GET', path, query || {});
+  if (!headers) return null;
+  var qs = '';
+  if (query && Object.keys(query).length > 0) {
+    qs = '?' + Object.keys(query).map(function(k) { return k + '=' + encodeURIComponent(query[k]); }).join('&');
+  }
+  var res = await fetch(TWAK_BASE + path + qs, { headers: headers });
+  return res.json();
+}
+
+async function twakPost(path, body) {
+  var headers = await twakSign('POST', path, {});
+  if (!headers) return null;
+  var res = await fetch(TWAK_BASE + path, { method: 'POST', headers: headers, body: JSON.stringify(body || {}) });
+  return res.json();
+}
+
+// TWAK: Check token security
+async function twakTokenSecurity(chain, contractAddress) {
+  // BSC coin ID = 714
+  var coinId = chain === 'bsc' ? 714 : chain === 'ethereum' ? 60 : chain === 'solana' ? 501 : 714;
+  var assetId = 'c' + coinId + '_t' + contractAddress;
+  return twakGet('/v2/coinstatus/' + assetId, { version: '2', include_security_info: 'true' });
+}
+
+// TWAK: Get swap quote
+async function twakSwapQuote(fromAsset, toAsset, amount, fromAddress, slippage) {
+  return twakPost('/amber-api/v1/route', {
+    fromAsset: fromAsset,
+    toAsset: toAsset,
+    fromAddress: fromAddress,
+    toAddress: fromAddress,
+    fromDomain: 56,
+    toDomain: 56,
+    amount: amount,
+    slippage: slippage || 1
+  });
+}
 </script>
 
 <!-- WalletConnect modal (loaded async, non-blocking) -->
