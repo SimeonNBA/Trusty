@@ -5103,6 +5103,15 @@ body::before {
             <div class="strategy-input-label">AMOUNT TO BUY (USD)</div>
             <input class="strategy-input" id="swap-amount" type="number" placeholder="25" min="1" />
           </div>
+          <div class="strategy-input-group" style="margin-bottom:10px;">
+            <div class="strategy-input-label">SLIPPAGE</div>
+            <div style="display:flex;gap:6px;margin-top:4px;">
+              <button onclick="setSlippage(5,this)" class="slippage-btn" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-weight:700;cursor:pointer;font-size:11px;">5%</button>
+              <button onclick="setSlippage(10,this)" class="slippage-btn" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--blue);background:rgba(59,130,246,0.15);color:var(--blue2);font-weight:700;cursor:pointer;font-size:11px;">10%</button>
+              <button onclick="setSlippage(15,this)" class="slippage-btn" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-weight:700;cursor:pointer;font-size:11px;">15%</button>
+              <button onclick="setSlippage(25,this)" class="slippage-btn" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-weight:700;cursor:pointer;font-size:11px;">25%</button>
+            </div>
+          </div>
           <button class="strategy-submit-btn" style="background:linear-gradient(135deg,#3B82F6,#2563EB);" onclick="submitSwap()">⚡ BUY NOW</button>
         </div>
         <div class="strategy-success" id="strategySuccess">
@@ -9930,6 +9939,22 @@ async function submitLimit() {
   }
 }
 
+// Slippage selector
+window._swapSlippage = 10; // default 10%
+function setSlippage(pct, btn) {
+  window._swapSlippage = pct;
+  document.querySelectorAll('.slippage-btn').forEach(function(b) {
+    b.style.borderColor = 'var(--border)';
+    b.style.background = 'var(--bg3)';
+    b.style.color = 'var(--muted)';
+  });
+  if (btn) {
+    btn.style.borderColor = 'var(--blue)';
+    btn.style.background = 'rgba(59,130,246,0.15)';
+    btn.style.color = 'var(--blue2)';
+  }
+}
+
 async function submitSwap() {
   if (!connectedWallet) return alert('Connect your wallet first!');
   if (!currentTokenAddress) return alert('Scan a token first!');
@@ -9954,17 +9979,40 @@ async function submitSwap() {
 
     console.log('🔄 Swap: $' + amountUSD + ' = ' + bnbAmount.toFixed(6) + ' BNB → ' + currentTokenAddress);
 
-    // 2. Build PancakeSwap Router call
-    // swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline)
+    // 2. Get expected output to calculate amountOutMin with slippage
     var ROUTER = '0x10ED43C718714eb63d5aA57B78B54704E256024E';
     var WBNB = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
     var deadline = Math.floor(Date.now() / 1000) + 1200; // 20 minutes
+    var slippage = window._swapSlippage || 10;
+
+    // Try to get expected output from PancakeSwap Router.getAmountsOut
+    var amountOutMinHex = '0000000000000000000000000000000000000000000000000000000000000000';
+    try {
+      var weiHex = Math.floor(bnbAmount * 1e18).toString(16).padStart(64, '0');
+      var getAmountsOutData = '0xd06ca61f' + weiHex +
+        '0000000000000000000000000000000000000000000000000000000000000040' +
+        '0000000000000000000000000000000000000000000000000000000000000002' +
+        WBNB.slice(2).toLowerCase().padStart(64, '0') +
+        currentTokenAddress.slice(2).toLowerCase().padStart(64, '0');
+
+      var amountsRes = await provider.request({
+        method: 'eth_call',
+        params: [{ to: ROUTER, data: getAmountsOutData }, 'latest']
+      });
+
+      if (amountsRes && amountsRes.length > 130) {
+        // Parse: skip first 128 chars (offset + length), take next 64 chars = amountOut
+        var expectedOut = BigInt('0x' + amountsRes.slice(130, 194));
+        var minOut = expectedOut * BigInt(100 - slippage) / BigInt(100);
+        amountOutMinHex = minOut.toString(16).padStart(64, '0');
+        console.log('📊 Expected output:', expectedOut.toString(), 'Min with ' + slippage + '% slippage:', minOut.toString());
+      }
+    } catch(e) { console.warn('Could not get expected output, using 0:', e.message); }
 
     // Encode function call data
     // Selector: 0xb6f9de95 (swapExactETHForTokensSupportingFeeOnTransferTokens)
     var selector = 'b6f9de95';
-    // amountOutMin = 0 (accept any amount — user sets slippage via amount)
-    var amountOutMin = '0000000000000000000000000000000000000000000000000000000000000000';
+    var amountOutMin = amountOutMinHex;
     // offset to path array = 128 (0x80)
     var pathOffset = '0000000000000000000000000000000000000000000000000000000000000080';
     // to = connectedWallet (padded to 32 bytes)
@@ -9981,7 +10029,9 @@ async function submitSwap() {
     var data = '0x' + selector + amountOutMin + pathOffset + toAddr + deadlineHex + pathLen + path0 + path1;
 
     // 3. Confirm with user
-    var confirmMsg = 'Swap ' + bnbAmount.toFixed(6) + ' BNB ($' + amountUSD + ') for ' + (document.getElementById('sidebarTokenName') ? document.getElementById('sidebarTokenName').textContent : 'token') + '?\n\nYour wallet will ask you to approve the transaction.';
+    var tokenLabel = document.getElementById('sidebarTokenName') ? document.getElementById('sidebarTokenName').textContent : 'token';
+    var confirmMsg = 'Swap ' + bnbAmount.toFixed(6) + ' BNB ($' + amountUSD + ') for ' + tokenLabel + '\n\nSlippage: ' + slippage + '%\nRouter: PancakeSwap V2\n\nYour wallet will ask you to approve.';
+    if (amountUSD >= 100) confirmMsg = '⚠️ LARGE TRADE ⚠️\n\n' + confirmMsg;
     if (!confirm(confirmMsg)) return;
 
     // 4. Send transaction via wallet
@@ -10095,7 +10145,18 @@ function openTradeModal(type) {
         '<label style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;">AMOUNT TO BUY (USD)</label>' +
         '<input id="tm-swap-amount" type="number" placeholder="25" min="1" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:16px;margin-top:4px;" />' +
       '</div>' +
+      '<div style="margin-bottom:14px;">' +
+        '<label style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:1px;">SLIPPAGE</label>' +
+        '<div style="display:flex;gap:6px;margin-top:4px;">' +
+          '<button onclick="setSlippage(5,this)" class="slippage-btn" style="flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg3);color:var(--muted);font-weight:700;cursor:pointer;font-size:12px;">5%</button>' +
+          '<button onclick="setSlippage(10,this)" class="slippage-btn active-slip" style="flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--blue);background:rgba(59,130,246,0.15);color:var(--blue2);font-weight:700;cursor:pointer;font-size:12px;">10%</button>' +
+          '<button onclick="setSlippage(15,this)" class="slippage-btn" style="flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg3);color:var(--muted);font-weight:700;cursor:pointer;font-size:12px;">15%</button>' +
+          '<button onclick="setSlippage(25,this)" class="slippage-btn" style="flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg3);color:var(--muted);font-weight:700;cursor:pointer;font-size:12px;">25%</button>' +
+        '</div>' +
+      '</div>' +
+      (amountUSD > 100 ? '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:#FCA5A5;">⚠️ Large trade — make sure you trust this token. Check the scanner results first.</div>' : '') +
       '<button onclick="submitTradeModal(\'swap\')" style="width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,#3B82F6,#2563EB);color:white;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--display);letter-spacing:1px;">⚡ BUY NOW</button>';
+    window._swapSlippage = 10; // default 10%
   }
   modal.classList.add('open');
 }
