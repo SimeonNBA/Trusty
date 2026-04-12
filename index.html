@@ -9931,10 +9931,86 @@ async function submitLimit() {
 }
 
 async function submitSwap() {
-  if (!connectedWallet) return;
-  const amount = document.getElementById('swap-amount').value;
-  if (!amount) return alert('Enter an amount fren');
-  showStrategySuccess(`Swap queued! Buying $${amount} worth. Check Trust Wallet to approve the transaction.`);
+  if (!connectedWallet) return alert('Connect your wallet first!');
+  if (!currentTokenAddress) return alert('Scan a token first!');
+
+  const amountUSD = parseFloat(document.getElementById('swap-amount').value);
+  if (!amountUSD || amountUSD <= 0) return alert('Enter a valid amount fren');
+
+  var provider = window._connectedProvider || window.trustwallet || window.ethereum;
+  if (!provider) return alert('No wallet provider found. Reconnect your wallet.');
+
+  try {
+    // 1. Get BNB price to convert USD to BNB
+    var bnbPrice = 600;
+    try {
+      var pr = await fetch('https://api.dexscreener.com/latest/dex/tokens/0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c');
+      var pd = await pr.json();
+      if (pd.pairs && pd.pairs[0]) bnbPrice = parseFloat(pd.pairs[0].priceUsd) || 600;
+    } catch(e) {}
+
+    var bnbAmount = amountUSD / bnbPrice;
+    var weiAmount = '0x' + Math.floor(bnbAmount * 1e18).toString(16);
+
+    console.log('🔄 Swap: $' + amountUSD + ' = ' + bnbAmount.toFixed(6) + ' BNB → ' + currentTokenAddress);
+
+    // 2. Build PancakeSwap Router call
+    // swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin, address[] path, address to, uint256 deadline)
+    var ROUTER = '0x10ED43C718714eb63d5aA57B78B54704E256024E';
+    var WBNB = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
+    var deadline = Math.floor(Date.now() / 1000) + 1200; // 20 minutes
+
+    // Encode function call data
+    // Selector: 0xb6f9de95 (swapExactETHForTokensSupportingFeeOnTransferTokens)
+    var selector = 'b6f9de95';
+    // amountOutMin = 0 (accept any amount — user sets slippage via amount)
+    var amountOutMin = '0000000000000000000000000000000000000000000000000000000000000000';
+    // offset to path array = 128 (0x80)
+    var pathOffset = '0000000000000000000000000000000000000000000000000000000000000080';
+    // to = connectedWallet (padded to 32 bytes)
+    var toAddr = connectedWallet.slice(2).toLowerCase().padStart(64, '0');
+    // deadline
+    var deadlineHex = deadline.toString(16).padStart(64, '0');
+    // path array length = 2
+    var pathLen = '0000000000000000000000000000000000000000000000000000000000000002';
+    // path[0] = WBNB
+    var path0 = WBNB.slice(2).toLowerCase().padStart(64, '0');
+    // path[1] = token
+    var path1 = currentTokenAddress.slice(2).toLowerCase().padStart(64, '0');
+
+    var data = '0x' + selector + amountOutMin + pathOffset + toAddr + deadlineHex + pathLen + path0 + path1;
+
+    // 3. Confirm with user
+    var confirmMsg = 'Swap ' + bnbAmount.toFixed(6) + ' BNB ($' + amountUSD + ') for ' + (document.getElementById('sidebarTokenName') ? document.getElementById('sidebarTokenName').textContent : 'token') + '?\n\nYour wallet will ask you to approve the transaction.';
+    if (!confirm(confirmMsg)) return;
+
+    // 4. Send transaction via wallet
+    console.log('📤 Sending swap transaction...');
+    var txHash = await provider.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from: connectedWallet,
+        to: ROUTER,
+        value: weiAmount,
+        data: data,
+        gas: '0x493E0' // 300,000 gas
+      }]
+    });
+
+    console.log('✅ Swap TX sent:', txHash);
+    showStrategySuccess('Swap sent! TX: ' + txHash.slice(0, 10) + '...' + txHash.slice(-8) + '\n\nCheck BscScan for confirmation.');
+
+    // Open BscScan in new tab
+    window.open('https://bscscan.com/tx/' + txHash, '_blank');
+
+  } catch(err) {
+    console.error('❌ Swap error:', err);
+    if (err.code === 4001) {
+      alert('Transaction rejected by wallet.');
+    } else {
+      alert('Swap failed: ' + (err.message || err));
+    }
+  }
 }
 
 function showStrategySuccess(msg) {
