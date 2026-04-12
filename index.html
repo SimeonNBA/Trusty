@@ -6852,17 +6852,8 @@ console.log('✅ Wallet connector ready');
 
 // ══ TWAK API CLIENT (HMAC-SHA256 auth) ══
 var TWAK_BASE = 'https://tws.trustwallet.com';
-var TWAK_ID = 'a4c8c6c3307052bfae083e9d89ce523004ad50694e8f083d821915649292c744';
-var TWAK_SECRET = null; // Will be set from env or config
-
-// Load TWAK secret (set via backend proxy endpoint)
-(async function() {
-  try {
-    var r = await fetch('https://trusty-backend-production.up.railway.app/api/twak-config');
-    var d = await r.json();
-    if (d.s) { TWAK_SECRET = d.s; console.log('✅ TWAK configured'); }
-  } catch(e) { console.warn('TWAK config not available'); }
-})();
+var TWAK_ID = null;
+var TWAK_SECRET = null;
 
 async function twakSign(method, path, query) {
   if (!TWAK_SECRET) return null;
