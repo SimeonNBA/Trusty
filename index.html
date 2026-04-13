@@ -8706,11 +8706,13 @@ function fmtTrendingPrice(p) {
 }
 
 function extractCA(assetId, chain) {
-  // assetId format: c60_t0x... (EVM) or c501_tMINT... (Solana) or c3 (native)
   if (!assetId) return null;
+  // Raw address (from DexScreener) — starts with 0x or is a Solana mint
+  if (assetId.startsWith('0x') || (assetId.length >= 32 && !assetId.startsWith('c'))) return assetId;
+  // TWAK format: c60_t0x... (EVM) or c501_tMINT... (Solana)
   const parts = assetId.split('_t');
   if (parts.length < 2) return null;
-  return parts[1]; // returns the contract address / mint
+  return parts[1];
 }
 
 function getChainFromAssetId(assetId) {
