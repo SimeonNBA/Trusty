@@ -1,9 +1,9 @@
-name: Fetch TW Trending
+name: Fetch Trending Tokens
 
 on:
   schedule:
-    - cron: '*/15 * * * *'   # every 15 minutes
-  workflow_dispatch:           # manual trigger from GitHub UI
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
 
 jobs:
   fetch:
@@ -20,70 +20,103 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install TWAK CLI
-        run: npm install -g @trustwallet/cli
-
-      - name: Init TWAK credentials
-        env:
-          TW_ACCESS_ID: ${{ secrets.TW_ACCESS_ID }}
-          TW_HMAC_SECRET: ${{ secrets.TW_HMAC_SECRET }}
-        run: |
-          twak init --api-key "$TW_ACCESS_ID" --api-secret "$TW_HMAC_SECRET"
-
-      - name: Fetch trending data
+      - name: Fetch trending via DexScreener
         run: |
           mkdir -p data
 
-          echo "Fetching memes..."
-          twak trending --category memes --sort price_change --limit 10 --json > data/cat_memes.json 2>&1 || echo "{}" > data/cat_memes.json
-
-          echo "Fetching bnb..."
-          twak trending --category bnb --sort price_change --limit 10 --json > data/cat_bnb.json 2>&1 || echo "{}" > data/cat_bnb.json
-
-          echo "Fetching sol..."
-          twak trending --category sol --sort price_change --limit 10 --json > data/cat_sol.json 2>&1 || echo "{}" > data/cat_sol.json
-
-          echo "Fetching ai..."
-          twak trending --category ai --sort price_change --limit 10 --json > data/cat_ai.json 2>&1 || echo "{}" > data/cat_ai.json
-
-          echo "Fetching pumpfun..."
-          twak trending --category pumpfun --sort price_change --limit 10 --json > data/cat_pumpfun.json 2>&1 || echo "{}" > data/cat_pumpfun.json
-
-          echo "Done fetching categories"
-          cat data/cat_memes.json | head -5
-
-      - name: Combine into trending.json
-        run: |
-          node << 'EOF'
+          node << 'SCRIPT'
           const fs = require('fs');
 
-          function safeRead(file) {
+          async function fetchCategory(query, chainId) {
             try {
-              const content = fs.readFileSync(file, 'utf8').trim();
-              return JSON.parse(content);
-            } catch(e) {
-              return { error: 'parse failed' };
-            }
+              const res = await fetch('https://api.dexscreener.com/latest/dex/search?q=' + encodeURIComponent(query));
+              const data = await res.json();
+              if (!data.pairs) return [];
+              return data.pairs
+                .filter(p => !chainId || p.chainId === chainId)
+                .sort((a, b) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0))
+                .slice(0, 10)
+                .map(p => ({
+                  name: p.baseToken.name,
+                  symbol: p.baseToken.symbol,
+                  assetId: p.baseToken.address,
+                  chain: p.chainId,
+                  priceUsd: parseFloat(p.priceUsd) || 0,
+                  marketCapUsd: p.fdv || 0,
+                  priceChange24h: p.priceChange?.h24 || 0,
+                  volume24h: p.volume?.h24 || 0,
+                  liquidity: p.liquidity?.usd || 0,
+                  logoUrl: p.info?.imageUrl || null,
+                  pairAddress: p.pairAddress
+                }));
+            } catch(e) { console.error('Error fetching ' + query + ':', e.message); return []; }
           }
 
-          const output = {
-            updatedAt: new Date().toISOString(),
-            categories: {
-              memes:   safeRead('data/cat_memes.json'),
-              bnb:     safeRead('data/cat_bnb.json'),
-              sol:     safeRead('data/cat_sol.json'),
-              ai:      safeRead('data/cat_ai.json'),
-              pumpfun: safeRead('data/cat_pumpfun.json')
-            }
-          };
+          async function main() {
+            console.log('Fetching trending data...');
 
-          fs.writeFileSync('data/trending.json', JSON.stringify(output, null, 2));
-          console.log('Combined trending.json saved');
-          console.log('Preview:', JSON.stringify(output).slice(0, 300));
-          EOF
+            const [memes, bnb, sol, ai, pumpfun] = await Promise.all([
+              fetchCategory('meme', 'bsc'),
+              fetchCategory('bnb bsc', 'bsc'),
+              fetchCategory('solana sol', 'solana'),
+              fetchCategory('ai agent', 'bsc'),
+              fetchCategory('pump fun', 'solana'),
+            ]);
 
-          # Clean up temp files
-          rm -f data/cat_*.json
+            // Also fetch top movers from DexScreener token boosts
+            let topMovers = [];
+            try {
+              const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
+              const data = await res.json();
+              if (Array.isArray(data)) {
+                const bscMovers = data.filter(t => t.chainId === 'bsc').slice(0, 10);
+                const solMovers = data.filter(t => t.chainId === 'solana').slice(0, 10);
+                // Enhance BNB category with boosted tokens
+                for (const t of bscMovers) {
+                  if (!bnb.find(b => b.address === t.tokenAddress)) {
+                    try {
+                      const pRes = await fetch('https://api.dexscreener.com/latest/dex/tokens/' + t.tokenAddress);
+                      const pData = await pRes.json();
+                      if (pData.pairs && pData.pairs[0]) {
+                        const p = pData.pairs[0];
+                        bnb.push({
+                          name: p.baseToken.name,
+                          symbol: p.baseToken.symbol,
+                          assetId: p.baseToken.address,
+                          chain: p.chainId,
+                          priceUsd: parseFloat(p.priceUsd) || 0,
+                          marketCapUsd: p.fdv || 0,
+                          priceChange24h: p.priceChange?.h24 || 0,
+                          volume24h: p.volume?.h24 || 0,
+                          liquidity: p.liquidity?.usd || 0,
+                          logoUrl: p.info?.imageUrl || null,
+                          pairAddress: p.pairAddress
+                        });
+                      }
+                    } catch(e) {}
+                  }
+                }
+              }
+            } catch(e) { console.error('Boosts error:', e.message); }
+
+            // Sort all by 24h price change
+            [memes, bnb, sol, ai, pumpfun].forEach(arr => {
+              arr.sort((a, b) => (b.priceChange24h || 0) - (a.priceChange24h || 0));
+              arr.splice(10); // keep top 10
+            });
+
+            const output = {
+              updatedAt: new Date().toISOString(),
+              categories: { memes, bnb, sol, ai, pumpfun }
+            };
+
+            fs.writeFileSync('data/trending.json', JSON.stringify(output, null, 2));
+            console.log('Saved trending.json');
+            console.log('Memes:', memes.length, '| BNB:', bnb.length, '| SOL:', sol.length, '| AI:', ai.length, '| PumpFun:', pumpfun.length);
+          }
+
+          main().catch(console.error);
+          SCRIPT
 
       - name: Commit and push
         run: |
