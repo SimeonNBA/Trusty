@@ -10144,39 +10144,13 @@ function trackEvent(type) {
 }
 
 // ══ ALPHA THREADS ══
+// Only verified real tweets — add more by DM submissions
 var threadsData = [
-  { author: 'Cobie', handle: '@coaborafe', avatar: '🧠', tag: 'mindset', tagLabel: 'MINDSET',
-    quote: '"If you can\'t hold through a 30% dip, you don\'t deserve the 300% pump. The market is a transfer of wealth from the impatient to the patient."',
-    takeaway: 'Position sizing matters more than entry price. If a dip makes you panic, your position is too big.',
-    url: '' },
-  { author: 'Ansem', handle: '@blaborafe', avatar: '🎯', tag: 'alpha', tagLabel: 'ALPHA',
-    quote: '"The best trades are the ones where you feel sick buying. If everyone agrees it\'s a good buy, you\'re already late."',
-    takeaway: 'Consensus = top signal. The biggest gains come from conviction trades when everyone else is scared.',
-    url: '' },
-  { author: 'Hsaka', handle: '@HsakaTrades', avatar: '📊', tag: 'strategy', tagLabel: 'STRATEGY',
-    quote: '"Never buy a token because it went up. Buy because you understand WHY it went up and believe the reason hasn\'t fully played out."',
-    takeaway: 'Chase narratives, not candles. A green chart is not a buy signal — understanding the catalyst is.',
-    url: '' },
-  { author: 'ZachXBT', handle: '@zachxbt', avatar: '🔍', tag: 'risk', tagLabel: 'RISK',
-    quote: '"I\'ve tracked over $1B in crypto scams. The pattern is always the same: fake team, locked socials, and a community that attacks anyone asking questions."',
-    takeaway: 'If the community bans you for asking about the dev wallet, that IS your answer. Transparency is non-negotiable.',
-    url: '' },
-  { author: 'Punk6529', handle: '@punk6529', avatar: '🏛️', tag: 'mindset', tagLabel: 'MINDSET',
-    quote: '"The goal is not to make money on every trade. The goal is to be in the game long enough for the asymmetric bets to pay off."',
-    takeaway: 'Survival > optimization. Small positions, many shots on goal. One 100x covers twenty losses.',
-    url: '' },
-  { author: 'Trusty', handle: '@Trusty_BNB', avatar: '🛡️', tag: 'guide', tagLabel: 'GUIDE',
-    quote: '"Scan before you ape. Every token tells a story in its contract — honeypot, mint function, LP lock, whale wallets. Learn to read it or pay the price."',
-    takeaway: 'This is literally why Trusty exists. Paste the CA, read the report, then decide. 30 seconds can save your portfolio.',
-    url: 'https://x.com/Trusty_BNB' },
-  { author: 'CZ', handle: '@caborafe', avatar: '🟡', tag: 'alpha', tagLabel: 'ALPHA',
-    quote: '"Meme Coin SZN is here. But remember — 99% of meme coins go to zero. The 1% that survive build real communities."',
-    takeaway: 'CZ confirms the meta but warns about the odds. Community is the only moat a meme coin has.',
-    url: '' },
-  { author: 'Arthur Hayes', handle: '@CryptoHayes', avatar: '📈', tag: 'strategy', tagLabel: 'STRATEGY',
-    quote: '"The market doesn\'t care about your feelings. It only cares about liquidity. When money flows in, everything pumps. When it leaves, nothing is safe."',
-    takeaway: 'Watch the macro. BTC dominance, Fed rates, stablecoin supply — these move meme coins more than any narrative.',
-    url: '' },
+  { author: 'CZ', handle: '@cz_binance', avatar: '🟡', tag: 'mindset', tagLabel: 'MINDSET',
+    date: 'Feb 10, 2021',
+    quote: 'If you can\'t hold, you won\'t be rich.',
+    takeaway: 'Six words that saved more portfolios than any trading course. If a 30% dip makes you panic-sell, your position size is wrong. Size small, hold through the noise.',
+    url: 'https://x.com/cz_binance/status/1359529612024270851' },
 ];
 
 function renderThreads() {
@@ -10186,12 +10160,15 @@ function renderThreads() {
     return '<div class="thread-card">' +
       '<div class="thread-header">' +
         '<div class="thread-avatar">' + t.avatar + '</div>' +
-        '<div style="flex:1;"><div class="thread-author">' + t.author + ' <span class="thread-handle">' + t.handle + '</span></div></div>' +
+        '<div style="flex:1;">' +
+          '<div class="thread-author">' + t.author + ' <span class="thread-handle">' + t.handle + '</span></div>' +
+          (t.date ? '<div style="font-size:10px;color:var(--muted);font-family:var(--mono);">' + t.date + '</div>' : '') +
+        '</div>' +
         '<span class="thread-tag ' + t.tag + '">' + t.tagLabel + '</span>' +
       '</div>' +
       '<div class="thread-quote">' + t.quote + '</div>' +
       '<div class="thread-takeaway">🛡️ <strong>Trusty takeaway:</strong> ' + t.takeaway + '</div>' +
-      (t.url ? '<a class="thread-link" href="' + t.url + '" target="_blank">View on 𝕏 →</a>' : '') +
+      (t.url ? '<a class="thread-link" href="' + t.url + '" target="_blank" style="display:inline-block;margin-top:12px;padding:8px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--blue2);text-decoration:none;font-family:var(--mono);font-size:11px;">𝕏 View Original Tweet →</a>' : '') +
     '</div>';
   }).join('');
 }
