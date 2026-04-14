@@ -10086,17 +10086,25 @@ function renderQuizScore() {
 }
 
 // ══ FEATURED TOKENS ══
-// ── ADD YOUR FEATURED TOKENS HERE ──
+// EASY EDIT: To add/remove featured tokens, edit data/featured.json on GitHub
+// The site loads fresh from JSON on page load (fallback to hardcoded list below)
 var featuredTokens = [
   { name: '$TRUSTY', symbol: 'TRUSTY', ca: '0x65aea108c21439693468FCD542D81C29E8df4444', reason: 'Trust Wallet OG mascot since 2019', emoji: '🛡️' },
-  { name: '$TEARY', symbol: 'TEARY', ca: 'DbVhWYxBv9jyQdARFbjw7Vktbps9L6f9813JQC8xmoon', reason: 'Community-driven Solana meme', emoji: '😢' },
-  // Add more tokens here:
-  // { name: '$TOKEN', symbol: 'TOKEN', ca: '0x...', reason: 'Short reason', emoji: '🔥' },
+  { name: '$TEARY', symbol: 'TEARY', ca: 'DbVhWYxBv9jyQdARFbjw7Vktbps9L6f9813JQC8xmoon', reason: 'Community-driven Solana meme', emoji: '💧' },
 ];
 
-function renderFeatured() {
+async function renderFeatured() {
   var panel = document.getElementById('featured-panel');
-  if (!panel || featuredTokens.length === 0) return;
+  if (!panel) return;
+  // Try to fetch latest from JSON file
+  try {
+    var res = await fetch('data/featured.json?t=' + Date.now());
+    if (res.ok) {
+      var data = await res.json();
+      if (data.tokens && data.tokens.length > 0) featuredTokens = data.tokens;
+    }
+  } catch(e) { console.warn('Using fallback featured list'); }
+  if (featuredTokens.length === 0) return;
   var cards = featuredTokens.map(function(t) {
     return '<div class="featured-card" onclick="evalTrendingCoin(\'' + t.ca + '\')">' +
       '<div class="featured-badge">⭐ FEATURED</div>' +
