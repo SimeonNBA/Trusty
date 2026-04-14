@@ -4247,6 +4247,43 @@ body::before {
 .narr-ape.when { background: rgba(34,197,94,0.08); border-left: 3px solid #22C55E; color: #86EFAC; }
 .narr-ape.avoid { background: rgba(239,68,68,0.08); border-left: 3px solid #EF4444; color: #FCA5A5; }
 
+/* ── FEATURED TOKENS ── */
+.featured-strip { display: flex; gap: 10px; overflow-x: auto; padding: 2px 0; scrollbar-width: none; }
+.featured-strip::-webkit-scrollbar { display: none; }
+.featured-card {
+  flex-shrink: 0; background: linear-gradient(135deg, var(--card), var(--card2));
+  border: 1.5px solid rgba(251,191,36,0.3); border-radius: 12px; padding: 12px 16px;
+  cursor: pointer; transition: all 0.2s; min-width: 200px;
+}
+.featured-card:hover { border-color: var(--yellow); transform: translateY(-2px); }
+.featured-badge { font-size: 8px; font-family: var(--mono); letter-spacing: 2px; color: var(--yellow); margin-bottom: 4px; }
+.featured-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.featured-reason { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.featured-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.featured-title { font-size: 10px; font-family: var(--mono); letter-spacing: 2px; color: var(--yellow); }
+.featured-ad { font-size: 8px; font-family: var(--mono); color: var(--muted); letter-spacing: 1px; }
+
+/* ── ALPHA THREADS ── */
+.thread-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 18px; margin-bottom: 10px; transition: border-color 0.2s;
+}
+.thread-card:hover { border-color: var(--border2); }
+.thread-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.thread-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.thread-author { font-size: 13px; font-weight: 700; color: var(--text); }
+.thread-handle { font-size: 11px; color: var(--blue2); font-family: var(--mono); }
+.thread-tag { font-size: 9px; font-family: var(--mono); padding: 2px 8px; border-radius: 10px; letter-spacing: 1px; }
+.thread-tag.mindset { background: rgba(168,85,247,0.15); color: #C084FC; }
+.thread-tag.strategy { background: rgba(59,130,246,0.15); color: var(--blue2); }
+.thread-tag.risk { background: rgba(239,68,68,0.15); color: #FCA5A5; }
+.thread-tag.alpha { background: rgba(34,197,94,0.15); color: #86EFAC; }
+.thread-tag.guide { background: rgba(251,191,36,0.15); color: #FDE68A; }
+.thread-quote { font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 12px; font-style: italic; border-left: 3px solid var(--border2); padding-left: 12px; }
+.thread-takeaway { font-size: 12px; color: var(--muted); line-height: 1.5; background: var(--bg3); border-radius: 8px; padding: 10px 12px; }
+.thread-link { display: inline-block; margin-top: 10px; font-size: 11px; color: var(--blue2); font-family: var(--mono); text-decoration: none; }
+.thread-link:hover { text-decoration: underline; }
+
 /* ── PORTFOLIO ── */
 .portfolio-token {
   display: flex;
@@ -4408,6 +4445,10 @@ body::before {
          TAB: SCANNER
          ══════════════════════════════ -->
     <div class="tab-panel active" id="tab-scanner">
+
+    <!-- ── FEATURED TOKENS ── -->
+    <div id="featured-panel" style="margin-bottom:16px;"></div>
+
     <!-- ── TRUSTY HERO ── -->
     <div class="trusty-hero" id="trustyHeroSection">
       <div class="trusty-hero-text">
@@ -4839,6 +4880,7 @@ body::before {
           <button class="academy-section-btn" onclick="showAcademySection('matrix',this)">📊 Risk Matrix</button>
           <button class="academy-section-btn" onclick="showAcademySection('narratives',this)">🎓 Narratives</button>
           <button class="academy-section-btn" onclick="showAcademySection('glossary',this)">📖 Glossary</button>
+          <button class="academy-section-btn" onclick="showAcademySection('threads',this)">🐦 Alpha Threads</button>
           <button class="academy-section-btn" onclick="showAcademySection('tw-history',this)">🛡️ Trust Wallet</button>
           <button class="academy-section-btn" onclick="showAcademySection('crypto-history',this)">₿ Crypto History</button>
         </div>
@@ -5022,6 +5064,20 @@ body::before {
             <input class="text-input" id="inlineGlossarySearch" type="text" placeholder="Search terms — rug, WAGMI, LP..." oninput="renderInlineGlossary(this.value)" style="margin-bottom:0;" />
           </div>
           <div id="inlineGlossaryBody"></div>
+        </div>
+
+        <!-- ALPHA THREADS SECTION -->
+        <div class="academy-section" id="asec-threads">
+          <div class="lore-card" style="margin-bottom:12px;">
+            <div class="lore-title">🐦 ALPHA THREADS</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.6;">Threads that changed how degens think. Study these before you trade.</div>
+          </div>
+
+          <div id="threads-list"></div>
+
+          <div class="lore-card" style="margin-top:16px;text-align:center;opacity:0.6;">
+            <div style="font-size:13px;color:var(--muted);">💡 Know a thread that should be here? <a href="https://x.com/Trusty_BNB" target="_blank" style="color:var(--blue2);">DM @Trusty_BNB</a></div>
+          </div>
         </div>
 
         <!-- TW HISTORY SECTION -->
@@ -6960,6 +7016,7 @@ async function connectViaProvider(provider, name) {
       showConnected(address);
       fetchBalance(address, provider);
       console.log('✅ Connected to ' + name + ':', address);
+      if (typeof trackEvent === 'function') trackEvent('connects');
     }
   } catch (err) { console.error(name + ' error:', err); resetConnectBtns(); }
 }
@@ -7192,7 +7249,7 @@ function onCaInput() {
 }
 
 function triggerCaScan(val) {
-  if (val && val.length >= 32) scanCA();
+  if (val && val.length >= 32) { scanCA(); if (typeof trackEvent === 'function') trackEvent('scans'); }
 }
 
 async function scanCA() {
@@ -9841,6 +9898,9 @@ function showAcademySection(id, btn) {
   if (id === 'quiz' && !document.getElementById('quiz-container').hasChildNodes()) {
     startQuiz();
   }
+  if (id === 'threads' && !document.getElementById('threads-list').hasChildNodes()) {
+    renderThreads();
+  }
 }
 
 function renderInlineGlossary(query) {
@@ -10041,6 +10101,99 @@ function renderQuizScore() {
       '<div style="font-size:13px;color:var(--muted);line-height:1.6;max-width:400px;margin:0 auto;">' + msg + '</div>' +
       '<button onclick="startQuiz()" style="margin-top:20px;padding:12px 28px;border-radius:10px;border:none;background:var(--blue);color:white;font-weight:700;cursor:pointer;font-size:14px;">🔄 Try Again</button>' +
     '</div></div>';
+}
+
+// ══ FEATURED TOKENS ══
+// ── ADD YOUR FEATURED TOKENS HERE ──
+var featuredTokens = [
+  { name: '$TRUSTY', symbol: 'TRUSTY', ca: '0x65aea108c21439693468FCD542D81C29E8df4444', reason: 'Trust Wallet OG mascot since 2019', emoji: '🛡️' },
+  // Add more tokens here:
+  // { name: '$TOKEN', symbol: 'TOKEN', ca: '0x...', reason: 'Short reason', emoji: '🔥' },
+];
+
+function renderFeatured() {
+  var panel = document.getElementById('featured-panel');
+  if (!panel || featuredTokens.length === 0) return;
+  var cards = featuredTokens.map(function(t) {
+    return '<div class="featured-card" onclick="evalTrendingCoin(\'' + t.ca + '\')">' +
+      '<div class="featured-badge">⭐ FEATURED</div>' +
+      '<div class="featured-name">' + t.emoji + ' ' + t.name + '</div>' +
+      '<div class="featured-reason">' + t.reason + '</div>' +
+    '</div>';
+  }).join('');
+
+  panel.innerHTML = '<div class="featured-header">' +
+    '<div class="featured-title">⭐ FEATURED TOKENS</div>' +
+    '<a href="https://x.com/Trusty_BNB" target="_blank" class="featured-ad">Want to be featured? DM @Trusty_BNB →</a>' +
+  '</div>' +
+  '<div class="featured-strip">' + cards + '</div>';
+}
+
+// Render on page load
+document.addEventListener('DOMContentLoaded', function() { renderFeatured(); trackEvent('page_view'); });
+
+// ══ BASIC ANALYTICS ══
+var _trustyStats = JSON.parse(localStorage.getItem('trusty_stats') || '{"views":0,"scans":0,"swaps":0,"connects":0}');
+
+function trackEvent(type) {
+  _trustyStats[type] = (_trustyStats[type] || 0) + 1;
+  _trustyStats.lastVisit = new Date().toISOString();
+  localStorage.setItem('trusty_stats', JSON.stringify(_trustyStats));
+  // Ping backend for aggregate stats (fire and forget)
+  try { fetch(BACKEND_URL + '/api/track?e=' + type + '&t=' + Date.now(), { mode: 'no-cors' }); } catch(e) {}
+}
+
+// ══ ALPHA THREADS ══
+var threadsData = [
+  { author: 'Cobie', handle: '@coaborafe', avatar: '🧠', tag: 'mindset', tagLabel: 'MINDSET',
+    quote: '"If you can\'t hold through a 30% dip, you don\'t deserve the 300% pump. The market is a transfer of wealth from the impatient to the patient."',
+    takeaway: 'Position sizing matters more than entry price. If a dip makes you panic, your position is too big.',
+    url: '' },
+  { author: 'Ansem', handle: '@blaborafe', avatar: '🎯', tag: 'alpha', tagLabel: 'ALPHA',
+    quote: '"The best trades are the ones where you feel sick buying. If everyone agrees it\'s a good buy, you\'re already late."',
+    takeaway: 'Consensus = top signal. The biggest gains come from conviction trades when everyone else is scared.',
+    url: '' },
+  { author: 'Hsaka', handle: '@HsakaTrades', avatar: '📊', tag: 'strategy', tagLabel: 'STRATEGY',
+    quote: '"Never buy a token because it went up. Buy because you understand WHY it went up and believe the reason hasn\'t fully played out."',
+    takeaway: 'Chase narratives, not candles. A green chart is not a buy signal — understanding the catalyst is.',
+    url: '' },
+  { author: 'ZachXBT', handle: '@zachxbt', avatar: '🔍', tag: 'risk', tagLabel: 'RISK',
+    quote: '"I\'ve tracked over $1B in crypto scams. The pattern is always the same: fake team, locked socials, and a community that attacks anyone asking questions."',
+    takeaway: 'If the community bans you for asking about the dev wallet, that IS your answer. Transparency is non-negotiable.',
+    url: '' },
+  { author: 'Punk6529', handle: '@punk6529', avatar: '🏛️', tag: 'mindset', tagLabel: 'MINDSET',
+    quote: '"The goal is not to make money on every trade. The goal is to be in the game long enough for the asymmetric bets to pay off."',
+    takeaway: 'Survival > optimization. Small positions, many shots on goal. One 100x covers twenty losses.',
+    url: '' },
+  { author: 'Trusty', handle: '@Trusty_BNB', avatar: '🛡️', tag: 'guide', tagLabel: 'GUIDE',
+    quote: '"Scan before you ape. Every token tells a story in its contract — honeypot, mint function, LP lock, whale wallets. Learn to read it or pay the price."',
+    takeaway: 'This is literally why Trusty exists. Paste the CA, read the report, then decide. 30 seconds can save your portfolio.',
+    url: 'https://x.com/Trusty_BNB' },
+  { author: 'CZ', handle: '@caborafe', avatar: '🟡', tag: 'alpha', tagLabel: 'ALPHA',
+    quote: '"Meme Coin SZN is here. But remember — 99% of meme coins go to zero. The 1% that survive build real communities."',
+    takeaway: 'CZ confirms the meta but warns about the odds. Community is the only moat a meme coin has.',
+    url: '' },
+  { author: 'Arthur Hayes', handle: '@CryptoHayes', avatar: '📈', tag: 'strategy', tagLabel: 'STRATEGY',
+    quote: '"The market doesn\'t care about your feelings. It only cares about liquidity. When money flows in, everything pumps. When it leaves, nothing is safe."',
+    takeaway: 'Watch the macro. BTC dominance, Fed rates, stablecoin supply — these move meme coins more than any narrative.',
+    url: '' },
+];
+
+function renderThreads() {
+  var container = document.getElementById('threads-list');
+  if (!container) return;
+  container.innerHTML = threadsData.map(function(t) {
+    return '<div class="thread-card">' +
+      '<div class="thread-header">' +
+        '<div class="thread-avatar">' + t.avatar + '</div>' +
+        '<div style="flex:1;"><div class="thread-author">' + t.author + ' <span class="thread-handle">' + t.handle + '</span></div></div>' +
+        '<span class="thread-tag ' + t.tag + '">' + t.tagLabel + '</span>' +
+      '</div>' +
+      '<div class="thread-quote">' + t.quote + '</div>' +
+      '<div class="thread-takeaway">🛡️ <strong>Trusty takeaway:</strong> ' + t.takeaway + '</div>' +
+      (t.url ? '<a class="thread-link" href="' + t.url + '" target="_blank">View on 𝕏 →</a>' : '') +
+    '</div>';
+  }).join('');
 }
 
 // Auto-start quiz when section opens
@@ -10369,6 +10522,7 @@ async function submitSwap() {
     });
 
     console.log('✅ Swap TX sent:', txHash);
+    if (typeof trackEvent === 'function') trackEvent('swaps');
     showStrategySuccess('Swap sent! TX: ' + txHash.slice(0, 10) + '...' + txHash.slice(-8) + '\n\nCheck BscScan for confirmation.');
 
     // Open BscScan in new tab
