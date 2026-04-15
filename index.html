@@ -8133,7 +8133,7 @@ function toggleBreakdown(btn) {
 
 // ── GENERATE PDF REPORT ──
 function generateReport() {
-  if (!caTokenData || !caTokenData.pairs || !caTokenData.pairs[0]) {
+  if (!caTokenData || !caTokenData.baseToken) {
     alert('Scan a token first!');
     return;
   }
@@ -8141,7 +8141,7 @@ function generateReport() {
     alert('PDF library still loading, try again in a second.');
     return;
   }
-  var pair = caTokenData.pairs[0];
+  var pair = caTokenData;
   var tok = pair.baseToken;
   var jsPDF = window.jspdf.jsPDF;
   var doc = new jsPDF();
@@ -8243,11 +8243,11 @@ function generateReport() {
 
 // ── SHARE SCAN ──
 function shareReport() {
-  if (!caTokenData || !caTokenData.pairs || !caTokenData.pairs[0]) {
+  if (!caTokenData || !caTokenData.baseToken) {
     alert('Scan a token first!');
     return;
   }
-  var tok = caTokenData.pairs[0].baseToken;
+  var tok = caTokenData.baseToken;
   var tier = document.getElementById('tierBadge');
   var score = document.getElementById('scoreNum');
   var text = 'Just scanned $' + tok.symbol + ' with @Trusty_BNB 🛡️\n\n' +
@@ -8261,8 +8261,8 @@ function shareReport() {
 
 // ── SUPPLY DISTRIBUTION PIE CHART ──
 async function renderSupplyChart() {
-  if (!caTokenData || !caTokenData.pairs || !caTokenData.pairs[0]) return;
-  var pair = caTokenData.pairs[0];
+  if (!caTokenData || !caTokenData.baseToken) return;
+  var pair = caTokenData;
   if (pair.chainId !== 'bsc') return; // BSC only for now
   var ca = pair.baseToken.address;
   var lpAddr = pair.pairAddress;
