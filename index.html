@@ -2447,10 +2447,14 @@ body::before {
 }
 
 /* ── GUT CHECK BUTTON ── */
+@keyframes gutCheckPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(243,186,47,0.5), 0 4px 16px rgba(243,186,47,0.15); border-color: rgba(243,186,47,0.5); }
+  50% { box-shadow: 0 0 0 10px rgba(243,186,47,0), 0 6px 22px rgba(243,186,47,0.35); border-color: rgba(243,186,47,0.85); }
+}
 .gut-check-btn {
   width: 100%;
-  background: linear-gradient(135deg, rgba(251,191,36,0.12), rgba(249,115,22,0.12));
-  border: 1.5px solid rgba(251,191,36,0.4);
+  background: linear-gradient(135deg, rgba(243,186,47,0.14), rgba(249,115,22,0.14));
+  border: 2px solid rgba(243,186,47,0.5);
   border-radius: 14px;
   padding: 16px 20px;
   cursor: pointer;
@@ -2460,11 +2464,14 @@ body::before {
   gap: 14px;
   margin-bottom: 16px;
   text-align: left;
+  animation: gutCheckPulse 2.2s ease-in-out infinite;
+  position: relative;
 }
 .gut-check-btn:hover {
-  border-color: rgba(251,191,36,0.7);
+  animation: none;
+  border-color: rgba(243,186,47,0.9);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(251,191,36,0.15);
+  box-shadow: 0 8px 24px rgba(243,186,47,0.3);
 }
 .gut-check-icon { font-size: 28px; flex-shrink: 0; }
 .gut-check-label {
@@ -4278,6 +4285,11 @@ body::before {
 .breakdown-toggle.open .bd-chevron { transform: rotate(180deg); }
 .breakdown-wrapper .cat-scores { margin: 0; padding: 0 16px 16px; }
 
+/* ── SIDE-BY-SIDE GRID (Supply + Breakdown) ── */
+.side-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; align-items: start; }
+.side-grid > * { margin-top: 0 !important; }
+@media (max-width: 700px) { .side-grid { grid-template-columns: 1fr; } }
+
 /* ── SUPPLY DISTRIBUTION PIE ── */
 .supply-pie-wrap { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; padding: 14px 0; }
 .supply-pie-svg { flex-shrink: 0; }
@@ -4815,12 +4827,6 @@ body::before {
         <div id="csContent"></div>
       </div>
 
-      <!-- SUPPLY DISTRIBUTION (new — pie chart) -->
-      <div class="section-card" id="supply-chart-section" style="display:none;">
-        <div class="section-num">🥧 SUPPLY DISTRIBUTION</div>
-        <div id="supply-chart-content"></div>
-      </div>
-
       <!-- GREENS / REDS -->
       <div class="result-grid">
         <div class="result-card">
@@ -4831,6 +4837,13 @@ body::before {
           <div class="result-card-title">🚨 THE REDS</div>
           <div id="cons-list"></div>
         </div>
+      </div>
+
+      <!-- SUPPLY + BREAKDOWN (side-by-side grid) -->
+      <div class="side-grid">
+      <div class="section-card" id="supply-chart-section" style="display:none;">
+        <div class="section-num">🥧 SUPPLY DISTRIBUTION</div>
+        <div id="supply-chart-content"></div>
       </div>
 
       <!-- BREAKDOWN (collapsible) -->
@@ -4884,6 +4897,7 @@ body::before {
           </div>
         </div>
       </div>
+      </div><!-- end side-grid -->
 
       <!-- GUT CHECK BUTTON (moved to end — pre-trade sanity check) -->
       <button class="gut-check-btn" onclick="openGutCheck()">
@@ -8132,6 +8146,12 @@ function toggleBreakdown(btn) {
 }
 
 // ── GENERATE PDF REPORT ──
+// Helper: strip emojis and non-ASCII from text so jsPDF helvetica renders cleanly
+function stripEmoji(s) {
+  if (!s) return '';
+  return String(s).replace(/[\u{1F300}-\u{1FAFF}]|[\u{2600}-\u{27BF}]|[\u{2700}-\u{27BF}]|[\uFE0F]|[\u200D]/gu, '').replace(/[^\x00-\x7F]/g, '').replace(/\s+/g, ' ').trim();
+}
+
 function generateReport() {
   if (!caTokenData || !caTokenData.baseToken) {
     alert('Scan a token first!');
@@ -8146,96 +8166,181 @@ function generateReport() {
   var jsPDF = window.jspdf.jsPDF;
   var doc = new jsPDF();
 
-  // Header
+  // ── HEADER BAR ──
   doc.setFillColor(5, 8, 15);
-  doc.rect(0, 0, 210, 30, 'F');
+  doc.rect(0, 0, 210, 32, 'F');
+  doc.setFillColor(59, 130, 246);
+  doc.rect(0, 30, 210, 2, 'F');
   doc.setTextColor(96, 165, 250);
-  doc.setFontSize(22);
+  doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
   doc.text('TRUSTY AI', 15, 18);
-  doc.setTextColor(200, 200, 200);
-  doc.setFontSize(9);
+  doc.setTextColor(180, 180, 180);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('Meme Coin Risk Report', 15, 24);
-  doc.setFontSize(8);
-  doc.text('trustyai.tech', 170, 24);
+  doc.text('Meme Coin Risk Report', 15, 25);
+  doc.setFontSize(9);
+  doc.setTextColor(243, 186, 47);
+  doc.text('trustyai.tech', 172, 25);
 
   var y = 45;
-  // Token info
-  doc.setTextColor(30, 30, 30);
-  doc.setFontSize(16);
+
+  // ── TOKEN INFO ──
+  doc.setTextColor(20, 20, 20);
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text(tok.name + ' ($' + tok.symbol + ')', 15, y); y += 8;
+  doc.text(stripEmoji(tok.name) + ' ($' + tok.symbol + ')', 15, y); y += 8;
+
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100, 100, 100);
+  doc.setTextColor(110, 110, 110);
   doc.text('CA: ' + tok.address, 15, y); y += 5;
-  doc.text('Chain: ' + pair.chainId.toUpperCase() + '   Pair: ' + pair.dexId, 15, y); y += 5;
-  doc.text('Price: $' + (pair.priceUsd || '—') + '   MCap: $' + Number(pair.fdv || 0).toLocaleString() + '   Liq: $' + Number(pair.liquidity?.usd || 0).toLocaleString(), 15, y); y += 10;
+  doc.text('Chain: ' + pair.chainId.toUpperCase() + '   |   DEX: ' + pair.dexId.toUpperCase(), 15, y); y += 5;
 
-  // Verdict
+  // Price metrics row
+  var price = pair.priceUsd ? '$' + parseFloat(pair.priceUsd).toPrecision(4) : '—';
+  var mcap = '$' + Number(pair.fdv || 0).toLocaleString();
+  var liq = '$' + Number(pair.liquidity?.usd || 0).toLocaleString();
+  var change = pair.priceChange?.h24 || 0;
+  doc.text('Price: ' + price + '    MCap: ' + mcap + '    Liq: ' + liq + '    24h: ' + (change >= 0 ? '+' : '') + change.toFixed(2) + '%', 15, y); y += 10;
+
+  // ── VERDICT CARD (colored based on tier) ──
   var tierEl = document.getElementById('tierBadge');
   var scoreEl = document.getElementById('scoreNum');
   var apePctEl = document.getElementById('apePct');
   var apeDescEl = document.getElementById('apeDesc');
-  doc.setDrawColor(80, 140, 255);
-  doc.setFillColor(240, 245, 255);
-  doc.roundedRect(15, y, 180, 22, 3, 3, 'FD');
-  doc.setTextColor(59, 130, 246);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('VERDICT: ' + (tierEl ? tierEl.textContent : '—'), 20, y + 8);
-  doc.setFontSize(9);
-  doc.setTextColor(50, 50, 50);
-  doc.text('Trusty Score: ' + (scoreEl ? scoreEl.textContent : '—') + ' / 100     Max Ape: ' + (apePctEl ? apePctEl.textContent : '—'), 20, y + 15);
-  y += 30;
+  var score = parseInt(scoreEl ? scoreEl.textContent : '0') || 0;
 
-  // Trusty Says
+  // Color based on score
+  var vR = 251, vG = 191, vB = 36; // yellow default
+  if (score >= 72) { vR = 34; vG = 197; vB = 94; }
+  else if (score >= 55) { vR = 243; vG = 186; vB = 47; }
+  else if (score >= 38) { vR = 249; vG = 115; vB = 22; }
+  else { vR = 239; vG = 68; vB = 68; }
+
+  doc.setFillColor(vR, vG, vB, 0.08);
+  doc.setDrawColor(vR, vG, vB);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(15, y, 180, 28, 3, 3, 'FD');
+
+  doc.setTextColor(vR, vG, vB);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('VERDICT: ' + stripEmoji(tierEl ? tierEl.textContent : '—'), 20, y + 10);
+
+  // Score bar
+  doc.setDrawColor(220, 220, 220);
+  doc.setFillColor(240, 240, 240);
+  doc.roundedRect(20, y + 14, 170, 5, 1, 1, 'FD');
+  doc.setFillColor(vR, vG, vB);
+  doc.roundedRect(20, y + 14, 170 * (score / 100), 5, 1, 1, 'F');
+
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Trusty Score: ' + score + ' / 100', 20, y + 24);
+  doc.text('Max Ape Size: ' + stripEmoji(apePctEl ? apePctEl.textContent : '—'), 110, y + 24);
+  y += 35;
+
+  // ── TRUSTY SAYS ──
   var trustyFinal = document.getElementById('trusty-final');
   if (trustyFinal && trustyFinal.textContent) {
-    doc.setTextColor(30, 30, 30);
+    doc.setFillColor(245, 248, 255);
+    doc.setDrawColor(200, 215, 240);
+    doc.roundedRect(15, y, 180, 4, 1, 1, 'FD'); // top border
+    doc.setTextColor(20, 20, 20);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('🛡️ TRUSTY SAYS', 15, y); y += 6;
+    doc.text('TRUSTY SAYS', 15, y + 12); y += 16;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(70, 70, 70);
-    var lines = doc.splitTextToSize(trustyFinal.textContent, 180);
-    doc.text(lines, 15, y); y += lines.length * 4.5 + 4;
+    var cleanSays = stripEmoji(trustyFinal.textContent);
+    var lines = doc.splitTextToSize(cleanSays, 180);
+    doc.text(lines, 15, y); y += lines.length * 4.5 + 6;
   }
 
-  // Category scores
-  if (y < 230) {
-    doc.setTextColor(30, 30, 30);
+  // ── CATEGORY SCORES with visual bars ──
+  if (y < 220) {
+    doc.setTextColor(20, 20, 20);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('📊 CATEGORY SCORES', 15, y); y += 6;
+    doc.text('CATEGORY SCORES', 15, y); y += 7;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    var cats = [['Chain Safety', 'score-chain'], ['Narrative', 'score-narr'], ['Ownership', 'score-own'], ['Age / Timing', 'score-age'], ['Social Presence', 'score-soc'], ['Supply Safety', 'score-sup']];
+
+    var cats = [
+      ['Chain Safety', 'score-chain'],
+      ['Narrative', 'score-narr'],
+      ['Ownership', 'score-own'],
+      ['Age / Timing', 'score-age'],
+      ['Social Presence', 'score-soc'],
+      ['Supply Safety', 'score-sup']
+    ];
     cats.forEach(function(c) {
       var v = document.getElementById(c[1]);
-      doc.setTextColor(70, 70, 70);
-      doc.text(c[0] + ':  ' + (v ? v.textContent : '—'), 15, y);
-      y += 5;
+      var val = parseInt(v ? v.textContent : '0') || 0;
+      // Label
+      doc.setTextColor(60, 60, 60);
+      doc.text(c[0], 15, y + 3);
+      // Score
+      doc.setFont('helvetica', 'bold');
+      doc.text(String(val), 187, y + 3, { align: 'right' });
+      doc.setFont('helvetica', 'normal');
+      // Bar
+      doc.setFillColor(235, 235, 240);
+      doc.roundedRect(70, y, 110, 4, 0.5, 0.5, 'F');
+      // Color by score
+      var r = 239, g = 68, b = 68;
+      if (val >= 70) { r = 34; g = 197; b = 94; }
+      else if (val >= 50) { r = 243; g = 186; b = 47; }
+      else if (val >= 30) { r = 249; g = 115; b = 22; }
+      doc.setFillColor(r, g, b);
+      doc.roundedRect(70, y, 110 * (val / 100), 4, 0.5, 0.5, 'F');
+      y += 7;
     });
-    y += 4;
+    y += 3;
   }
 
-  // Ape desc
-  if (apeDescEl && apeDescEl.textContent && y < 260) {
+  // ── GUT CHECK CTA (prominent callout) ──
+  if (y < 245) {
+    doc.setFillColor(168, 85, 247, 0.1);
+    doc.setDrawColor(168, 85, 247);
+    doc.setLineWidth(0.6);
+    doc.roundedRect(15, y, 180, 18, 2, 2, 'FD');
+    doc.setTextColor(168, 85, 247);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('!! BEFORE YOU APE: RUN THE GUT CHECK !!', 105, y + 7, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(120, 120, 120);
-    var apeLines = doc.splitTextToSize('Trusty guidance: ' + apeDescEl.textContent, 180);
+    doc.setTextColor(100, 60, 150);
+    doc.text('Go to trustyai.tech, scan this CA, and answer 5 honest questions. The score is data. The Gut Check is YOU.', 105, y + 14, { align: 'center' });
+    y += 22;
+  }
+
+  // Ape desc at bottom if space
+  if (apeDescEl && apeDescEl.textContent && y < 270) {
+    doc.setFontSize(8);
+    doc.setTextColor(130, 130, 130);
+    doc.setFont('helvetica', 'italic');
+    var apeLines = doc.splitTextToSize('Trusty guidance: ' + stripEmoji(apeDescEl.textContent), 180);
     doc.text(apeLines, 15, y);
   }
 
-  // Footer
-  doc.setDrawColor(200, 200, 200);
-  doc.line(15, 280, 195, 280);
-  doc.setFontSize(8);
+  // ── FOOTER ──
+  doc.setDrawColor(220, 220, 220);
+  doc.line(15, 282, 195, 282);
+  doc.setFontSize(7);
   doc.setTextColor(150, 150, 150);
-  doc.text('Generated ' + new Date().toLocaleString() + ' · trustyai.tech · Not financial advice', 15, 286);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Generated ' + new Date().toLocaleString(), 15, 288);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(59, 130, 246);
+  doc.text('trustyai.tech', 105, 288, { align: 'center' });
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(150, 150, 150);
+  doc.text('Not financial advice', 195, 288, { align: 'right' });
 
   doc.save('trusty-report-' + (tok.symbol || 'token').toLowerCase() + '.pdf');
   if (typeof trackEvent === 'function') trackEvent('pdf_downloaded');
