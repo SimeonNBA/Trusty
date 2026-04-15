@@ -4282,8 +4282,9 @@ body::before {
 .breakdown-wrapper .cat-scores { margin: 0; padding: 0 16px 16px; }
 
 /* ── SIDE-BY-SIDE GRID (Supply + Breakdown) ── */
-.side-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; margin-bottom: 24px; align-items: start; }
-.side-grid > * { margin-top: 0 !important; }
+.side-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; margin-bottom: 24px; align-items: stretch; }
+.side-grid > * { margin-top: 0 !important; display: flex; flex-direction: column; }
+.side-grid .supply-pie-wrap { flex: 1; justify-content: center; }
 @media (max-width: 700px) { .side-grid { grid-template-columns: 1fr; } }
 
 /* ── SUPPLY DISTRIBUTION PIE ── */
