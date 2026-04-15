@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 
 <title>Trusty AI — Meme Coin Scanner & Education</title>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 /* Ensure WalletConnect modal renders above everything */
@@ -4247,6 +4248,45 @@ body::before {
 .narr-ape.when { background: rgba(34,197,94,0.08); border-left: 3px solid #22C55E; color: #86EFAC; }
 .narr-ape.avoid { background: rgba(239,68,68,0.08); border-left: 3px solid #EF4444; color: #FCA5A5; }
 
+/* ── ACTION BAR (Download PDF / Share) ── */
+.action-bar {
+  display: flex; gap: 10px; margin: 16px 0;
+  flex-wrap: wrap;
+}
+.action-btn {
+  flex: 1; min-width: 140px; padding: 12px 16px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 10px; color: var(--text);
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.action-btn:hover { border-color: var(--blue); background: var(--card2); transform: translateY(-1px); }
+
+/* ── BREAKDOWN COLLAPSIBLE ── */
+.breakdown-wrapper {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; margin-top: 16px; overflow: hidden;
+}
+.breakdown-toggle {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px; background: transparent; border: none;
+  color: var(--text); font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase; cursor: pointer; transition: background 0.2s;
+}
+.breakdown-toggle:hover { background: var(--bg3); }
+.breakdown-toggle .bd-chevron { transition: transform 0.2s; font-size: 10px; color: var(--muted); }
+.breakdown-toggle.open .bd-chevron { transform: rotate(180deg); }
+.breakdown-wrapper .cat-scores { margin: 0; padding: 0 16px 16px; }
+
+/* ── SUPPLY DISTRIBUTION PIE ── */
+.supply-pie-wrap { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; padding: 14px 0; }
+.supply-pie-svg { flex-shrink: 0; }
+.supply-legend { flex: 1; min-width: 180px; }
+.supply-legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+.supply-legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.supply-legend-label { flex: 1; color: var(--muted); }
+.supply-legend-value { color: var(--text); font-weight: 700; font-family: var(--mono); }
+
 /* ── FEATURED TOKENS ── */
 .featured-strip { display: flex; gap: 10px; overflow-x: auto; padding: 2px 0; scrollbar-width: none; }
 .featured-strip::-webkit-scrollbar { display: none; }
@@ -4743,79 +4783,26 @@ body::before {
         <div class="tier-badge" id="tierBadge">—</div>
       </div>
 
-      <div class="cat-scores" style="margin-top:20px">
-        <div class="section-num" style="margin-bottom:14px">BREAKDOWN <span style="font-size:9px;color:var(--muted);letter-spacing:1px">— TAP ANY ROW</span></div>
-        <div class="cat-row" onclick="openMetricPopup('chain')">
-          <div class="cat-name">Chain Safety</div>
-          <div class="cat-bar-wrap"><div class="cat-bar" id="bar-chain"></div></div>
-          <div class="cat-score" id="score-chain">—</div>
-          <span class="tap-hint">tap to think</span>
-        </div>
-        <div class="cat-row" onclick="openMetricPopup('narr')">
-          <div class="cat-name">Narrative</div>
-          <div class="cat-bar-wrap"><div class="cat-bar" id="bar-narr"></div></div>
-          <div class="cat-score" id="score-narr">—</div>
-          <span class="tap-hint">tap to think</span>
-        </div>
-        <div class="cat-row" onclick="openMetricPopup('own')">
-          <div class="cat-name">Ownership</div>
-          <div class="cat-bar-wrap"><div class="cat-bar" id="bar-own"></div></div>
-          <div class="cat-score" id="score-own">—</div>
-          <span class="tap-hint">tap to think</span>
-        </div>
-        <div class="cat-row" onclick="openMetricPopup('age')">
-          <div class="cat-name">Age / Timing</div>
-          <div class="cat-bar-wrap"><div class="cat-bar" id="bar-age"></div></div>
-          <div class="cat-score" id="score-age">—</div>
-          <span class="tap-hint">tap to think</span>
-        </div>
-        <div class="cat-row" onclick="openMetricPopup('soc')">
-          <div class="cat-name">Social Presence</div>
-          <div class="cat-bar-wrap"><div class="cat-bar" id="bar-soc"></div></div>
-          <div class="cat-score" id="score-soc">—</div>
-          <span class="tap-hint">tap to think</span>
-        </div>
-        <div class="cat-row" onclick="openMetricPopup('sup')">
-          <div class="cat-name">Supply Safety</div>
-          <div class="cat-bar-wrap"><div class="cat-bar" id="bar-sup"></div></div>
-          <div class="cat-score" id="score-sup">—</div>
-          <span class="tap-hint">tap to think</span>
-        </div>
-        <div class="cat-row" id="contract-safety-row" style="display:none" onclick="openMetricPopup('contract')">
-          <div class="cat-name">Contract Safety</div>
-          <div class="cat-bar-wrap"><div class="cat-bar" id="bar-contract"></div></div>
-          <div class="cat-score" id="score-contract">—</div>
-          <span class="tap-hint">tap to think</span>
-        </div>
-      </div>
-
-      <!-- ── GUT CHECK BUTTON ── -->
-      <button class="gut-check-btn" onclick="openGutCheck()">
-        <div class="gut-check-icon">🧠</div>
-        <div>
-          <div class="gut-check-label">TRUSTY'S GUT CHECK</div>
-          <div class="gut-check-sub">Before you ape — answer 5 honest questions. Trusty adjusts the verdict based on YOUR situation.</div>
-        </div>
-      </button>
-
-      <div class="result-grid">
-        <div class="result-card">
-          <div class="result-card-title">✅ THE GREENS</div>
-          <div id="pros-list"></div>
-        </div>
-        <div class="result-card">
-          <div class="result-card-title">🚨 THE REDS</div>
-          <div id="cons-list"></div>
-        </div>
-      </div>
-
+      <!-- MAX APE SIZE (moved up — actionable output) -->
       <div class="ape-section">
         <div class="ape-label">MAX <span class="glink" onclick="openGlossary('ape')">APE</span> SIZE</div>
         <div class="ape-pct" id="apePct">—%</div>
         <div class="ape-desc" id="apeDesc">—</div>
       </div>
 
-      <!-- ── CONTRACT SAFETY PANEL ── -->
+      <!-- ACTION BAR: Download PDF + Share -->
+      <div class="action-bar">
+        <button class="action-btn" onclick="generateReport()">📥 Download PDF Report</button>
+        <button class="action-btn" onclick="shareReport()">🔗 Share Scan</button>
+      </div>
+
+      <!-- TRUSTY SAYS (moved up — AI commentary) -->
+      <div class="section-card" style="border-color: rgba(59,130,246,0.4);">
+        <div class="section-num">TRUSTY SAYS</div>
+        <div id="trusty-final" style="font-size:14px; line-height:1.7; color: var(--text);"></div>
+      </div>
+
+      <!-- CONTRACT SAFETY PANEL (moved up — critical info) -->
       <div class="contract-safety-panel" id="contractSafetyPanel" style="display:none">
         <div class="cs-header">
           <div class="cs-title">🔒 CONTRACT SAFETY</div>
@@ -4828,10 +4815,84 @@ body::before {
         <div id="csContent"></div>
       </div>
 
-      <div class="section-card" style="border-color: rgba(59,130,246,0.4);">
-        <div class="section-num">TRUSTY SAYS</div>
-        <div id="trusty-final" style="font-size:14px; line-height:1.7; color: var(--text);"></div>
+      <!-- SUPPLY DISTRIBUTION (new — pie chart) -->
+      <div class="section-card" id="supply-chart-section" style="display:none;">
+        <div class="section-num">🥧 SUPPLY DISTRIBUTION</div>
+        <div id="supply-chart-content"></div>
       </div>
+
+      <!-- GREENS / REDS -->
+      <div class="result-grid">
+        <div class="result-card">
+          <div class="result-card-title">✅ THE GREENS</div>
+          <div id="pros-list"></div>
+        </div>
+        <div class="result-card">
+          <div class="result-card-title">🚨 THE REDS</div>
+          <div id="cons-list"></div>
+        </div>
+      </div>
+
+      <!-- BREAKDOWN (collapsible) -->
+      <div class="breakdown-wrapper">
+        <button class="breakdown-toggle" onclick="toggleBreakdown(this)">
+          <span>📊 Detailed Breakdown <span style="font-size:10px;color:var(--muted);">— 6 categories</span></span>
+          <span class="bd-chevron">▼</span>
+        </button>
+        <div class="cat-scores" id="breakdown-content" style="display:none;">
+          <div class="cat-row" onclick="openMetricPopup('chain')">
+            <div class="cat-name">Chain Safety</div>
+            <div class="cat-bar-wrap"><div class="cat-bar" id="bar-chain"></div></div>
+            <div class="cat-score" id="score-chain">—</div>
+            <span class="tap-hint">tap to think</span>
+          </div>
+          <div class="cat-row" onclick="openMetricPopup('narr')">
+            <div class="cat-name">Narrative</div>
+            <div class="cat-bar-wrap"><div class="cat-bar" id="bar-narr"></div></div>
+            <div class="cat-score" id="score-narr">—</div>
+            <span class="tap-hint">tap to think</span>
+          </div>
+          <div class="cat-row" onclick="openMetricPopup('own')">
+            <div class="cat-name">Ownership</div>
+            <div class="cat-bar-wrap"><div class="cat-bar" id="bar-own"></div></div>
+            <div class="cat-score" id="score-own">—</div>
+            <span class="tap-hint">tap to think</span>
+          </div>
+          <div class="cat-row" onclick="openMetricPopup('age')">
+            <div class="cat-name">Age / Timing</div>
+            <div class="cat-bar-wrap"><div class="cat-bar" id="bar-age"></div></div>
+            <div class="cat-score" id="score-age">—</div>
+            <span class="tap-hint">tap to think</span>
+          </div>
+          <div class="cat-row" onclick="openMetricPopup('soc')">
+            <div class="cat-name">Social Presence</div>
+            <div class="cat-bar-wrap"><div class="cat-bar" id="bar-soc"></div></div>
+            <div class="cat-score" id="score-soc">—</div>
+            <span class="tap-hint">tap to think</span>
+          </div>
+          <div class="cat-row" onclick="openMetricPopup('sup')">
+            <div class="cat-name">Supply Safety</div>
+            <div class="cat-bar-wrap"><div class="cat-bar" id="bar-sup"></div></div>
+            <div class="cat-score" id="score-sup">—</div>
+            <span class="tap-hint">tap to think</span>
+          </div>
+          <div class="cat-row" id="contract-safety-row" style="display:none" onclick="openMetricPopup('contract')">
+            <div class="cat-name">Contract Safety</div>
+            <div class="cat-bar-wrap"><div class="cat-bar" id="bar-contract"></div></div>
+            <div class="cat-score" id="score-contract">—</div>
+            <span class="tap-hint">tap to think</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GUT CHECK BUTTON (moved to end — pre-trade sanity check) -->
+      <button class="gut-check-btn" onclick="openGutCheck()">
+        <div class="gut-check-icon">🧠</div>
+        <div>
+          <div class="gut-check-label">TRUSTY'S GUT CHECK</div>
+          <div class="gut-check-sub">Before you ape — answer 5 honest questions. Trusty adjusts the verdict based on YOUR situation.</div>
+        </div>
+      </button>
 
       <button class="reset-btn" onclick="resetAll()">🔄 Evaluate Another Coin</button>
 
@@ -7915,6 +7976,7 @@ function showResults(scores, total, tier, tierClass, scoreColor, pros, cons, ape
   // Scroll CA section into view top, then show results
   const resultsEl = document.getElementById('results-section');
   resultsEl.style.display = 'block';
+  if (typeof renderSupplyChart === 'function') renderSupplyChart();
 
   const scoreEl = document.getElementById('scoreNum');
   const circle = document.getElementById('scoreCircle');
@@ -8026,8 +8088,9 @@ function resetAll() {
   document.getElementById('results-section').style.display = 'none';
   document.getElementById('form-sections').style.display = 'block';
   contractSafetyData = null;
-  // Scroll back to top showing trending
-  document.getElementById('trendingSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Scroll back to top
+  var scrollTarget = document.getElementById('ca-section') || document.body;
+  if (scrollTarget && scrollTarget.scrollIntoView) scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const csp = document.getElementById('contractSafetyPanel');
   if (csp) csp.style.display = 'none';
   const csr = document.getElementById('contract-safety-row');
@@ -8049,9 +8112,232 @@ function resetAll() {
   document.getElementById('trustyTip').innerHTML = 'Paste any CA and I scan it automatically fren! 🔮';
   updateHistoryCount();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Hide supply chart
+  var supplyEl = document.getElementById('supply-chart-section');
+  if (supplyEl) supplyEl.style.display = 'none';
+  // Close breakdown
+  var bdToggle = document.querySelector('.breakdown-toggle');
+  var bdContent = document.getElementById('breakdown-content');
+  if (bdToggle) bdToggle.classList.remove('open');
+  if (bdContent) bdContent.style.display = 'none';
 }
 
+// ── TOGGLE BREAKDOWN ──
+function toggleBreakdown(btn) {
+  var content = document.getElementById('breakdown-content');
+  if (!content) return;
+  var isOpen = content.style.display === 'block';
+  content.style.display = isOpen ? 'none' : 'block';
+  btn.classList.toggle('open', !isOpen);
+}
 
+// ── GENERATE PDF REPORT ──
+function generateReport() {
+  if (!caTokenData || !caTokenData.pairs || !caTokenData.pairs[0]) {
+    alert('Scan a token first!');
+    return;
+  }
+  if (typeof window.jspdf === 'undefined') {
+    alert('PDF library still loading, try again in a second.');
+    return;
+  }
+  var pair = caTokenData.pairs[0];
+  var tok = pair.baseToken;
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF();
+
+  // Header
+  doc.setFillColor(5, 8, 15);
+  doc.rect(0, 0, 210, 30, 'F');
+  doc.setTextColor(96, 165, 250);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('TRUSTY AI', 15, 18);
+  doc.setTextColor(200, 200, 200);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Meme Coin Risk Report', 15, 24);
+  doc.setFontSize(8);
+  doc.text('trustyai.tech', 170, 24);
+
+  var y = 45;
+  // Token info
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(tok.name + ' ($' + tok.symbol + ')', 15, y); y += 8;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text('CA: ' + tok.address, 15, y); y += 5;
+  doc.text('Chain: ' + pair.chainId.toUpperCase() + '   Pair: ' + pair.dexId, 15, y); y += 5;
+  doc.text('Price: $' + (pair.priceUsd || '—') + '   MCap: $' + Number(pair.fdv || 0).toLocaleString() + '   Liq: $' + Number(pair.liquidity?.usd || 0).toLocaleString(), 15, y); y += 10;
+
+  // Verdict
+  var tierEl = document.getElementById('tierBadge');
+  var scoreEl = document.getElementById('scoreNum');
+  var apePctEl = document.getElementById('apePct');
+  var apeDescEl = document.getElementById('apeDesc');
+  doc.setDrawColor(80, 140, 255);
+  doc.setFillColor(240, 245, 255);
+  doc.roundedRect(15, y, 180, 22, 3, 3, 'FD');
+  doc.setTextColor(59, 130, 246);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('VERDICT: ' + (tierEl ? tierEl.textContent : '—'), 20, y + 8);
+  doc.setFontSize(9);
+  doc.setTextColor(50, 50, 50);
+  doc.text('Trusty Score: ' + (scoreEl ? scoreEl.textContent : '—') + ' / 100     Max Ape: ' + (apePctEl ? apePctEl.textContent : '—'), 20, y + 15);
+  y += 30;
+
+  // Trusty Says
+  var trustyFinal = document.getElementById('trusty-final');
+  if (trustyFinal && trustyFinal.textContent) {
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('🛡️ TRUSTY SAYS', 15, y); y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(70, 70, 70);
+    var lines = doc.splitTextToSize(trustyFinal.textContent, 180);
+    doc.text(lines, 15, y); y += lines.length * 4.5 + 4;
+  }
+
+  // Category scores
+  if (y < 230) {
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('📊 CATEGORY SCORES', 15, y); y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    var cats = [['Chain Safety', 'score-chain'], ['Narrative', 'score-narr'], ['Ownership', 'score-own'], ['Age / Timing', 'score-age'], ['Social Presence', 'score-soc'], ['Supply Safety', 'score-sup']];
+    cats.forEach(function(c) {
+      var v = document.getElementById(c[1]);
+      doc.setTextColor(70, 70, 70);
+      doc.text(c[0] + ':  ' + (v ? v.textContent : '—'), 15, y);
+      y += 5;
+    });
+    y += 4;
+  }
+
+  // Ape desc
+  if (apeDescEl && apeDescEl.textContent && y < 260) {
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    var apeLines = doc.splitTextToSize('Trusty guidance: ' + apeDescEl.textContent, 180);
+    doc.text(apeLines, 15, y);
+  }
+
+  // Footer
+  doc.setDrawColor(200, 200, 200);
+  doc.line(15, 280, 195, 280);
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text('Generated ' + new Date().toLocaleString() + ' · trustyai.tech · Not financial advice', 15, 286);
+
+  doc.save('trusty-report-' + (tok.symbol || 'token').toLowerCase() + '.pdf');
+  if (typeof trackEvent === 'function') trackEvent('pdf_downloaded');
+}
+
+// ── SHARE SCAN ──
+function shareReport() {
+  if (!caTokenData || !caTokenData.pairs || !caTokenData.pairs[0]) {
+    alert('Scan a token first!');
+    return;
+  }
+  var tok = caTokenData.pairs[0].baseToken;
+  var tier = document.getElementById('tierBadge');
+  var score = document.getElementById('scoreNum');
+  var text = 'Just scanned $' + tok.symbol + ' with @Trusty_BNB 🛡️\n\n' +
+    'Verdict: ' + (tier ? tier.textContent : '—') + '\n' +
+    'Score: ' + (score ? score.textContent : '—') + '/100\n\n' +
+    'Scan any meme coin at trustyai.tech';
+  var url = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text);
+  window.open(url, '_blank');
+  if (typeof trackEvent === 'function') trackEvent('share_clicked');
+}
+
+// ── SUPPLY DISTRIBUTION PIE CHART ──
+async function renderSupplyChart() {
+  if (!caTokenData || !caTokenData.pairs || !caTokenData.pairs[0]) return;
+  var pair = caTokenData.pairs[0];
+  if (pair.chainId !== 'bsc') return; // BSC only for now
+  var ca = pair.baseToken.address;
+  var lpAddr = pair.pairAddress;
+  var section = document.getElementById('supply-chart-section');
+  var content = document.getElementById('supply-chart-content');
+  if (!section || !content) return;
+
+  try {
+    content.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px;">Loading supply data...</div>';
+    section.style.display = 'block';
+
+    // Build RPC batch: totalSupply + 3 balanceOf calls
+    var paddedDead = '000000000000000000000000000000000000000000000000000000000000dead';
+    var paddedZero = '0000000000000000000000000000000000000000000000000000000000000000';
+    var paddedLp = lpAddr.slice(2).toLowerCase().padStart(64, '0');
+    var batch = [
+      { jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: ca, data: '0x18160ddd' }, 'latest'] }, // totalSupply
+      { jsonrpc: '2.0', id: 2, method: 'eth_call', params: [{ to: ca, data: '0x70a08231' + paddedDead }, 'latest'] }, // balanceOf(dead)
+      { jsonrpc: '2.0', id: 3, method: 'eth_call', params: [{ to: ca, data: '0x70a08231' + paddedZero }, 'latest'] }, // balanceOf(0x0)
+      { jsonrpc: '2.0', id: 4, method: 'eth_call', params: [{ to: ca, data: '0x70a08231' + paddedLp }, 'latest'] }, // balanceOf(LP)
+    ];
+    var res = await fetch('https://bsc-dataseed.binance.org', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(batch)
+    });
+    var data = await res.json();
+    if (!Array.isArray(data)) throw new Error('RPC batch failed');
+
+    var totalSupply = BigInt(data.find(d => d.id === 1)?.result || '0x0');
+    var burnDead = BigInt(data.find(d => d.id === 2)?.result || '0x0');
+    var burnZero = BigInt(data.find(d => d.id === 3)?.result || '0x0');
+    var lpBalance = BigInt(data.find(d => d.id === 4)?.result || '0x0');
+    var burned = burnDead + burnZero;
+
+    if (totalSupply === 0n) { section.style.display = 'none'; return; }
+
+    var burnPct = Number(burned * 10000n / totalSupply) / 100;
+    var lpPct = Number(lpBalance * 10000n / totalSupply) / 100;
+    var circPct = Math.max(0, 100 - burnPct - lpPct);
+
+    // Build SVG pie chart
+    var size = 140, radius = 60, cx = 70, cy = 70;
+    function slice(startPct, pct, color) {
+      if (pct <= 0) return '';
+      if (pct >= 100) return '<circle cx="'+cx+'" cy="'+cy+'" r="'+radius+'" fill="'+color+'"/>';
+      var startAngle = (startPct / 100) * 2 * Math.PI - Math.PI/2;
+      var endAngle = ((startPct + pct) / 100) * 2 * Math.PI - Math.PI/2;
+      var x1 = cx + radius * Math.cos(startAngle), y1 = cy + radius * Math.sin(startAngle);
+      var x2 = cx + radius * Math.cos(endAngle), y2 = cy + radius * Math.sin(endAngle);
+      var largeArc = pct > 50 ? 1 : 0;
+      return '<path d="M '+cx+' '+cy+' L '+x1+' '+y1+' A '+radius+' '+radius+' 0 '+largeArc+' 1 '+x2+' '+y2+' Z" fill="'+color+'"/>';
+    }
+
+    var svg = '<svg class="supply-pie-svg" width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">' +
+      '<circle cx="'+cx+'" cy="'+cy+'" r="'+radius+'" fill="#0f1a2e"/>' +
+      slice(0, burnPct, '#EF4444') +
+      slice(burnPct, lpPct, '#3B82F6') +
+      slice(burnPct + lpPct, circPct, '#22C55E') +
+      '<circle cx="'+cx+'" cy="'+cy+'" r="26" fill="#111d33"/>' +
+      '<text x="'+cx+'" y="'+(cy+2)+'" text-anchor="middle" fill="#E2EEFF" font-size="10" font-family="monospace">SUPPLY</text>' +
+      '<text x="'+cx+'" y="'+(cy+14)+'" text-anchor="middle" fill="#6B85B0" font-size="8" font-family="monospace">100%</text>' +
+    '</svg>';
+
+    var legend = '<div class="supply-legend">' +
+      '<div class="supply-legend-row"><span class="supply-legend-dot" style="background:#EF4444"></span><span class="supply-legend-label">🔥 Burned</span><span class="supply-legend-value">' + burnPct.toFixed(2) + '%</span></div>' +
+      '<div class="supply-legend-row"><span class="supply-legend-dot" style="background:#3B82F6"></span><span class="supply-legend-label">💧 Liquidity Pool</span><span class="supply-legend-value">' + lpPct.toFixed(2) + '%</span></div>' +
+      '<div class="supply-legend-row"><span class="supply-legend-dot" style="background:#22C55E"></span><span class="supply-legend-label">🔄 Circulating</span><span class="supply-legend-value">' + circPct.toFixed(2) + '%</span></div>' +
+    '</div>';
+
+    content.innerHTML = '<div class="supply-pie-wrap">' + svg + legend + '</div>';
+  } catch(e) {
+    console.warn('Supply chart error:', e.message);
+    section.style.display = 'none';
+  }
+}
 
 // ── CA HELP MODAL ──
 function openCaHelp() {
