@@ -4272,21 +4272,17 @@ body::before {
 /* ── BREAKDOWN COLLAPSIBLE ── */
 .breakdown-wrapper {
   background: var(--card); border: 1px solid var(--border);
-  border-radius: 14px; margin-top: 16px; overflow: hidden;
+  border-radius: 14px; overflow: hidden;
 }
-.breakdown-toggle {
-  width: 100%; display: flex; justify-content: space-between; align-items: center;
-  padding: 14px 16px; background: transparent; border: none;
+.breakdown-header {
+  padding: 14px 16px;
   color: var(--text); font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
-  text-transform: uppercase; cursor: pointer; transition: background 0.2s;
+  text-transform: uppercase;
 }
-.breakdown-toggle:hover { background: var(--bg3); }
-.breakdown-toggle .bd-chevron { transition: transform 0.2s; font-size: 10px; color: var(--muted); }
-.breakdown-toggle.open .bd-chevron { transform: rotate(180deg); }
 .breakdown-wrapper .cat-scores { margin: 0; padding: 0 16px 16px; }
 
 /* ── SIDE-BY-SIDE GRID (Supply + Breakdown) ── */
-.side-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; align-items: start; }
+.side-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; margin-bottom: 24px; align-items: start; }
 .side-grid > * { margin-top: 0 !important; }
 @media (max-width: 700px) { .side-grid { grid-template-columns: 1fr; } }
 
@@ -4791,7 +4787,7 @@ body::before {
         </div>
       </div>
 
-      <div style="text-align:center">
+      <div style="text-align:center;margin-bottom:24px;">
         <div class="tier-badge" id="tierBadge">—</div>
       </div>
 
@@ -4846,13 +4842,12 @@ body::before {
         <div id="supply-chart-content"></div>
       </div>
 
-      <!-- BREAKDOWN (collapsible) -->
+      <!-- BREAKDOWN (always visible) -->
       <div class="breakdown-wrapper">
-        <button class="breakdown-toggle" onclick="toggleBreakdown(this)">
+        <div class="breakdown-header">
           <span>📊 Detailed Breakdown <span style="font-size:10px;color:var(--muted);">— 6 categories</span></span>
-          <span class="bd-chevron">▼</span>
-        </button>
-        <div class="cat-scores" id="breakdown-content" style="display:none;">
+        </div>
+        <div class="cat-scores" id="breakdown-content">
           <div class="cat-row" onclick="openMetricPopup('chain')">
             <div class="cat-name">Chain Safety</div>
             <div class="cat-bar-wrap"><div class="cat-bar" id="bar-chain"></div></div>
@@ -8129,11 +8124,6 @@ function resetAll() {
   // Hide supply chart
   var supplyEl = document.getElementById('supply-chart-section');
   if (supplyEl) supplyEl.style.display = 'none';
-  // Close breakdown
-  var bdToggle = document.querySelector('.breakdown-toggle');
-  var bdContent = document.getElementById('breakdown-content');
-  if (bdToggle) bdToggle.classList.remove('open');
-  if (bdContent) bdContent.style.display = 'none';
 }
 
 // ── TOGGLE BREAKDOWN ──
