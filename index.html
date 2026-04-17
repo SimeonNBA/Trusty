@@ -1474,7 +1474,7 @@ body::before {
 /* ── MOBILE ── */
 @media (max-width: 600px) {
   .app-wrapper { padding: 16px 14px 0; }
-  .app { padding: 0 0 80px; padding-right: 0; }
+  .app { padding: 0 0 64px; padding-right: 0; }
   .trusty-sidebar {
     position: fixed;
     bottom: 0;
@@ -1485,15 +1485,16 @@ body::before {
     height: auto;
     max-height: none;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
     align-items: center;
     gap: 6px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-left: none;
     border-top: 1px solid var(--border);
     background: var(--bg2);
-    overflow: visible;
+    overflow-x: auto;
+    overflow-y: hidden;
     z-index: 200;
   }
   .trusty-sidebar #trustyFig { width: 36px !important; height: 36px !important; object-fit: contain; display: block !important; flex-shrink: 0; border-radius: 8px; }
@@ -1503,9 +1504,11 @@ body::before {
   .trusty-sidebar .history-btn { font-size: 11px; padding: 7px 12px; order: 10; }
   .trusty-sidebar .sidebar-strategy { padding: 0; gap: 4px; border: none; background: transparent; margin: 0; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; }
   .trusty-sidebar .sidebar-strat-btn { padding: 7px 12px; font-size: 11px; }
-  .trusty-sidebar #sidebarConnectBtn { padding: 8px 14px; font-size: 12px; margin: 0; font-weight: 600; }
-  .trusty-sidebar #sidebarConnected { font-size: 10px; display: flex !important; }
-  .trusty-sidebar #sidebarWallet { display: flex !important; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 4px; }
+  .trusty-sidebar #sidebarConnectBtn { width: auto !important; padding: 7px 12px !important; font-size: 11px !important; margin: 0 !important; font-weight: 600; white-space: nowrap; }
+  .trusty-sidebar #sidebarConnected { font-size: 10px; display: flex !important; flex-direction: row !important; align-items: center; gap: 6px; }
+  .trusty-sidebar #sidebarConnected > div { margin: 0 !important; }
+  .trusty-sidebar #sidebarWallet { display: flex !important; flex-direction: row; flex-wrap: nowrap; justify-content: center; gap: 4px; padding: 0 !important; }
+  .trusty-sidebar #sidebarTradeBtns { display: flex !important; flex-direction: row; gap: 4px; }
   .speech-bubble { border-radius: 4px 14px 14px 14px; }
   .age-grid { grid-template-columns: repeat(2, 1fr); }
   .result-grid { grid-template-columns: 1fr; }
@@ -7165,74 +7168,6 @@ if (window.trustwallet || window.ethereum) {
 
 console.log('✅ Wallet connector ready');
 
-// ══ TWAK API CLIENT (HMAC-SHA256 auth) ══
-var TWAK_BASE = 'https://tws.trustwallet.com';
-var TWAK_ID = null;
-var TWAK_SECRET = null;
-
-async function twakSign(method, path, query) {
-  if (!TWAK_SECRET) return null;
-  var nonce = crypto.randomUUID();
-  var date = new Date().toUTCString();
-  var sortedQuery = '';
-  if (query && Object.keys(query).length > 0) {
-    sortedQuery = Object.keys(query).sort().map(function(k) { return k + '=' + query[k]; }).join('&');
-  }
-  var plaintext = [method.toUpperCase(), path, sortedQuery, TWAK_ID, nonce, date].join(';');
-  // HMAC-SHA256 using Web Crypto API
-  var encoder = new TextEncoder();
-  var key = await crypto.subtle.importKey('raw', encoder.encode(TWAK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  var sig = await crypto.subtle.sign('HMAC', key, encoder.encode(plaintext));
-  var signature = btoa(String.fromCharCode.apply(null, new Uint8Array(sig)));
-  return {
-    'X-TW-CREDENTIAL': TWAK_ID,
-    'X-TW-NONCE': nonce,
-    'X-TW-DATE': date,
-    'Authorization': 'HMAC-SHA256 Signature=' + signature,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  };
-}
-
-async function twakGet(path, query) {
-  var headers = await twakSign('GET', path, query || {});
-  if (!headers) return null;
-  var qs = '';
-  if (query && Object.keys(query).length > 0) {
-    qs = '?' + Object.keys(query).map(function(k) { return k + '=' + encodeURIComponent(query[k]); }).join('&');
-  }
-  var res = await fetch(TWAK_BASE + path + qs, { headers: headers });
-  return res.json();
-}
-
-async function twakPost(path, body) {
-  var headers = await twakSign('POST', path, {});
-  if (!headers) return null;
-  var res = await fetch(TWAK_BASE + path, { method: 'POST', headers: headers, body: JSON.stringify(body || {}) });
-  return res.json();
-}
-
-// TWAK: Check token security
-async function twakTokenSecurity(chain, contractAddress) {
-  // BSC coin ID = 714
-  var coinId = chain === 'bsc' ? 714 : chain === 'ethereum' ? 60 : chain === 'solana' ? 501 : 714;
-  var assetId = 'c' + coinId + '_t' + contractAddress;
-  return twakGet('/v2/coinstatus/' + assetId, { version: '2', include_security_info: 'true' });
-}
-
-// TWAK: Get swap quote
-async function twakSwapQuote(fromAsset, toAsset, amount, fromAddress, slippage) {
-  return twakPost('/amber-api/v1/route', {
-    fromAsset: fromAsset,
-    toAsset: toAsset,
-    fromAddress: fromAddress,
-    toAddress: fromAddress,
-    fromDomain: 56,
-    toDomain: 56,
-    amount: amount,
-    slippage: slippage || 1
-  });
-}
 </script>
 
 <!-- WalletConnect modal (loaded async, non-blocking) -->
