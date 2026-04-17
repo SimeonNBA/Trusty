@@ -4462,7 +4462,7 @@ body::before {
         ⭐ Watchlist
       </button>
       <button class="main-nav-btn" id="nav-meme" onclick="switchTab('meme')">
-        📰 Week in Meme
+        📰 Weekly Trenches Report
       </button>
     </div>
 
@@ -5160,7 +5160,7 @@ body::before {
         <div class="lore-card" style="margin-bottom:16px;">
           <div class="lore-title">📊 LIVE PRICE</div>
           <div style="border-radius:12px;overflow:hidden;background:#0a0a1a;">
-            <iframe src="https://dexscreener.com/bsc/0xe2D86D6dFDE0D428f8F83260b6C7c1e7f16C8ed2?embed=1&theme=dark&trades=0&info=0"
+            <iframe src="https://dexscreener.com/bsc/0xe2D86D6dFDE0D428f8F83260b6C7c1e7f16C8ed2?embed=1"
               style="width:100%;height:420px;border:none;" allowfullscreen></iframe>
           </div>
           <div style="text-align:center;margin-top:10px;font-size:11px;color:var(--muted);">
@@ -5286,8 +5286,8 @@ body::before {
     <div class="tab-panel" id="tab-meme">
       <div class="token-page" style="padding:8px 0 24px;">
         <div style="text-align:center;margin-bottom:24px;">
-          <div style="font-family:var(--display);font-size:36px;letter-spacing:3px;background:linear-gradient(135deg,#A855F7,#EC4899,#F97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;">📰 WEEK IN MEME</div>
-          <div style="font-size:14px;color:var(--muted);max-width:560px;margin:0 auto;line-height:1.6;">What's happening across the chains — pumps, rugs, narratives, and takes. Straight from Trusty.</div>
+          <div style="font-family:var(--display);font-size:36px;letter-spacing:3px;background:linear-gradient(135deg,#A855F7,#EC4899,#F97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;">📰 WEEKLY TRENCHES REPORT</div>
+          <div style="font-size:14px;color:var(--muted);max-width:560px;margin:0 auto;line-height:1.6;">What's happening in the trenches — pumps, rugs, narratives, takes. Straight from Trusty.</div>
         </div>
         <div id="meme-empty" style="text-align:center;padding:40px 20px;display:none;">
           <div style="font-size:40px;margin-bottom:12px;">📝</div>
@@ -9794,6 +9794,7 @@ function addToWatchlist() {
     score: scoreEl ? parseInt(scoreEl.textContent) || 0 : 0,
     tier: tierEl ? tierEl.textContent.trim() : '',
     priceUsd: pair.priceUsd,
+    marketCap: pair.fdv || pair.marketCap || 0,
     logoUrl: (pair.info && pair.info.imageUrl) || null,
     addedAt: new Date().toISOString()
   });
@@ -9835,11 +9836,12 @@ function renderWatchlist() {
     var icon = t.logoUrl
       ? '<img src="' + t.logoUrl + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.innerHTML=\'🪙\'" />'
       : '🪙';
-    var price = t.priceUsd ? '$' + parseFloat(t.priceUsd).toPrecision(4) : '—';
+    var mc = t.marketCap || 0;
+    var mcDisplay = mc >= 1e9 ? '$' + (mc/1e9).toFixed(2) + 'B' : mc >= 1e6 ? '$' + (mc/1e6).toFixed(2) + 'M' : mc >= 1e3 ? '$' + (mc/1e3).toFixed(1) + 'K' : mc > 0 ? '$' + mc.toFixed(0) : '—';
     return '<div class="portfolio-token" onclick="portfolioScan(\'' + t.ca + '\')">' +
       '<div class="portfolio-token-icon">' + icon + '</div>' +
       '<div class="portfolio-token-info"><div class="portfolio-token-name">' + (t.name || 'Unknown') + '</div><div class="portfolio-token-symbol">$' + (t.symbol || '???') + '</div></div>' +
-      '<div class="portfolio-token-balance"><div class="portfolio-token-value" style="color:' + tierColor + ';">' + (t.tier || ('Score ' + t.score)) + '</div><div class="portfolio-token-amount">' + price + '</div></div>' +
+      '<div class="portfolio-token-balance"><div class="portfolio-token-value" style="color:' + tierColor + ';">' + (t.tier || ('Score ' + t.score)) + '</div><div class="portfolio-token-amount">MC: ' + mcDisplay + '</div></div>' +
       '<button onclick="event.stopPropagation();removeFromWatchlist(\'' + t.ca + '\')" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:6px 10px;cursor:pointer;font-size:11px;font-family:var(--mono);">✕</button>' +
     '</div>';
   }).join('');
