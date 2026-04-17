@@ -4932,6 +4932,7 @@ body::before {
           <button class="academy-section-btn" onclick="showAcademySection('glossary',this)">📖 Glossary</button>
           <button class="academy-section-btn" onclick="showAcademySection('threads',this)">🐦 Alpha Threads</button>
           <button class="academy-section-btn" onclick="showAcademySection('tw-history',this)">🛡️ Trust Wallet</button>
+          <button class="academy-section-btn" onclick="showAcademySection('bnb-history',this)">🟡 BNB Chain</button>
           <button class="academy-section-btn" onclick="showAcademySection('crypto-history',this)">₿ Crypto History</button>
         </div>
 
@@ -5137,6 +5138,15 @@ body::before {
             <div style="font-size:13px;color:var(--muted);line-height:1.6;">From a developer's garage in 2017 to 220 million users. The story behind the wallet that Trusty calls home.</div>
           </div>
           <div id="inline-tw-history"></div>
+        </div>
+
+        <!-- BNB CHAIN HISTORY SECTION -->
+        <div class="academy-section" id="asec-bnb-history">
+          <div class="lore-card" style="margin-bottom:12px;">
+            <div class="lore-title">🟡 HISTORY OF BNB CHAIN</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.6;">From ERC-20 token to the home of meme coin szn. How BNB Chain became the builders' playground — and Trusty's home.</div>
+          </div>
+          <div id="inline-bnb-history"></div>
         </div>
 
         <!-- CRYPTO HISTORY SECTION -->
@@ -10253,6 +10263,9 @@ function showAcademySection(id, btn) {
   if (id === 'tw-history' && !document.getElementById('inline-tw-history').hasChildNodes()) {
     renderInlineTWHistory();
   }
+  if (id === 'bnb-history' && !document.getElementById('inline-bnb-history').hasChildNodes()) {
+    renderInlineBNBHistory();
+  }
   if (id === 'crypto-history' && !document.getElementById('inline-crypto-history').hasChildNodes()) {
     renderInlineCryptoHistory();
   }
@@ -10571,6 +10584,27 @@ function renderInlineTWHistory() {
     ['2022-2025','From 40M to 220M Users','Under Eowyn Chen: Trust Wallet grew from 40M to 220M downloads, turned profitable, revenue quadrupled.'],
     ['Feb 2026','Felix Fan Becomes CEO','OKX veteran Felix Fan appointed CEO. Shipped 5 new features in 48 hours. Focus: product experience and security.'],
     ['Mar 2026','Trusty AI Launches','The Trusty community launches an AI-powered meme coin scanner and education platform on BNB Smart Chain. Scan, learn, and trade — all through Trust Wallet.'],
+  ];
+  container.innerHTML = items.map(function(i){
+    return '<div class="inline-timeline-item"><div class="inline-timeline-year">'+i[0]+'</div><div class="inline-timeline-title">'+i[1]+'</div><div class="inline-timeline-desc">'+i[2]+'</div></div>';
+  }).join('');
+}
+
+function renderInlineBNBHistory() {
+  var container = document.getElementById('inline-bnb-history');
+  if (!container) return;
+  var items = [
+    ['Jul 2017','BNB ICO','Binance launches and raises $15M via ICO. BNB initially issued as an ERC-20 token on Ethereum — a utility token for trading fee discounts.'],
+    ['Apr 2019','Binance Chain Mainnet','BNB migrates from Ethereum to its own blockchain (Binance Chain / Beacon Chain). Built for fast trading on Binance DEX. BNB is now native.'],
+    ['Sep 2020','BSC Launches','Binance Smart Chain goes live as a parallel EVM-compatible chain. Low fees, fast blocks, full Solidity support. Built to compete with Ethereum.'],
+    ['2020-2021','DeFi Explosion','PancakeSwap, Venus, Alpaca, BakerySwap launch. Daily volumes surpass Ethereum. BNB hits $690 ATH. PancakeSwap TVL hits $4B.'],
+    ['May 2021','BNB Burns Begin','Auto-burn mechanism replaces quarterly burns. BNB becomes deflationary. Total supply capped at 100M, burning toward 100M target.'],
+    ['Feb 2022','BNB Chain Rebrand','Binance Chain + BSC merge into "BNB Chain" under one brand. BSC becomes "BNB Smart Chain." Beacon Chain deprecated over time.'],
+    ['Oct 2022','Bridge Exploit','Cross-chain bridge hacked for ~$570M in BNB. Network pauses for first time ever. Community response hardens security focus.'],
+    ['Sep 2023','opBNB Launch','Layer-2 built on Optimism stack. Sub-cent gas fees, 4000+ TPS. Gaming and social apps shift to opBNB.'],
+    ['Feb 2024','BNB Greenfield','Decentralized storage network launches. Permission-based file storage using BNB as payment. Web3 data layer.'],
+    ['2024-2025','Meme Coin SZN','CZ declares "meme coin season." BNB Chain DEX volume hits $6.05B in a single day. GIGGLE, $4, PENGU, and countless four.meme launches explode. TRUSTY revived as CTO.'],
+    ['2026','AI Agents Era','Trust Wallet Agent Kit (TWAK) launches. AI-powered wallets and trading tools proliferate. BNB Chain becomes home for AI x DeFi experimentation. Trusty AI goes live.'],
   ];
   container.innerHTML = items.map(function(i){
     return '<div class="inline-timeline-item"><div class="inline-timeline-year">'+i[0]+'</div><div class="inline-timeline-title">'+i[1]+'</div><div class="inline-timeline-desc">'+i[2]+'</div></div>';
