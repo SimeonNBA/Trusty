@@ -1,0 +1,14 @@
+{
+  "updatedAt": "2026-04-18",
+  "articles": [
+    {
+      "id": "welcome",
+      "title": "Week in Meme is Here 📰",
+      "date": "April 18, 2026",
+      "cover": "",
+      "tags": ["Launch", "Trusty"],
+      "body": "<p>This is where Trusty recaps what's happening across the chains — the pumps, the rugs, the narratives, and the takes that actually matter.</p><p>Every week we'll break down the biggest moves, who called them, who got rugged, and what you can learn from it. No shilling. No financial advice. Just the meta, explained.</p><p>If you spot something worth covering — a viral token, a clean rug, a wild CZ post — <a href='https://x.com/Trusty_BNB' target='_blank' style='color:var(--blue2);'>DM @Trusty_BNB</a> and we'll feature it.</p>",
+      "takeaway": "The market moves fast. Read this weekly to stay ahead of the narratives without scrolling X for 6 hours a day."
+    }
+  ]
+}

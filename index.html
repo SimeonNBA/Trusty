@@ -4420,36 +4420,6 @@ body::before {
 </head>
 <body>
 
-<!-- ── WALLET CHOOSER MODAL ── -->
-<div class="wallet-modal-overlay" id="walletModal" onclick="if(event.target===this)closeWalletModal()">
-  <div class="wallet-modal">
-    <h3>Connect Wallet</h3>
-    <p>Choose your wallet to connect to BSC</p>
-    <div id="walletProviderList"></div>
-    <button class="wallet-modal-btn" onclick="connectViaWC()">
-      <span class="wm-icon">📱</span>
-      <span class="wm-label">WalletConnect<br><span class="wm-sub">Scan QR with mobile wallet</span></span>
-    </button>
-    <button class="wallet-modal-btn" onclick="connectViaManual()">
-      <span class="wm-icon">📋</span>
-      <span class="wm-label">Paste Address<br><span class="wm-sub">Read-only mode</span></span>
-    </button>
-    <button class="wallet-modal-close" onclick="closeWalletModal()">Cancel</button>
-  </div>
-</div>
-
-<!-- ── TRADE MODAL (DCA / Limit / Swap) ── -->
-<div class="wallet-modal-overlay" id="tradeModal" onclick="if(event.target===this)closeTradeModal()">
-  <div class="wallet-modal" style="max-width:420px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <h3 id="tradeModalTitle" style="margin:0;">📈 DCA</h3>
-      <button onclick="closeTradeModal()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
-    </div>
-    <div id="tradeTokenInfo" style="font-size:13px;color:var(--yellow);margin-bottom:14px;font-weight:700;"></div>
-    <div id="tradeFormContent"></div>
-  </div>
-</div>
-
 <!-- ══════════════════════════════════════════════════════ -->
 <!--  MAIN EVALUATOR APP                                   -->
 <!-- ══════════════════════════════════════════════════════ -->
@@ -4488,8 +4458,11 @@ body::before {
       <button class="main-nav-btn token-btn" id="nav-token" onclick="switchTab('token')">
         🪙 Token
       </button>
-      <button class="main-nav-btn" id="nav-portfolio" onclick="switchTab('portfolio')">
-        💼 Portfolio
+      <button class="main-nav-btn" id="nav-watchlist" onclick="switchTab('watchlist')">
+        ⭐ Watchlist
+      </button>
+      <button class="main-nav-btn" id="nav-meme" onclick="switchTab('meme')">
+        📰 Week in Meme
       </button>
     </div>
 
@@ -4802,8 +4775,9 @@ body::before {
         <div class="ape-desc" id="apeDesc">—</div>
       </div>
 
-      <!-- ACTION BAR: Download PDF + Share -->
+      <!-- ACTION BAR: Watchlist + PDF + Share -->
       <div class="action-bar">
+        <button class="action-btn" id="watchlistBtn" onclick="addToWatchlist()">⭐ Save to Watchlist</button>
         <button class="action-btn" onclick="generateReport()">📥 Download PDF Report</button>
         <button class="action-btn" onclick="shareReport()">🔗 Share Scan</button>
       </div>
@@ -5289,146 +5263,40 @@ body::before {
     </div></div><!-- end tab-token -->
 
     <!-- ══════════════════════════════
-         TAB: PORTFOLIO
+         TAB: WATCHLIST
          ══════════════════════════════ -->
-    <div class="tab-panel" id="tab-portfolio">
-
-        <div id="portfolio-not-connected" style="text-align:center;padding:60px 20px;">
-          <div style="font-size:48px;margin-bottom:16px;">💼</div>
-          <div style="font-size:20px;font-weight:700;margin-bottom:8px;color:var(--text);">Portfolio Scanner</div>
-          <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;">Connect your wallet to see all your BSC tokens<br>with Trusty risk scores for each holding.</div>
-          <button class="wc-connect-btn" onclick="connectWallet()" style="padding:14px 32px;font-size:14px;">🔗 Connect Wallet</button>
+    <div class="tab-panel" id="tab-watchlist">
+      <div class="token-page" style="padding:8px 0 24px;">
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="font-family:var(--display);font-size:36px;letter-spacing:3px;background:linear-gradient(135deg,#F3BA2F,#F97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;">⭐ WATCHLIST</div>
+          <div style="font-size:14px;color:var(--muted);max-width:480px;margin:0 auto;line-height:1.6;">Tokens you're watching. Saved locally in your browser — no account needed.</div>
         </div>
-
-        <div id="portfolio-content">
-          <!-- Summary Card -->
-          <div class="section-card" style="margin-bottom:16px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-              <div>
-                <div style="font-size:10px;font-family:var(--mono);letter-spacing:2px;color:var(--blue2);margin-bottom:4px;">YOUR PORTFOLIO</div>
-                <div style="font-size:24px;font-weight:700;color:var(--text);" id="portfolio-total-value">Loading...</div>
-              </div>
-              <div style="display:flex;gap:16px;flex-wrap:wrap;">
-                <div style="text-align:center;">
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--muted);">TOKENS</div>
-                  <div style="font-size:18px;font-weight:700;color:var(--text);" id="portfolio-token-count">—</div>
-                </div>
-                <div style="text-align:center;">
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--muted);">BNB</div>
-                  <div style="font-size:18px;font-weight:700;color:var(--yellow);" id="portfolio-bnb">—</div>
-                </div>
-                <div style="text-align:center;">
-                  <div style="font-size:10px;font-family:var(--mono);color:var(--muted);">HEALTH</div>
-                  <div style="font-size:18px;font-weight:700;" id="portfolio-health">—</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Loading state -->
-          <div id="portfolio-loading" style="text-align:center;padding:40px;color:var(--muted);">
-            <div style="font-size:32px;margin-bottom:12px;">🔍</div>
-            <div>Scanning your wallet...</div>
-          </div>
-
-          <!-- Token List -->
-          <div id="portfolio-list"></div>
-
-          <!-- Refresh button -->
-          <div style="text-align:center;margin-top:16px;">
-            <button onclick="loadPortfolio()" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--muted);padding:10px 20px;cursor:pointer;font-family:var(--mono);font-size:11px;">🔄 Refresh Portfolio</button>
-          </div>
+        <div id="watchlist-empty" style="text-align:center;padding:60px 20px;display:none;">
+          <div style="font-size:48px;margin-bottom:16px;">⭐</div>
+          <div style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--text);">Your watchlist is empty</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.6;">Scan a token and click "Save to Watchlist" to track it here.</div>
         </div>
-
+        <div id="watchlist-content"></div>
       </div>
-    </div><!-- end tab-portfolio -->
+    </div><!-- end tab-watchlist -->
 
-    <!-- ══ APE WITH TRUSTY (always visible) ══ -->
-    <div class="wc-section" id="strategySection">
-      <div class="wc-header">🤖 APE WITH TRUSTY</div>
-      <div id="wc-step1">
-        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5;">
-          Connect your Trust Wallet and let Trusty set a DCA, limit order or one-time swap. You approve every transaction.
+    <!-- ══════════════════════════════
+         TAB: WEEK IN MEME
+         ══════════════════════════════ -->
+    <div class="tab-panel" id="tab-meme">
+      <div class="token-page" style="padding:8px 0 24px;">
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="font-family:var(--display);font-size:36px;letter-spacing:3px;background:linear-gradient(135deg,#A855F7,#EC4899,#F97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;">📰 WEEK IN MEME</div>
+          <div style="font-size:14px;color:var(--muted);max-width:560px;margin:0 auto;line-height:1.6;">What's happening across the chains — pumps, rugs, narratives, and takes. Straight from Trusty.</div>
         </div>
-        <button class="wc-connect-btn" id="connectWalletBtn" onclick="connectWallet()">
-          🔗 Connect Trust Wallet
-        </button>
+        <div id="meme-empty" style="text-align:center;padding:40px 20px;display:none;">
+          <div style="font-size:40px;margin-bottom:12px;">📝</div>
+          <div style="font-size:14px;color:var(--muted);line-height:1.6;">No articles yet. Come back soon fren.</div>
+        </div>
+        <div id="meme-content"></div>
       </div>
-      <div class="wc-connected" id="wcConnected">
-        <span>🟢</span>
-        <span>Connected:</span>
-        <span class="wc-address" id="wcAddress">0x0000...0000</span>
-        <span style="margin-left:auto;cursor:pointer;color:var(--muted);font-size:11px;" onclick="disconnectWallet()">Disconnect</span>
-      </div>
-      <div id="wc-step2" style="display:none;">
-        <div class="strategy-tabs">
-          <div class="strategy-tab active" onclick="switchStrategy('dca',this)">📈 DCA</div>
-          <div class="strategy-tab" onclick="switchStrategy('limit',this)">🎯 Limit</div>
-          <div class="strategy-tab" onclick="switchStrategy('swap',this)">⚡ Buy Now</div>
-        </div>
-        <div class="strategy-form active" id="form-dca">
-          <div class="strategy-input-row">
-            <div class="strategy-input-group">
-              <div class="strategy-input-label">AMOUNT PER BUY (USD)</div>
-              <input class="strategy-input" id="dca-amount" type="number" placeholder="10" min="1" />
-            </div>
-            <div class="strategy-input-group">
-              <div class="strategy-input-label">EVERY X DAYS</div>
-              <input class="strategy-input" id="dca-interval" type="number" placeholder="7" min="1" />
-            </div>
-          </div>
-          <div class="strategy-input-row">
-            <div class="strategy-input-group">
-              <div class="strategy-input-label">NUMBER OF BUYS</div>
-              <input class="strategy-input" id="dca-buys" type="number" placeholder="4" min="1" />
-            </div>
-            <div class="strategy-input-group">
-              <div class="strategy-input-label">TOTAL</div>
-              <input class="strategy-input" id="dca-total" type="text" placeholder="$40" disabled style="opacity:0.5;" />
-            </div>
-          </div>
-          <button class="strategy-submit-btn" onclick="submitDCA()">🛡️ SET DCA STRATEGY</button>
-        </div>
-        <div class="strategy-form" id="form-limit">
-          <div class="strategy-input-row">
-            <div class="strategy-input-group">
-              <div class="strategy-input-label">BUY AMOUNT (USD)</div>
-              <input class="strategy-input" id="limit-amount" type="number" placeholder="50" min="1" />
-            </div>
-            <div class="strategy-input-group">
-              <div class="strategy-input-label">TARGET PRICE (USD)</div>
-              <input class="strategy-input" id="limit-price" type="number" placeholder="0.00001" step="any" />
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;margin-bottom:10px;">
-            <button class="strategy-tab active" id="dir-below" onclick="setDirection('buy_below')" style="flex:1;">📉 Below</button>
-            <button class="strategy-tab" id="dir-above" onclick="setDirection('buy_above')" style="flex:1;">📈 Above</button>
-          </div>
-          <button class="strategy-submit-btn" onclick="submitLimit()">🎯 SET LIMIT ORDER</button>
-        </div>
-        <div class="strategy-form" id="form-swap">
-          <div class="strategy-input-group" style="margin-bottom:10px;">
-            <div class="strategy-input-label">AMOUNT TO BUY (USD)</div>
-            <input class="strategy-input" id="swap-amount" type="number" placeholder="25" min="1" />
-          </div>
-          <div class="strategy-input-group" style="margin-bottom:10px;">
-            <div class="strategy-input-label">SLIPPAGE</div>
-            <div style="display:flex;gap:6px;margin-top:4px;">
-              <button onclick="setSlippage(5,this)" class="slippage-btn" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-weight:700;cursor:pointer;font-size:11px;">5%</button>
-              <button onclick="setSlippage(10,this)" class="slippage-btn" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--blue);background:rgba(59,130,246,0.15);color:var(--blue2);font-weight:700;cursor:pointer;font-size:11px;">10%</button>
-              <button onclick="setSlippage(15,this)" class="slippage-btn" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-weight:700;cursor:pointer;font-size:11px;">15%</button>
-              <button onclick="setSlippage(25,this)" class="slippage-btn" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-weight:700;cursor:pointer;font-size:11px;">25%</button>
-            </div>
-          </div>
-          <button class="strategy-submit-btn" style="background:linear-gradient(135deg,#3B82F6,#2563EB);" onclick="submitSwap()">⚡ BUY NOW</button>
-        </div>
-        <div class="strategy-success" id="strategySuccess">
-          <div class="strategy-success-icon">🛡️</div>
-          <div class="strategy-success-title">STRATEGY SET!</div>
-          <div class="strategy-success-desc" id="successDesc">Your strategy is active.</div>
-        </div>
-      </div>
-    </div>
+    </div><!-- end tab-meme -->
+
 
   </div><!-- end main-col -->
 
@@ -5457,30 +5325,6 @@ body::before {
       <span>🕐 RECENT SCANS</span>
       <span id="historyCount" style="background:var(--blue);color:white;border-radius:10px;padding:1px 7px;font-size:10px;font-family:var(--mono)">0</span>
     </button>
-
-    <!-- ── SIDEBAR WALLET ── -->
-    <div class="sidebar-strategy" id="sidebarWallet" style="display:block;">
-      <button class="wc-connect-btn" id="sidebarConnectBtn" onclick="connectWallet()" style="width:100%;padding:10px 12px;font-size:12px;margin-bottom:8px;">
-        🔗 Connect Wallet
-      </button>
-      <div id="sidebarConnected" style="display:none;margin-bottom:8px;text-align:center;">
-        <div style="font-size:11px;color:var(--green);">🟢 <span id="sidebarWalletAddr">0x00...00</span></div>
-        <div class="sidebar-balance" id="sidebarBalance"></div>
-        <button onclick="disconnectWallet()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:9px;padding:3px 10px;cursor:pointer;font-family:var(--mono);margin-top:4px;">Disconnect</button>
-      </div>
-      <div id="sidebarTradeBtns" style="display:none;">
-        <div class="sidebar-strategy-token" id="sidebarTokenName" style="margin-bottom:6px;">—</div>
-        <button class="sidebar-strat-btn dca" onclick="sidebarTrade('dca')">
-          📈 DCA
-        </button>
-        <button class="sidebar-strat-btn limit" onclick="sidebarTrade('limit')">
-          🎯 Limit
-        </button>
-        <button class="sidebar-strat-btn swap" onclick="sidebarTrade('swap')">
-          ⚡ Swap
-        </button>
-      </div>
-    </div>
 
     <div class="search-history-panel" id="searchHistoryPanel">
       <div class="sh-header">
@@ -7932,6 +7776,7 @@ function showResults(scores, total, tier, tierClass, scoreColor, pros, cons, ape
   const resultsEl = document.getElementById('results-section');
   resultsEl.style.display = 'block';
   if (typeof renderSupplyChart === 'function') renderSupplyChart();
+  if (typeof updateWatchlistBtn === 'function') setTimeout(updateWatchlistBtn, 300);
 
   const scoreEl = document.getElementById('scoreNum');
   const circle = document.getElementById('scoreCircle');
@@ -9890,7 +9735,7 @@ function playNarrative(id) {
 // ── MAIN TABS ──
 function switchTab(tab) {
   try {
-    var tabs = ['scanner','academy','token','portfolio'];
+    var tabs = ['scanner','academy','token','watchlist','meme'];
     for (var i = 0; i < tabs.length; i++) {
       var tp = document.getElementById('tab-' + tabs[i]);
       var nb = document.getElementById('nav-' + tabs[i]);
@@ -9906,20 +9751,135 @@ function switchTab(tab) {
       var nr = document.getElementById('inline-narratives');
       if (nr && !nr.hasChildNodes()) renderInlineNarratives();
     }
-    if (tab === 'portfolio') {
-      if (connectedWallet) {
-        document.getElementById('portfolio-not-connected').style.display = 'none';
-        document.getElementById('portfolio-content').style.display = 'block';
-        if (!window._portfolioLoaded) loadPortfolio();
-      } else {
-        document.getElementById('portfolio-not-connected').style.display = 'block';
-        document.getElementById('portfolio-content').style.display = 'none';
-      }
-    }
+    if (tab === 'watchlist') { renderWatchlist(); }
+    if (tab === 'meme') { renderMemeArticles(); }
   } catch(e) { console.error('switchTab error:', e); }
 }
 
-// ══ PORTFOLIO (via Chainbase free API) ══
+// ══ WATCHLIST (localStorage-based, no accounts) ══
+function getWatchlist() {
+  try { return JSON.parse(localStorage.getItem('trusty_watchlist') || '[]'); }
+  catch(e) { return []; }
+}
+
+function saveWatchlist(list) {
+  try { localStorage.setItem('trusty_watchlist', JSON.stringify(list)); } catch(e) {}
+}
+
+function isInWatchlist(ca) {
+  if (!ca) return false;
+  var list = getWatchlist();
+  return list.some(function(t) { return (t.ca || '').toLowerCase() === ca.toLowerCase(); });
+}
+
+function addToWatchlist() {
+  if (!caTokenData || !caTokenData.baseToken) { alert('Scan a token first!'); return; }
+  var pair = caTokenData;
+  var tok = pair.baseToken;
+  var scoreEl = document.getElementById('scoreNum');
+  var tierEl = document.getElementById('tierBadge');
+  var list = getWatchlist();
+  if (isInWatchlist(tok.address)) {
+    // toggle off
+    list = list.filter(function(t) { return (t.ca || '').toLowerCase() !== tok.address.toLowerCase(); });
+    saveWatchlist(list);
+    updateWatchlistBtn();
+    return;
+  }
+  list.unshift({
+    ca: tok.address,
+    name: tok.name,
+    symbol: tok.symbol,
+    chain: pair.chainId,
+    score: scoreEl ? parseInt(scoreEl.textContent) || 0 : 0,
+    tier: tierEl ? tierEl.textContent.trim() : '',
+    priceUsd: pair.priceUsd,
+    logoUrl: (pair.info && pair.info.imageUrl) || null,
+    addedAt: new Date().toISOString()
+  });
+  list = list.slice(0, 50); // cap at 50
+  saveWatchlist(list);
+  updateWatchlistBtn();
+  if (typeof trackEvent === 'function') trackEvent('watchlist_add');
+}
+
+function removeFromWatchlist(ca) {
+  var list = getWatchlist().filter(function(t) { return (t.ca || '').toLowerCase() !== ca.toLowerCase(); });
+  saveWatchlist(list);
+  renderWatchlist();
+}
+
+function updateWatchlistBtn() {
+  var btn = document.getElementById('watchlistBtn');
+  if (!btn || !caTokenData || !caTokenData.baseToken) return;
+  var inList = isInWatchlist(caTokenData.baseToken.address);
+  btn.innerHTML = inList ? '⭐ Saved — Remove' : '⭐ Save to Watchlist';
+  btn.style.background = inList ? 'rgba(243,186,47,0.15)' : 'var(--bg3)';
+  btn.style.borderColor = inList ? 'var(--yellow)' : 'var(--border2)';
+  btn.style.color = inList ? 'var(--yellow)' : 'var(--text)';
+}
+
+function renderWatchlist() {
+  var empty = document.getElementById('watchlist-empty');
+  var content = document.getElementById('watchlist-content');
+  if (!content) return;
+  var list = getWatchlist();
+  if (list.length === 0) {
+    if (empty) empty.style.display = 'block';
+    content.innerHTML = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  content.innerHTML = list.map(function(t) {
+    var tierColor = t.score >= 72 ? '#86EFAC' : t.score >= 55 ? '#FDE68A' : t.score >= 38 ? '#FDBA74' : '#FCA5A5';
+    var icon = t.logoUrl
+      ? '<img src="' + t.logoUrl + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.innerHTML=\'🪙\'" />'
+      : '🪙';
+    var price = t.priceUsd ? '$' + parseFloat(t.priceUsd).toPrecision(4) : '—';
+    return '<div class="portfolio-token" onclick="portfolioScan(\'' + t.ca + '\')">' +
+      '<div class="portfolio-token-icon">' + icon + '</div>' +
+      '<div class="portfolio-token-info"><div class="portfolio-token-name">' + (t.name || 'Unknown') + '</div><div class="portfolio-token-symbol">$' + (t.symbol || '???') + '</div></div>' +
+      '<div class="portfolio-token-balance"><div class="portfolio-token-value" style="color:' + tierColor + ';">' + (t.tier || ('Score ' + t.score)) + '</div><div class="portfolio-token-amount">' + price + '</div></div>' +
+      '<button onclick="event.stopPropagation();removeFromWatchlist(\'' + t.ca + '\')" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:6px 10px;cursor:pointer;font-size:11px;font-family:var(--mono);">✕</button>' +
+    '</div>';
+  }).join('');
+}
+
+// ══ WEEK IN MEME (blog articles from data/articles.json) ══
+async function renderMemeArticles() {
+  var content = document.getElementById('meme-content');
+  var empty = document.getElementById('meme-empty');
+  if (!content) return;
+  try {
+    var res = await fetch('data/articles.json?t=' + Date.now());
+    var data = await res.json();
+    var articles = (data && data.articles) || [];
+    if (articles.length === 0) {
+      if (empty) empty.style.display = 'block';
+      content.innerHTML = '';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    content.innerHTML = articles.map(function(a) {
+      var tags = (a.tags || []).map(function(t) { return '<span style="font-size:10px;font-family:var(--mono);background:var(--bg3);color:var(--blue2);padding:2px 8px;border-radius:10px;">' + t + '</span>'; }).join(' ');
+      var cover = a.cover ? '<img src="' + a.cover + '" style="width:100%;max-height:280px;object-fit:cover;border-radius:10px;margin-bottom:14px;" onerror="this.style.display=\'none\'" />' : '';
+      var takeaway = a.takeaway ? '<div style="background:rgba(243,186,47,0.08);border-left:3px solid var(--yellow);padding:12px 14px;border-radius:8px;margin-top:14px;font-size:13px;color:#FDE68A;line-height:1.6;">🛡️ <strong>Trusty takeaway:</strong> ' + a.takeaway + '</div>' : '';
+      return '<article class="lore-card" style="margin-bottom:14px;">' +
+        '<div style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:2px;margin-bottom:6px;">' + (a.date || '') + '</div>' +
+        '<h3 style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:10px;line-height:1.3;">' + a.title + '</h3>' +
+        (tags ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">' + tags + '</div>' : '') +
+        cover +
+        '<div style="font-size:14px;color:var(--text);line-height:1.7;">' + (a.body || '') + '</div>' +
+        takeaway +
+      '</article>';
+    }).join('');
+  } catch(e) {
+    console.error('Meme articles load error:', e);
+    content.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">Could not load articles. Try again in a bit fren.</div>';
+  }
+}
+
+// ══ PORTFOLIO (legacy — kept for backwards compat, no longer called) ══
 async function loadPortfolio() {
   console.log('📊 loadPortfolio called, wallet:', connectedWallet);
   if (!connectedWallet) { console.warn('No wallet connected'); return; }
