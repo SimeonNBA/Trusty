@@ -2765,6 +2765,9 @@ body::before {
   border-radius: 12px;
   overflow: hidden;
   animation: fadeUp 0.25s ease both;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .search-history-panel.open { display: block; }
 
@@ -4360,9 +4363,9 @@ body::before {
 .portfolio-token-info { flex: 1; min-width: 0; }
 .portfolio-token-name { font-size: 14px; font-weight: 700; color: var(--text); }
 .portfolio-token-symbol { font-size: 11px; color: var(--muted); font-family: var(--mono); }
-.portfolio-token-balance { text-align: right; }
-.portfolio-token-value { font-size: 14px; font-weight: 700; color: var(--text); }
-.portfolio-token-amount { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.portfolio-token-balance { text-align: right; min-width: 100px; flex-shrink: 0; }
+.portfolio-token-value { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.portfolio-token-amount { font-size: 11px; color: var(--muted); font-family: var(--mono); white-space: nowrap; }
 .portfolio-risk-badge {
   padding: 3px 10px; border-radius: 20px; font-size: 10px;
   font-family: var(--mono); font-weight: 700; letter-spacing: 1px;
@@ -9070,11 +9073,10 @@ function renderSearchHistory() {
 
     return `<button class="sh-item" onclick="reScanFromHistory('${h.ca}')">
       <div class="sh-item-icon">${iconHtml}</div>
-      <div style="flex:1;min-width:0">
-        <div class="sh-item-name">${h.name || h.symbol || 'Unknown'} <span style="font-weight:400;color:var(--muted);font-size:11px">$${h.symbol || ''}</span></div>
-        <div style="font-size:10px;color:var(--muted);font-family:var(--mono)">${shortCA} · ${timeAgo}</div>
+      <div style="flex:1;min-width:0;overflow:hidden;">
+        <div class="sh-item-name">${h.name || h.symbol || 'Unknown'}</div>
+        <div style="font-size:10px;color:var(--muted);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">$${h.symbol || ''} · ${timeAgo}</div>
       </div>
-      <div class="sh-item-chain">${h.chain || '?'}</div>
       <div class="sh-item-score" style="color:${scoreColor}">${h.score || '—'}</div>
     </button>`;
   }).join('');
