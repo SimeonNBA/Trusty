@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-04-17T20:08:39.426Z",
+  "updatedAt": "2026-04-17T22:09:15.537Z",
   "categories": {
     "memes": [
       {
@@ -61,10 +61,10 @@
         "symbol": "PEPE BSC ARMY",
         "assetId": "0xA73723fF98bA64bBfe44b8677B5F4CC895b4FfFf",
         "chain": "bsc",
-        "priceUsd": 0.000009128,
-        "marketCapUsd": 9128.97,
-        "priceChange24h": 120,
-        "volume24h": 3275.62,
+        "priceUsd": 0.000009163,
+        "marketCapUsd": 9163.77,
+        "priceChange24h": 121,
+        "volume24h": 3281.93,
         "liquidity": 0,
         "logoUrl": null,
         "pairAddress": "0xA73723fF98bA64bBfe44b8677B5F4CC895b4FfFf:4meme"
@@ -74,26 +74,13 @@
         "symbol": "燃烧人生",
         "assetId": "0xbC62BF19903462aD5b1B9f7237dB5358c9E27777",
         "chain": "bsc",
-        "priceUsd": 0.00005932,
-        "marketCapUsd": 58791,
-        "priceChange24h": 16.38,
-        "volume24h": 111047.88,
-        "liquidity": 22458.18,
+        "priceUsd": 0.00006433,
+        "marketCapUsd": 63751,
+        "priceChange24h": 26.22,
+        "volume24h": 114048.42,
+        "liquidity": 23405.05,
         "logoUrl": "https://cdn.dexscreener.com/cms/images/bW_CcUXaWjEHqhv6?width=800&height=800&quality=95&format=auto",
         "pairAddress": "0x64f5e93d51CBb14BE63c73a29d28Eff381DB20a6"
-      },
-      {
-        "name": "BNB SUPER CYCLE",
-        "symbol": "BSC",
-        "assetId": "0x6B4917a11BCb3BDCb545D79F211e81aa5835a3Ba",
-        "chain": "bsc",
-        "priceUsd": 0.00002603,
-        "marketCapUsd": 26030,
-        "priceChange24h": 9.56,
-        "volume24h": 956.57,
-        "liquidity": 24971.21,
-        "logoUrl": "https://cdn.dexscreener.com/cms/images/5f062b25c5785d5b6b1ecc27054f78183045d8be68f052ed0b094201c6ade087?width=800&height=800&quality=95&format=auto",
-        "pairAddress": "0xd16EEE66969539eA67BB85d1a3412A1ff0e3310F"
       },
       {
         "name": "BSC链第一个中文域名",
@@ -109,56 +96,17 @@
         "pairAddress": "0xf9bC17492fC5000e06d981220e1C4110B1c9584E"
       },
       {
-        "name": "BSC第一个具有代币经济的NFA项目",
-        "symbol": "Claworld",
-        "assetId": "0x3B486c191c74C9945fA944A3ddDe24acDd63ffFf",
-        "chain": "bsc",
-        "priceUsd": 0.00001599,
-        "marketCapUsd": 15994,
-        "priceChange24h": 8,
-        "volume24h": 3755.11,
-        "liquidity": 12326.52,
-        "logoUrl": "https://cdn.dexscreener.com/cms/images/yAsw8mDOyTu3ONvT?width=800&height=800&quality=95&format=auto",
-        "pairAddress": "0x4EA35A33b35359d303a51dA44AAC4d111eF8290E"
-      },
-      {
-        "name": "首个聚焦BSC链的Skill制造商",
-        "symbol": "SKILL",
-        "assetId": "0x9de129f9A57009B898db561177d09089EFE0fffF",
-        "chain": "bsc",
-        "priceUsd": 0.00001513,
-        "marketCapUsd": 15134,
-        "priceChange24h": 6.41,
-        "volume24h": 1558.64,
-        "liquidity": 13361.12,
-        "logoUrl": "https://cdn.dexscreener.com/cms/images/7CvRKN8d2BHwfKhC?width=800&height=800&quality=95&format=auto",
-        "pairAddress": "0xCc880B57f1Bd475380d0B853f138873cF0a6B60b"
-      },
-      {
         "name": "BSCPAD.com",
         "symbol": "BSCPAD",
         "assetId": "0x5A3010d4d8D3B5fB49f8B6E57FB9E48063f16700",
         "chain": "bsc",
         "priceUsd": 0.004764,
         "marketCapUsd": 836591,
-        "priceChange24h": 1.65,
-        "volume24h": 117.05,
+        "priceChange24h": 1.61,
+        "volume24h": 117.02,
         "liquidity": 329395.93,
         "logoUrl": null,
         "pairAddress": "0xba01662E978DE7d67F8FfC937726215eb8995d17"
-      },
-      {
-        "name": "BSC首个进化式AI洞察分析师",
-        "symbol": "搜狗",
-        "assetId": "0xdb21C4ba1541fc575e24d9a8160f6748304f7777",
-        "chain": "bsc",
-        "priceUsd": 0.000005047,
-        "marketCapUsd": 5048,
-        "priceChange24h": 0.91,
-        "volume24h": 12.69,
-        "liquidity": 7077.25,
-        "logoUrl": "https://cdn.dexscreener.com/cms/images/a1fc53589d759f38d686a6734295c28e2d45fdd6deacedb246260177e35f262f?width=800&height=800&quality=95&format=auto",
-        "pairAddress": "0xEC99906073ac2a23cDE1976136A0eF28361ECaC6"
       },
       {
         "name": "OneDream Bsc Token",
@@ -174,6 +122,19 @@
         "pairAddress": "0xC80942EcB8004784551ea5c460134463ac2962b5"
       },
       {
+        "name": "Fuse Token on BSC",
+        "symbol": "FUSE",
+        "assetId": "0x5857c96DaE9cF8511B08Cb07f85753C472D36Ea3",
+        "chain": "bsc",
+        "priceUsd": 0.003008,
+        "marketCapUsd": 29255,
+        "priceChange24h": 0.15,
+        "volume24h": 57.06,
+        "liquidity": 24078.76,
+        "logoUrl": null,
+        "pairAddress": "0x6483F166b9E4310A165a55FEa04F867499aded06"
+      },
+      {
         "name": "Binance Super Cycle",
         "symbol": "BSC",
         "assetId": "0x8c29fC7a43eB6dc592C1d5f06d3fD574d9Fb1fd7",
@@ -185,6 +146,45 @@
         "liquidity": 10002.41,
         "logoUrl": "https://cdn.dexscreener.com/cms/images/d9bc30f53a03bbcb9e2794226f60d8400e05a7894362ede451bcdb5b4869fb13?width=800&height=800&quality=95&format=auto",
         "pairAddress": "0x2cc501334fe65fF0304e8563e3D3C79fAB54B50b"
+      },
+      {
+        "name": "BabyKraken | t.me/BabyKrakenBSC",
+        "symbol": "KRAKBABY",
+        "assetId": "0x4D79DA6F390D9E9d475802a693353C3715b7Bd75",
+        "chain": "bsc",
+        "priceUsd": 6.5e-10,
+        "marketCapUsd": 489165,
+        "priceChange24h": 0,
+        "volume24h": 1.65,
+        "liquidity": 789787.82,
+        "logoUrl": null,
+        "pairAddress": "0x4b903f3B2C849a2D35f646da3B1dD3B06B00748e"
+      },
+      {
+        "name": "SHIBA BSC",
+        "symbol": "SHIBSC",
+        "assetId": "0xdF0816CC717216c8B0863aF8d4f0fC20Bc65d643",
+        "chain": "bsc",
+        "priceUsd": 5.114e-10,
+        "marketCapUsd": 150693,
+        "priceChange24h": 0,
+        "volume24h": 0,
+        "liquidity": 258664.47,
+        "logoUrl": null,
+        "pairAddress": "0x0b85ddf1921Ab0EFBFABd0b178b90f64ea2b11d3"
+      },
+      {
+        "name": "何一在BSC的第一个捐款项目Happy-Sci",
+        "symbol": "HAPPY-SCI",
+        "assetId": "0x03173FBcC63b5f27A6b3d25e03d426d143647777",
+        "chain": "bsc",
+        "priceUsd": 0.00001193,
+        "marketCapUsd": 11933,
+        "priceChange24h": 0,
+        "volume24h": 0.1,
+        "liquidity": 13119.69,
+        "logoUrl": "https://cdn.dexscreener.com/cms/images/4f6206f81eba402cd66d03835a2016a7ac739afffc0e64518fc20721dac2257a?width=800&height=800&quality=95&format=auto",
+        "pairAddress": "0x9Cf746E45a0CbFBc39C928B66953d086B942f7fA"
       }
     ],
     "sol": [
@@ -193,50 +193,24 @@
         "symbol": "SOLANA",
         "assetId": "HZZDNQ3bT1dMqBVgkANuojgMvsbo4z3RiGjEsaUYpump",
         "chain": "solana",
-        "priceUsd": 0.0004973,
-        "marketCapUsd": 497387,
-        "priceChange24h": 1223,
-        "volume24h": 2577627.62,
-        "liquidity": 64642.98,
+        "priceUsd": 0.0001294,
+        "marketCapUsd": 129489,
+        "priceChange24h": 245,
+        "volume24h": 3020273.55,
+        "liquidity": 33624.76,
         "logoUrl": "https://cdn.dexscreener.com/cms/images/BchtB5XLn21ZFM8B?width=800&height=800&quality=95&format=auto",
         "pairAddress": "HwKF1Q45rXYjBm84wfz6FsCK5MVPaHFZiPnLDM9nk5Nf"
-      },
-      {
-        "name": "SpongeBobShrekWifCrocs",
-        "symbol": "SOLANA",
-        "assetId": "HZZDNQ3bT1dMqBVgkANuojgMvsbo4z3RiGjEsaUYpump",
-        "chain": "solana",
-        "priceUsd": 0.0004919,
-        "marketCapUsd": 491966,
-        "priceChange24h": 143,
-        "volume24h": 77963.72,
-        "liquidity": 26049.08,
-        "logoUrl": "https://cdn.dexscreener.com/cms/images/BchtB5XLn21ZFM8B?width=800&height=800&quality=95&format=auto",
-        "pairAddress": "4RYpc6HRvoFdLbFetmD7Vr1B7nKMWLwiUCKAH77emdLy"
-      },
-      {
-        "name": "XRP on Solana",
-        "symbol": "XRPS",
-        "assetId": "52wAKM63jqiHmev2MWzETas4ifos2CM8DaT7PYh7pump",
-        "chain": "solana",
-        "priceUsd": 0.000004592,
-        "marketCapUsd": 4592.16,
-        "priceChange24h": 58.33,
-        "volume24h": 2459.59,
-        "liquidity": 0,
-        "logoUrl": null,
-        "pairAddress": "7eq15nwfdeDKShkjoU3y3DoEtAD8GqUW5BFgQwCWbMZm"
       },
       {
         "name": "Zero-Fee Trading on Solana",
         "symbol": "UNTAXED",
         "assetId": "BoRiiSZ4hqtbCnQc7cWaEYTEtxmzRXyy5xaKCt7Ppump",
         "chain": "solana",
-        "priceUsd": 0.00009288,
-        "marketCapUsd": 92888,
-        "priceChange24h": 16.13,
-        "volume24h": 3673.44,
-        "liquidity": 27942.49,
+        "priceUsd": 0.00009372,
+        "marketCapUsd": 93720,
+        "priceChange24h": 15.21,
+        "volume24h": 3653.02,
+        "liquidity": 27980.8,
         "logoUrl": "https://cdn.dexscreener.com/cms/images/C1ztfcJcf14mKmOd?width=800&height=800&quality=95&format=auto",
         "pairAddress": "FJogaEP9XwC2MHNx8DYJgTBJk6Pnj61iaMSbNt8td5c"
       },
@@ -254,43 +228,30 @@
         "pairAddress": "4VLWQsgWF5WcC7pG9huCT3domqzhYVonY5GvcbHduCWv"
       },
       {
+        "name": "NPC Solana",
+        "symbol": "NPCS",
+        "assetId": "5ToDNkiBAK6k697RRyngTburU7yZNFZFx7jzsD1Uc7pK",
+        "chain": "solana",
+        "priceUsd": 0.0004008,
+        "marketCapUsd": 400056,
+        "priceChange24h": 2.31,
+        "volume24h": 361.54,
+        "liquidity": 93365.25,
+        "logoUrl": "https://cdn.dexscreener.com/cms/images/adf8a5e09becfd32a0a4d89fac77f9889e8f7604db318b36ce56226deb6afe46?width=800&height=800&quality=95&format=auto",
+        "pairAddress": "4BKRQ2iL3Rv8mSpDsFM5FNkZ9SGq4iaqrYtgNWjGE3s4"
+      },
+      {
         "name": "Play Solana",
         "symbol": "PLAY",
         "assetId": "PLAYs3GSSadH2q2JLS7djp7yzeT75NK78XgrE5YLrfq",
         "chain": "solana",
         "priceUsd": 0.001307,
-        "marketCapUsd": 6538219,
-        "priceChange24h": 0.99,
-        "volume24h": 2765.42,
-        "liquidity": 230597.2,
+        "marketCapUsd": 6537802,
+        "priceChange24h": 1.29,
+        "volume24h": 2626.11,
+        "liquidity": 230583.56,
         "logoUrl": "https://cdn.dexscreener.com/cms/images/e0e7ef3de7e113bb1ef430f909e8f9ed0f4ace2178c0e5a1b06df31ca95fbd66?width=800&height=800&quality=95&format=auto",
         "pairAddress": "5LrRfERGV885eUGjNXQQ9Di5nErATUwyRB5rSJ6rjafK"
-      },
-      {
-        "name": "Solana Poker",
-        "symbol": "$PLAY",
-        "assetId": "EvEFaj8bU5vNa4jc15GgRQrVMqu7Wzf9Kz6aKn3yeB1z",
-        "chain": "solana",
-        "priceUsd": 0.006457,
-        "marketCapUsd": 645763,
-        "priceChange24h": 0.79,
-        "volume24h": 24.27,
-        "liquidity": 56179.67,
-        "logoUrl": "https://cdn.dexscreener.com/cms/images/29894a2f577dacd6474d8c1fdd9fd27672acb6c21d9a541eeff7f985bcccc089?width=800&height=800&quality=95&format=auto",
-        "pairAddress": "ybzE4HgVLVCdEUnXmgfkFXB7GMmBCiWxb4WT98ux1P4"
-      },
-      {
-        "name": "NPC Solana",
-        "symbol": "NPCS",
-        "assetId": "5ToDNkiBAK6k697RRyngTburU7yZNFZFx7jzsD1Uc7pK",
-        "chain": "solana",
-        "priceUsd": 0.000403,
-        "marketCapUsd": 402276,
-        "priceChange24h": 0.28,
-        "volume24h": 321.16,
-        "liquidity": 93982.17,
-        "logoUrl": "https://cdn.dexscreener.com/cms/images/adf8a5e09becfd32a0a4d89fac77f9889e8f7604db318b36ce56226deb6afe46?width=800&height=800&quality=95&format=auto",
-        "pairAddress": "4BKRQ2iL3Rv8mSpDsFM5FNkZ9SGq4iaqrYtgNWjGE3s4"
       },
       {
         "name": "Solana",
@@ -300,10 +261,23 @@
         "priceUsd": 78.36,
         "marketCapUsd": 9403843,
         "priceChange24h": -0.05,
-        "volume24h": 163252.87,
-        "liquidity": 7050113.96,
+        "volume24h": 163451.85,
+        "liquidity": 7050116.37,
         "logoUrl": null,
         "pairAddress": "GhhUiNcoFKEtZ9RTGd1DgHHouDAJrW9DDADmX13jdGEY"
+      },
+      {
+        "name": "Solana",
+        "symbol": "SOL",
+        "assetId": "sosd5Q3DutGxMEaukBDmkPgsapMQz59jNjGWmhYcdTQ",
+        "chain": "solana",
+        "priceUsd": 143.2,
+        "marketCapUsd": 3293488,
+        "priceChange24h": -0.15,
+        "volume24h": 163358.75,
+        "liquidity": 2466896.81,
+        "logoUrl": null,
+        "pairAddress": "3fkdUeRvUnSKKYgTyX1hkiJmJVbiYtDwyBwxYW19n28t"
       },
       {
         "name": "Solana Spaces",
@@ -317,9 +291,61 @@
         "liquidity": 40260.08,
         "logoUrl": "https://cdn.dexscreener.com/cms/images/65afd7cbb3c8527b132c9120f0ce5d4f5558bf71b872ace2b74fbaec79be9348?width=800&height=800&quality=95&format=auto",
         "pairAddress": "3RZcRvdU4osDJKDmhCyKqhU5eF8F8Lsy9BDghAM8RmvA"
+      },
+      {
+        "name": "Solana Poker",
+        "symbol": "$PLAY",
+        "assetId": "EvEFaj8bU5vNa4jc15GgRQrVMqu7Wzf9Kz6aKn3yeB1z",
+        "chain": "solana",
+        "priceUsd": 0.006402,
+        "marketCapUsd": 640296,
+        "priceChange24h": -0.85,
+        "volume24h": 360.16,
+        "liquidity": 55584.91,
+        "logoUrl": "https://cdn.dexscreener.com/cms/images/29894a2f577dacd6474d8c1fdd9fd27672acb6c21d9a541eeff7f985bcccc089?width=800&height=800&quality=95&format=auto",
+        "pairAddress": "ybzE4HgVLVCdEUnXmgfkFXB7GMmBCiWxb4WT98ux1P4"
+      },
+      {
+        "name": "Solana Social Explorer",
+        "symbol": "SSE",
+        "assetId": "H4phNbsqjV5rqk8u6FUACTLB6rNZRTAPGnBb8KXJpump",
+        "chain": "solana",
+        "priceUsd": 0.00008472,
+        "marketCapUsd": 84721,
+        "priceChange24h": -0.9,
+        "volume24h": 262.77,
+        "liquidity": 77152.66,
+        "logoUrl": "https://cdn.dexscreener.com/cms/images/4e35f464d044a7558efc9514069b772063201fcb8c7bf0a150706588eb242318?width=800&height=800&quality=95&format=auto",
+        "pairAddress": "HDt4asuvNjWn1Y5mV2R3sPXf54hC911ANYihU8HtmK7z"
       }
     ],
     "ai": [
+      {
+        "name": "DeAgentAI",
+        "symbol": "AIA",
+        "assetId": "0x53EC33Cd4fA46b9ecED9cA3f6dB626C5FfCd55cC",
+        "chain": "bsc",
+        "priceUsd": 0.08134,
+        "marketCapUsd": 16268677,
+        "priceChange24h": -0.9,
+        "volume24h": 20869.19,
+        "liquidity": 11208.44,
+        "logoUrl": null,
+        "pairAddress": "0xdf26c3Fcc4B7BD6611db66B2c5501c174f9227DA"
+      },
+      {
+        "name": "DeAgentAI",
+        "symbol": "AIA",
+        "assetId": "0x53EC33Cd4fA46b9ecED9cA3f6dB626C5FfCd55cC",
+        "chain": "bsc",
+        "priceUsd": 0.08131,
+        "marketCapUsd": 16263906,
+        "priceChange24h": -0.92,
+        "volume24h": 2922494.63,
+        "liquidity": 735342.74,
+        "logoUrl": null,
+        "pairAddress": "0xADEDafd06CC16Dec264Fb02D3f8570E072DAEe35"
+      },
       {
         "name": "最新上线的AI Agent ",
         "symbol": "AI Agent",
@@ -332,19 +358,6 @@
         "liquidity": 0,
         "logoUrl": null,
         "pairAddress": "0x262d2904005DAde45126076F585833809A294444:4meme"
-      },
-      {
-        "name": "DeAgentAI",
-        "symbol": "AIA",
-        "assetId": "0x53EC33Cd4fA46b9ecED9cA3f6dB626C5FfCd55cC",
-        "chain": "bsc",
-        "priceUsd": 0.07939,
-        "marketCapUsd": 15879790,
-        "priceChange24h": -4.48,
-        "volume24h": 2935534.71,
-        "liquidity": 725480.41,
-        "logoUrl": null,
-        "pairAddress": "0xADEDafd06CC16Dec264Fb02D3f8570E072DAEe35"
       }
     ],
     "pumpfun": [
@@ -353,11 +366,11 @@
         "symbol": "Synap",
         "assetId": "xt9wDekJSoew2zpKwbwttm3HWtQCAhTM7xfnhpfpump",
         "chain": "solana",
-        "priceUsd": 0.0001782,
-        "marketCapUsd": 178195,
-        "priceChange24h": 11827,
-        "volume24h": 187526.81,
-        "liquidity": 33034.55,
+        "priceUsd": 0.0002003,
+        "marketCapUsd": 200307,
+        "priceChange24h": 13307,
+        "volume24h": 224244.11,
+        "liquidity": 35087.12,
         "logoUrl": "https://cdn.dexscreener.com/cms/images/FMzyTpN4A12K2EVC?width=800&height=800&quality=95&format=auto",
         "pairAddress": "8LrM6ySfcs2Yg9obkbi3UJZbdeiMtAkv9K8Uigv1H9a2"
       },
@@ -379,26 +392,26 @@
         "symbol": "MSBT",
         "assetId": "w5M37Za32i5uavooMaDGHH2u4wrg2C1U4t1SAHxpump",
         "chain": "solana",
-        "priceUsd": 0.000008258,
-        "marketCapUsd": 8258.09,
-        "priceChange24h": 55.85,
-        "volume24h": 1489.2,
+        "priceUsd": 0.000008446,
+        "marketCapUsd": 8446.82,
+        "priceChange24h": 59.41,
+        "volume24h": 1671.39,
         "liquidity": 0,
         "logoUrl": null,
         "pairAddress": "FUNn7zkVxw4nUqK1FCxVPxvAFuyJnYh87D1psfRfYfZ3"
       },
       {
-        "name": "UFO Files",
-        "symbol": "UFOfiles",
-        "assetId": "2M17EZcPE7VqDyzSnkCkUfUNYzk37xax7WvAdYsBpump",
+        "name": "BATIDAO FUNKY DANCE",
+        "symbol": "$BFD",
+        "assetId": "GGRZjneMCDbu5eJepZdRRCGvdmQ68jTkGEV8tKQ9pump",
         "chain": "solana",
-        "priceUsd": 0.00000608,
-        "marketCapUsd": 6080.66,
-        "priceChange24h": 15.46,
-        "volume24h": 1611.25,
+        "priceUsd": 0.00001358,
+        "marketCapUsd": 13587.17,
+        "priceChange24h": 7.79,
+        "volume24h": 1011.11,
         "liquidity": 0,
-        "logoUrl": "https://cdn.dexscreener.com/cms/images/_uvyjeeVtY9WEgRx?width=800&height=800&quality=95&format=auto",
-        "pairAddress": "2bd1RiTmi1oim3aDHGgpuzirMh5QckgVuPwCCDN3gfNZ"
+        "logoUrl": "https://cdn.dexscreener.com/cms/images/bqkq0DAbRU8Tc_Ow?width=800&height=800&quality=95&format=auto",
+        "pairAddress": "G2i4MJeMr4BWiDHXRkjT8KVYaYJtDkBKDvmXdsrt14Tt"
       },
       {
         "name": "FUND",
@@ -414,17 +427,17 @@
         "pairAddress": "JAbi6CBkDvtUQzEQ18113KMdpJJk5QvDkqkhBNCjSu4b"
       },
       {
-        "name": "Pump fun",
-        "symbol": "PUMP",
-        "assetId": "ARkgcXQqVy5Vi1qaKF44piXaV8bUB2vb1phDPDjXpump",
+        "name": "Federal Oil Fund",
+        "symbol": "FOF",
+        "assetId": "7vxWzeHQ66yVvA6WxFJWsk9SfrDX3cMphX4wfYaNpump",
         "chain": "solana",
-        "priceUsd": 0.000001605,
-        "marketCapUsd": 1603,
-        "priceChange24h": 0,
-        "volume24h": 0.88,
-        "liquidity": 3182.35,
-        "logoUrl": "https://cdn.dexscreener.com/cms/images/qChh2hnlsIeL18Ji?width=800&height=800&quality=95&format=auto",
-        "pairAddress": "7EmtqxzHgD1SYN6wSxcqiZ6FpWMgcdSw2S7V4K6e9iky"
+        "priceUsd": 0.000007857,
+        "marketCapUsd": 7857.66,
+        "priceChange24h": 1.94,
+        "volume24h": 2186.83,
+        "liquidity": 0,
+        "logoUrl": null,
+        "pairAddress": "8Kznea164kMRHoAQMrmSAuD9P4D5aNAJcAYJXUiyzDoL"
       },
       {
         "name": "Pump Fun ",
@@ -466,17 +479,17 @@
         "pairAddress": "5TBgJNVN1BgUfvKa4pwd5hawLy9wJTfRaRpgvyaXeL8i"
       },
       {
-        "name": "Spongebobsonicilluminatiworld",
-        "symbol": "Pumpfun",
-        "assetId": "3YGfG3QhfTXKX5Sv2icj8a41kL5AAXJjGvPuJB5Apump",
+        "name": "Tether",
+        "symbol": "USDT",
+        "assetId": "DT3q95UfRwdhpFTJZ55LDTj8ktcFzHSuwS79yTYcpump",
         "chain": "solana",
-        "priceUsd": 0.000003022,
-        "marketCapUsd": 3022.41,
+        "priceUsd": 0.000005328,
+        "marketCapUsd": 5328.68,
         "priceChange24h": 0,
-        "volume24h": 268.02,
+        "volume24h": 0,
         "liquidity": 0,
         "logoUrl": null,
-        "pairAddress": "EHdXD4YwVi6sZGfF9i7VuyvJthuftJPchKQaYYkP93cc"
+        "pairAddress": "EHAmsDYCHEhCq6RpaaWfuNA9w74uB1UPRSA4ghXj6qhK"
       }
     ]
   }
