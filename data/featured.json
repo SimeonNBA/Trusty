@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-04-14",
+  "updatedAt": "2026-04-18",
   "tokens": [
     {
       "name": "$TRUSTY",
@@ -14,6 +14,27 @@
       "ca": "DbVhWYxBv9jyQdARFbjw7Vktbps9L6f9813JQC8xmoon",
       "reason": "Community-driven Solana meme",
       "emoji": "💧"
+    },
+    {
+      "name": "$NIANNIAN",
+      "symbol": "NIANNIAN",
+      "ca": "0x9C27c4072738CF4b7B0B7071af0ad5666BdDC096",
+      "reason": "BSC cat meta — community fren",
+      "emoji": "🐱"
+    },
+    {
+      "name": "$ROSE",
+      "symbol": "ROSE",
+      "ca": "EQBdr5b7csZbXhDnQ5U364bpLylHfk8AWcug8TwhzCMVcvPA",
+      "reason": "Rosecoin — TON chain meme",
+      "emoji": "🌹"
+    },
+    {
+      "name": "$JUGNI",
+      "symbol": "JUGNI",
+      "ca": "0xE313bcB77dbA15F39Ff0B9cEABe140cedD0953cB",
+      "reason": "Another BSC cat fren",
+      "emoji": "😺"
     }
   ]
 }
