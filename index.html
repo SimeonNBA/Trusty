@@ -3961,6 +3961,36 @@ body::before {
 .academy-section { display: none; }
 .academy-section.active { display: block; }
 
+/* academy sub-nav (within a category like Cheat Sheet or History) */
+.academy-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.academy-subnav-btn {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 5px 12px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.academy-subnav-btn:hover { border-color: var(--blue); color: var(--text); }
+.academy-subnav-btn.active {
+  background: rgba(96,165,250,0.12);
+  border-color: rgba(96,165,250,0.5);
+  color: #60A5FA;
+}
+.academy-subpanel { display: none; }
+.academy-subpanel.active { display: block; }
+
 /* inline glossary */
 .inline-glossary-term {
   background: var(--card);
@@ -4224,27 +4254,6 @@ body::before {
 .cheat-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; font-size: 13px; font-weight: 600; }
 .cheat-item.green { background: rgba(34,197,94,0.1); color: #86EFAC; }
 .cheat-item.red { background: rgba(239,68,68,0.1); color: #FCA5A5; }
-
-.quiz-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 12px; }
-.quiz-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px; }
-.quiz-stat { background: var(--bg3); border-radius: 10px; padding: 10px 12px; text-align: center; }
-.quiz-stat-label { font-size: 9px; font-family: var(--mono); color: var(--muted); letter-spacing: 1.5px; margin-bottom: 2px; }
-.quiz-stat-value { font-size: 15px; font-weight: 700; color: var(--text); }
-.quiz-btn { flex: 1; padding: 14px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; border: 2px solid; transition: all 0.2s; font-family: var(--display); letter-spacing: 1px; }
-.quiz-btn.gem { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.08); color: #86EFAC; }
-.quiz-btn.gem:hover { background: rgba(34,197,94,0.2); border-color: #22C55E; }
-.quiz-btn.rug { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); color: #FCA5A5; }
-.quiz-btn.rug:hover { background: rgba(239,68,68,0.2); border-color: #EF4444; }
-.quiz-result { padding: 16px; border-radius: 12px; margin-top: 12px; font-size: 13px; line-height: 1.6; }
-.quiz-result.correct { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86EFAC; }
-.quiz-result.wrong { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #FCA5A5; }
-.quiz-progress { display: flex; gap: 4px; margin-bottom: 16px; }
-.quiz-dot { width: 100%; height: 4px; border-radius: 2px; background: var(--bg3); }
-.quiz-dot.done { background: var(--blue); }
-.quiz-dot.correct { background: #22C55E; }
-.quiz-dot.wrong { background: #EF4444; }
-.quiz-score { text-align: center; padding: 30px; }
-.quiz-score-num { font-size: 48px; font-family: var(--display); margin-bottom: 8px; }
 
 .risk-matrix { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
 .risk-matrix th { font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; color: var(--muted); padding: 10px 8px; text-align: center; border-bottom: 1px solid var(--border); }
@@ -4912,187 +4921,182 @@ body::before {
         <!-- ACADEMY SECTION NAV -->
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
           <button class="academy-section-btn active" onclick="showAcademySection('cheatsheet',this)">⚡ Cheat Sheet</button>
-          <button class="academy-section-btn" onclick="showAcademySection('quiz',this)">🎮 Rug or Gem?</button>
-          <button class="academy-section-btn" onclick="showAcademySection('matrix',this)">📊 Risk Matrix</button>
-          <button class="academy-section-btn" onclick="showAcademySection('narratives',this)">🎓 Narratives</button>
           <button class="academy-section-btn" onclick="showAcademySection('glossary',this)">📖 Glossary</button>
           <button class="academy-section-btn" onclick="showAcademySection('threads',this)">🐦 Alpha Threads</button>
-          <button class="academy-section-btn" onclick="showAcademySection('tw-history',this)">🛡️ Trust Wallet</button>
-          <button class="academy-section-btn" onclick="showAcademySection('bnb-history',this)">🟡 BNB Chain</button>
-          <button class="academy-section-btn" onclick="showAcademySection('crypto-history',this)">₿ Crypto History</button>
+          <button class="academy-section-btn" onclick="showAcademySection('history',this)">📜 History</button>
         </div>
 
-        <!-- CHEAT SHEET SECTION -->
+        <!-- CHEAT SHEET SECTION (with sub-tabs: Signals / Risk Matrix / Narratives) -->
         <div class="academy-section active" id="asec-cheatsheet">
-          <div class="lore-card" style="margin-bottom:12px;">
-            <div class="lore-title">⚡ WHEN TO APE vs WHEN TO RUN</div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;">Quick-reference checklist before you buy any meme coin. If you see 3+ red flags, walk away.</div>
+
+          <!-- Sub-nav for Cheat Sheet -->
+          <div class="academy-subnav">
+            <button class="academy-subnav-btn active" onclick="showAcademySub('cheatsheet','signals',this)">⚡ Ape vs Run</button>
+            <button class="academy-subnav-btn" onclick="showAcademySub('cheatsheet','matrix',this)">📊 Risk Matrix</button>
+            <button class="academy-subnav-btn" onclick="showAcademySub('cheatsheet','narratives',this)">🎓 Narratives</button>
           </div>
-          <div class="cheat-grid">
-            <div class="cheat-col ape">
-              <h3>✅ APE SIGNALS</h3>
-              <div class="cheat-item green">🔓 Contract renounced</div>
-              <div class="cheat-item green">🔒 LP locked (6+ months)</div>
-              <div class="cheat-item green">🔥 Supply burned (50%+)</div>
-              <div class="cheat-item green">📊 Real volume ($50K+ daily)</div>
-              <div class="cheat-item green">🐋 No single wallet >5%</div>
-              <div class="cheat-item green">🌐 Active socials (X + TG)</div>
-              <div class="cheat-item green">⏰ Token age >7 days</div>
-              <div class="cheat-item green">💧 Liquidity >$50K</div>
-              <div class="cheat-item green">🏷️ 0% buy/sell tax</div>
-              <div class="cheat-item green">📈 Organic price action</div>
+
+          <!-- Sub-panel: Ape vs Run signals -->
+          <div class="academy-subpanel active" id="csub-signals">
+            <div class="lore-card" style="margin-bottom:12px;">
+              <div class="lore-title">⚡ WHEN TO APE vs WHEN TO RUN</div>
+              <div style="font-size:13px;color:var(--muted);line-height:1.6;">Quick-reference checklist before you buy any meme coin. If you see 3+ red flags, walk away.</div>
             </div>
-            <div class="cheat-col run">
-              <h3>❌ RUN SIGNALS</h3>
-              <div class="cheat-item red">🍯 Honeypot detected</div>
-              <div class="cheat-item red">🖨️ Mint function active</div>
-              <div class="cheat-item red">👤 Owner not renounced</div>
-              <div class="cheat-item red">🐋 Dev wallet holds >10%</div>
-              <div class="cheat-item red">💀 LP unlocked</div>
-              <div class="cheat-item red">💸 High sell tax (>5%)</div>
-              <div class="cheat-item red">👻 No socials or website</div>
-              <div class="cheat-item red">🕐 Token age <1 hour</div>
-              <div class="cheat-item red">📉 Liquidity <$5K</div>
-              <div class="cheat-item red">🤖 Fake volume / wash trading</div>
+            <div class="cheat-grid">
+              <div class="cheat-col ape">
+                <h3>✅ APE SIGNALS</h3>
+                <div class="cheat-item green">🔓 Contract renounced</div>
+                <div class="cheat-item green">🔒 LP locked (6+ months)</div>
+                <div class="cheat-item green">🔥 Supply burned (50%+)</div>
+                <div class="cheat-item green">📊 Real volume ($50K+ daily)</div>
+                <div class="cheat-item green">🐋 No single wallet >5%</div>
+                <div class="cheat-item green">🌐 Active socials (X + TG)</div>
+                <div class="cheat-item green">⏰ Token age >7 days</div>
+                <div class="cheat-item green">💧 Liquidity >$50K</div>
+                <div class="cheat-item green">🏷️ 0% buy/sell tax</div>
+                <div class="cheat-item green">📈 Organic price action</div>
+              </div>
+              <div class="cheat-col run">
+                <h3>❌ RUN SIGNALS</h3>
+                <div class="cheat-item red">🍯 Honeypot detected</div>
+                <div class="cheat-item red">🖨️ Mint function active</div>
+                <div class="cheat-item red">👤 Owner not renounced</div>
+                <div class="cheat-item red">🐋 Dev wallet holds >10%</div>
+                <div class="cheat-item red">💀 LP unlocked</div>
+                <div class="cheat-item red">💸 High sell tax (>5%)</div>
+                <div class="cheat-item red">👻 No socials or website</div>
+                <div class="cheat-item red">🕐 Token age <1 hour</div>
+                <div class="cheat-item red">📉 Liquidity <$5K</div>
+                <div class="cheat-item red">🤖 Fake volume / wash trading</div>
+              </div>
+            </div>
+            <div class="lore-card" style="margin-top:12px;text-align:center;">
+              <div style="font-size:12px;color:var(--muted);line-height:1.6;">💡 <strong style="color:var(--yellow);">Pro tip:</strong> Even if all signals are green, never invest more than you can afford to lose. Meme coins are casino plays. Size your position like a lottery ticket, not a savings account.</div>
+            </div>
+            <div id="cheatsheet-embeds"></div>
+          </div>
+
+          <!-- Sub-panel: Risk Matrix -->
+          <div class="academy-subpanel" id="csub-matrix">
+            <div class="lore-card" style="margin-bottom:12px;">
+              <div class="lore-title">📊 NARRATIVE RISK MATRIX</div>
+              <div style="font-size:13px;color:var(--muted);line-height:1.6;">Every narrative has a different risk/reward profile. Use this matrix to understand what you're getting into.</div>
+            </div>
+            <div class="lore-card" style="overflow-x:auto;">
+              <table class="risk-matrix">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;">NARRATIVE</th>
+                    <th>AVG RETURN</th>
+                    <th>RUG RATE</th>
+                    <th>LIFESPAN</th>
+                    <th>BEST ENTRY</th>
+                    <th>RISK</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="rm-cat">🐶 Dog Meta</td>
+                    <td class="rm-green">300-1,000%</td>
+                    <td class="rm-green">Low (~15%)</td>
+                    <td class="rm-green">Months-Years</td>
+                    <td>Early bull cycle</td>
+                    <td class="rm-green">🟢 LOW</td>
+                  </tr>
+                  <tr>
+                    <td class="rm-cat">🐱 Cat Meta</td>
+                    <td class="rm-green">500-5,000%</td>
+                    <td class="rm-yellow">Med (~30%)</td>
+                    <td class="rm-yellow">Weeks-Months</td>
+                    <td>After dogs pump</td>
+                    <td class="rm-yellow">🟡 MED</td>
+                  </tr>
+                  <tr>
+                    <td class="rm-cat">🤖 AI Agents</td>
+                    <td class="rm-green">1,000-10,000%</td>
+                    <td class="rm-yellow">Med (~35%)</td>
+                    <td class="rm-yellow">Weeks-Months</td>
+                    <td>New AI product launch</td>
+                    <td class="rm-yellow">🟡 MED</td>
+                  </tr>
+                  <tr>
+                    <td class="rm-cat">🎭 Mascot Meta</td>
+                    <td class="rm-yellow">200-2,000%</td>
+                    <td class="rm-green">Low (~20%)</td>
+                    <td class="rm-green">Months-Years</td>
+                    <td>When meme goes viral</td>
+                    <td class="rm-green">🟢 LOW</td>
+                  </tr>
+                  <tr>
+                    <td class="rm-cat">📱 TikTok Meta</td>
+                    <td class="rm-orange">5,000-80,000%</td>
+                    <td class="rm-red">High (~60%)</td>
+                    <td class="rm-red">Hours-Days</td>
+                    <td>Before crypto press</td>
+                    <td class="rm-red">🔴 HIGH</td>
+                  </tr>
+                  <tr>
+                    <td class="rm-cat">🟡 CZ Meta</td>
+                    <td class="rm-yellow">200-5,000%</td>
+                    <td class="rm-orange">Med-High (~45%)</td>
+                    <td class="rm-orange">Days-Weeks</td>
+                    <td>CZ tweet/post</td>
+                    <td class="rm-orange">🟠 MED-HIGH</td>
+                  </tr>
+                  <tr>
+                    <td class="rm-cat">🇺🇸 Political</td>
+                    <td class="rm-red">1,000-50,000%</td>
+                    <td class="rm-red">Very High (~70%)</td>
+                    <td class="rm-red">Hours</td>
+                    <td>Before event peaks</td>
+                    <td class="rm-red">🔴 EXTREME</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="lore-card" style="margin-top:12px;text-align:center;">
+              <div style="font-size:12px;color:var(--muted);line-height:1.6;">📌 <strong style="color:var(--yellow);">Remember:</strong> Higher return = higher rug rate. There are no free lunches in meme coins. The best risk-adjusted plays are low-rug-rate narratives with solid communities.</div>
             </div>
           </div>
-          <div class="lore-card" style="margin-top:12px;text-align:center;">
-            <div style="font-size:12px;color:var(--muted);line-height:1.6;">💡 <strong style="color:var(--yellow);">Pro tip:</strong> Even if all signals are green, never invest more than you can afford to lose. Meme coins are casino plays. Size your position like a lottery ticket, not a savings account.</div>
-          </div>
-          <!-- Placeholder for future tweet/chart embeds -->
-          <div id="cheatsheet-embeds"></div>
-        </div>
 
-        <!-- QUIZ SECTION -->
-        <div class="academy-section" id="asec-quiz">
-          <div class="lore-card" style="margin-bottom:12px;">
-            <div class="lore-title">🎮 RUG OR GEM?</div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;">Trusty shows you real token stats. Can you tell which ones are rugs? Test your degen instincts.</div>
-          </div>
-          <div id="quiz-container"></div>
-        </div>
+          <!-- Sub-panel: Narratives -->
+          <div class="academy-subpanel" id="csub-narratives">
+            <div class="lore-card" style="margin-bottom:12px;">
+              <div class="lore-title">🎓 NARRATIVE PLAYBOOKS</div>
+              <div style="font-size:13px;color:var(--muted);line-height:1.6;">Every meme coin runs on a narrative. The meta determines how high it can go and how fast it falls. Click any playbook to expand it.</div>
+            </div>
+            <div id="inline-narratives"></div>
 
-        <!-- RISK MATRIX SECTION -->
-        <div class="academy-section" id="asec-matrix">
-          <div class="lore-card" style="margin-bottom:12px;">
-            <div class="lore-title">📊 NARRATIVE RISK MATRIX</div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;">Every narrative has a different risk/reward profile. Use this matrix to understand what you're getting into.</div>
-          </div>
-          <div class="lore-card" style="overflow-x:auto;">
-            <table class="risk-matrix">
-              <thead>
-                <tr>
-                  <th style="text-align:left;">NARRATIVE</th>
-                  <th>AVG RETURN</th>
-                  <th>RUG RATE</th>
-                  <th>LIFESPAN</th>
-                  <th>BEST ENTRY</th>
-                  <th>RISK</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td class="rm-cat">🐶 Dog Meta</td>
-                  <td class="rm-green">300-1,000%</td>
-                  <td class="rm-green">Low (~15%)</td>
-                  <td class="rm-green">Months-Years</td>
-                  <td>Early bull cycle</td>
-                  <td class="rm-green">🟢 LOW</td>
-                </tr>
-                <tr>
-                  <td class="rm-cat">🐱 Cat Meta</td>
-                  <td class="rm-green">500-5,000%</td>
-                  <td class="rm-yellow">Med (~30%)</td>
-                  <td class="rm-yellow">Weeks-Months</td>
-                  <td>After dogs pump</td>
-                  <td class="rm-yellow">🟡 MED</td>
-                </tr>
-                <tr>
-                  <td class="rm-cat">🤖 AI Agents</td>
-                  <td class="rm-green">1,000-10,000%</td>
-                  <td class="rm-yellow">Med (~35%)</td>
-                  <td class="rm-yellow">Weeks-Months</td>
-                  <td>New AI product launch</td>
-                  <td class="rm-yellow">🟡 MED</td>
-                </tr>
-                <tr>
-                  <td class="rm-cat">🎭 Mascot Meta</td>
-                  <td class="rm-yellow">200-2,000%</td>
-                  <td class="rm-green">Low (~20%)</td>
-                  <td class="rm-green">Months-Years</td>
-                  <td>When meme goes viral</td>
-                  <td class="rm-green">🟢 LOW</td>
-                </tr>
-                <tr>
-                  <td class="rm-cat">📱 TikTok Meta</td>
-                  <td class="rm-orange">5,000-80,000%</td>
-                  <td class="rm-red">High (~60%)</td>
-                  <td class="rm-red">Hours-Days</td>
-                  <td>Before crypto press</td>
-                  <td class="rm-red">🔴 HIGH</td>
-                </tr>
-                <tr>
-                  <td class="rm-cat">🟡 CZ Meta</td>
-                  <td class="rm-yellow">200-5,000%</td>
-                  <td class="rm-orange">Med-High (~45%)</td>
-                  <td class="rm-orange">Days-Weeks</td>
-                  <td>CZ tweet/post</td>
-                  <td class="rm-orange">🟠 MED-HIGH</td>
-                </tr>
-                <tr>
-                  <td class="rm-cat">🇺🇸 Political</td>
-                  <td class="rm-red">1,000-50,000%</td>
-                  <td class="rm-red">Very High (~70%)</td>
-                  <td class="rm-red">Hours</td>
-                  <td>Before event peaks</td>
-                  <td class="rm-red">🔴 EXTREME</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="lore-card" style="margin-top:12px;text-align:center;">
-            <div style="font-size:12px;color:var(--muted);line-height:1.6;">📌 <strong style="color:var(--yellow);">Remember:</strong> Higher return = higher rug rate. There are no free lunches in meme coins. The best risk-adjusted plays are low-rug-rate narratives with solid communities.</div>
-          </div>
-        </div>
-
-        <!-- NARRATIVES SECTION -->
-        <div class="academy-section" id="asec-narratives">
-          <div class="lore-card" style="margin-bottom:12px;">
-            <div class="lore-title">🎓 NARRATIVE PLAYBOOKS</div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;">Every meme coin runs on a narrative. The meta determines how high it can go and how fast it falls. Click any playbook to expand it.</div>
-          </div>
-          <!-- Narrative cards are injected here by JS from existing academy data -->
-          <div id="inline-narratives"></div>
-
-          <!-- Coming soon -->
-          <div class="lore-card" style="opacity:0.55;margin-top:12px;">
-            <div style="display:flex;gap:12px;align-items:center;">
-              <div style="font-size:24px;">🔥</div>
-              <div>
-                <div style="font-size:14px;font-weight:700;color:var(--text);">Famous Rugs <span style="font-size:10px;font-family:var(--mono);background:rgba(239,68,68,0.15);color:#FCA5A5;border-radius:20px;padding:2px 8px;margin-left:6px;">COMING SOON</span></div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px;">Real coins, real losses — what Trusty would have caught</div>
+            <div class="lore-card" style="opacity:0.55;margin-top:12px;">
+              <div style="display:flex;gap:12px;align-items:center;">
+                <div style="font-size:24px;">🔥</div>
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text);">Famous Rugs <span style="font-size:10px;font-family:var(--mono);background:rgba(239,68,68,0.15);color:#FCA5A5;border-radius:20px;padding:2px 8px;margin-left:6px;">COMING SOON</span></div>
+                  <div style="font-size:12px;color:var(--muted);margin-top:2px;">Real coins, real losses — what Trusty would have caught</div>
+                </div>
+              </div>
+            </div>
+            <div class="lore-card" style="opacity:0.55;margin-top:8px;">
+              <div style="display:flex;gap:12px;align-items:center;">
+                <div style="font-size:24px;">👥</div>
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text);">Community Signals <span style="font-size:10px;font-family:var(--mono);background:rgba(239,68,68,0.15);color:#FCA5A5;border-radius:20px;padding:2px 8px;margin-left:6px;">COMING SOON</span></div>
+                  <div style="font-size:12px;color:var(--muted);margin-top:2px;">How to read a community before you ape</div>
+                </div>
+              </div>
+            </div>
+            <div class="lore-card" style="opacity:0.55;margin-top:8px;">
+              <div style="display:flex;gap:12px;align-items:center;">
+                <div style="font-size:24px;">📈</div>
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text);">Market Potential <span style="font-size:10px;font-family:var(--mono);background:rgba(239,68,68,0.15);color:#FCA5A5;border-radius:20px;padding:2px 8px;margin-left:6px;">COMING SOON</span></div>
+                  <div style="font-size:12px;color:var(--muted);margin-top:2px;">How to size the opportunity before entry</div>
+                </div>
               </div>
             </div>
           </div>
-          <div class="lore-card" style="opacity:0.55;margin-top:8px;">
-            <div style="display:flex;gap:12px;align-items:center;">
-              <div style="font-size:24px;">👥</div>
-              <div>
-                <div style="font-size:14px;font-weight:700;color:var(--text);">Community Signals <span style="font-size:10px;font-family:var(--mono);background:rgba(239,68,68,0.15);color:#FCA5A5;border-radius:20px;padding:2px 8px;margin-left:6px;">COMING SOON</span></div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px;">How to read a community before you ape</div>
-              </div>
-            </div>
-          </div>
-          <div class="lore-card" style="opacity:0.55;margin-top:8px;">
-            <div style="display:flex;gap:12px;align-items:center;">
-              <div style="font-size:24px;">📈</div>
-              <div>
-                <div style="font-size:14px;font-weight:700;color:var(--text);">Market Potential <span style="font-size:10px;font-family:var(--mono);background:rgba(239,68,68,0.15);color:#FCA5A5;border-radius:20px;padding:2px 8px;margin-left:6px;">COMING SOON</span></div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px;">How to size the opportunity before entry</div>
-              </div>
-            </div>
-          </div>
-        </div>
+
+        </div><!-- end asec-cheatsheet -->
 
         <!-- GLOSSARY SECTION -->
         <div class="academy-section" id="asec-glossary">
@@ -5117,32 +5121,44 @@ body::before {
           </div>
         </div>
 
-        <!-- TW HISTORY SECTION -->
-        <div class="academy-section" id="asec-tw-history">
-          <div class="lore-card" style="margin-bottom:12px;">
-            <div class="lore-title">🛡️ HISTORY OF TRUST WALLET</div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;">From a developer's garage in 2017 to 220 million users. The story behind the wallet that Trusty calls home.</div>
-          </div>
-          <div id="inline-tw-history"></div>
-        </div>
+        <!-- HISTORY SECTION (with sub-tabs: Trust Wallet / BNB Chain / Crypto) -->
+        <div class="academy-section" id="asec-history">
 
-        <!-- BNB CHAIN HISTORY SECTION -->
-        <div class="academy-section" id="asec-bnb-history">
-          <div class="lore-card" style="margin-bottom:12px;">
-            <div class="lore-title">🟡 HISTORY OF BNB CHAIN</div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;">From ERC-20 token to the home of meme coin szn. How BNB Chain became the builders' playground — and Trusty's home.</div>
+          <!-- Sub-nav for History -->
+          <div class="academy-subnav">
+            <button class="academy-subnav-btn active" onclick="showAcademySub('history','tw',this)">🛡️ Trust Wallet</button>
+            <button class="academy-subnav-btn" onclick="showAcademySub('history','bnb',this)">🟡 BNB Chain</button>
+            <button class="academy-subnav-btn" onclick="showAcademySub('history','crypto',this)">₿ Crypto</button>
           </div>
-          <div id="inline-bnb-history"></div>
-        </div>
 
-        <!-- CRYPTO HISTORY SECTION -->
-        <div class="academy-section" id="asec-crypto-history">
-          <div class="lore-card" style="margin-bottom:12px;">
-            <div class="lore-title">₿ HISTORY OF CRYPTO</div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;">Bitcoin to meme coins — the full timeline of how we got here.</div>
+          <!-- Sub-panel: Trust Wallet history -->
+          <div class="academy-subpanel active" id="hsub-tw">
+            <div class="lore-card" style="margin-bottom:12px;">
+              <div class="lore-title">🛡️ HISTORY OF TRUST WALLET</div>
+              <div style="font-size:13px;color:var(--muted);line-height:1.6;">From a developer's garage in 2017 to 220 million users. The story behind the wallet that Trusty calls home.</div>
+            </div>
+            <div id="inline-tw-history"></div>
           </div>
-          <div id="inline-crypto-history"></div>
-        </div>
+
+          <!-- Sub-panel: BNB Chain history -->
+          <div class="academy-subpanel" id="hsub-bnb">
+            <div class="lore-card" style="margin-bottom:12px;">
+              <div class="lore-title">🟡 HISTORY OF BNB CHAIN</div>
+              <div style="font-size:13px;color:var(--muted);line-height:1.6;">From ERC-20 token to the home of meme coin szn. How BNB Chain became the builders' playground — and Trusty's home.</div>
+            </div>
+            <div id="inline-bnb-history"></div>
+          </div>
+
+          <!-- Sub-panel: Crypto history -->
+          <div class="academy-subpanel" id="hsub-crypto">
+            <div class="lore-card" style="margin-bottom:12px;">
+              <div class="lore-title">₿ HISTORY OF CRYPTO</div>
+              <div style="font-size:13px;color:var(--muted);line-height:1.6;">Bitcoin to meme coins — the full timeline of how we got here.</div>
+            </div>
+            <div id="inline-crypto-history"></div>
+          </div>
+
+        </div><!-- end asec-history -->
 
       </div>
     </div><!-- end tab-academy -->
@@ -10161,27 +10177,42 @@ function showAcademySection(id, btn) {
   if (sec) sec.classList.add('active');
   if (btn) btn.classList.add('active');
 
-  // Lazy load content
+  // Lazy load content for top-level sections
   if (id === 'glossary' && !document.getElementById('inlineGlossaryBody').hasChildNodes()) {
     renderInlineGlossary('');
   }
-  if (id === 'tw-history' && !document.getElementById('inline-tw-history').hasChildNodes()) {
-    renderInlineTWHistory();
-  }
-  if (id === 'bnb-history' && !document.getElementById('inline-bnb-history').hasChildNodes()) {
-    renderInlineBNBHistory();
-  }
-  if (id === 'crypto-history' && !document.getElementById('inline-crypto-history').hasChildNodes()) {
-    renderInlineCryptoHistory();
-  }
-  if (id === 'narratives' && !document.getElementById('inline-narratives').hasChildNodes()) {
-    renderInlineNarratives();
-  }
-  if (id === 'quiz' && !document.getElementById('quiz-container').hasChildNodes()) {
-    startQuiz();
-  }
   if (id === 'threads' && !document.getElementById('threads-list').hasChildNodes()) {
     renderThreads();
+  }
+  // History defaults to Trust Wallet sub-panel — lazy load it
+  if (id === 'history' && !document.getElementById('inline-tw-history').hasChildNodes()) {
+    renderInlineTWHistory();
+  }
+}
+
+// Sub-tab switcher for Cheat Sheet + History sections
+function showAcademySub(parent, subId, btn) {
+  const prefix = parent === 'cheatsheet' ? 'csub-' : 'hsub-';
+  const parentSec = document.getElementById('asec-' + parent);
+  if (!parentSec) return;
+  parentSec.querySelectorAll('.academy-subpanel').forEach(p => p.classList.remove('active'));
+  parentSec.querySelectorAll('.academy-subnav-btn').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById(prefix + subId);
+  if (panel) panel.classList.add('active');
+  if (btn) btn.classList.add('active');
+
+  // Lazy load sub-panel content
+  if (parent === 'cheatsheet' && subId === 'narratives' && !document.getElementById('inline-narratives').hasChildNodes()) {
+    renderInlineNarratives();
+  }
+  if (parent === 'history' && subId === 'tw' && !document.getElementById('inline-tw-history').hasChildNodes()) {
+    renderInlineTWHistory();
+  }
+  if (parent === 'history' && subId === 'bnb' && !document.getElementById('inline-bnb-history').hasChildNodes()) {
+    renderInlineBNBHistory();
+  }
+  if (parent === 'history' && subId === 'crypto' && !document.getElementById('inline-crypto-history').hasChildNodes()) {
+    renderInlineCryptoHistory();
   }
 }
 
@@ -10288,101 +10319,6 @@ function renderInlineNarratives() {
 
 function toggleInlineNarrative(i) {
   document.getElementById('in-' + i).classList.toggle('open');
-}
-
-// ══ RUG OR GEM QUIZ ══
-var quizData = [
-  { name: 'SAFEDOG', liquidity: '$285K', age: '45 days', holders: '3,200', contract: 'Renounced', tax: '0%/0%', mint: 'Disabled', lpLocked: 'Yes (12mo)', topWallet: '2.1%',
-    answer: 'gem', explain: 'Renounced contract, locked LP, zero tax, no whale concentration, good liquidity, and 45 days old. This checks every green flag.' },
-  { name: 'MOONX100', liquidity: '$1,200', age: '2 hours', holders: '47', contract: 'NOT renounced', tax: '0%/15%', mint: 'Active', lpLocked: 'No', topWallet: '34%',
-    answer: 'rug', explain: 'Active mint, 15% sell tax, unrenounced contract, unlocked LP, dev holds 34%, and only $1.2K liquidity. This is a textbook rug setup.' },
-  { name: 'PENGUAI', liquidity: '$92K', age: '12 days', holders: '1,800', contract: 'Renounced', tax: '2%/2%', mint: 'Disabled', lpLocked: 'Yes (6mo)', topWallet: '4.8%',
-    answer: 'gem', explain: 'Renounced with locked LP, small tax for marketing, healthy holder distribution, decent liquidity. The 2% tax is acceptable if used for growth.' },
-  { name: 'ELONCAT', liquidity: '$8K', age: '6 hours', holders: '120', contract: 'NOT renounced', tax: '5%/5%', mint: 'Active', lpLocked: 'No', topWallet: '22%',
-    answer: 'rug', explain: 'Classic celebrity name bait. Active mint + unrenounced + unlocked LP + 22% top wallet = guaranteed rug. The $8K liquidity means even a small sell crashes the price.' },
-  { name: 'TRDFI', liquidity: '$520K', age: '3 months', holders: '8,400', contract: 'Renounced', tax: '0%/0%', mint: 'Disabled', lpLocked: 'Yes (24mo)', topWallet: '1.2%',
-    answer: 'gem', explain: 'Everything is green. Renounced, zero tax, 24-month LP lock, great distribution, 3 months of history, and strong liquidity. This is as safe as meme coins get.' },
-  { name: 'PUMP69', liquidity: '$3K', age: '30 min', holders: '15', contract: 'NOT renounced', tax: '0%/25%', mint: 'Active', lpLocked: 'No', topWallet: '51%',
-    answer: 'rug', explain: 'Dev holds 51% of supply with a 25% sell tax and active mint. The LP is unlocked with only $3K. This will rug within hours — the dev can drain everything.' },
-];
-var quizState = { current: 0, score: 0, answers: [] };
-
-function startQuiz() {
-  quizState = { current: 0, score: 0, answers: [] };
-  renderQuizQuestion();
-}
-
-function renderQuizQuestion() {
-  var container = document.getElementById('quiz-container');
-  if (quizState.current >= quizData.length) { renderQuizScore(); return; }
-  var q = quizData[quizState.current];
-  var progress = quizData.map(function(_, i) {
-    var cls = 'quiz-dot';
-    if (i < quizState.answers.length) cls += quizState.answers[i] ? ' correct' : ' wrong';
-    else if (i === quizState.current) cls += ' done';
-    return '<div class="' + cls + '"></div>';
-  }).join('');
-
-  container.innerHTML =
-    '<div class="quiz-progress">' + progress + '</div>' +
-    '<div class="quiz-card">' +
-      '<div style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:2px;margin-bottom:4px;">QUESTION ' + (quizState.current + 1) + ' OF ' + quizData.length + '</div>' +
-      '<div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:14px;">$' + q.name + '</div>' +
-      '<div class="quiz-stats">' +
-        '<div class="quiz-stat"><div class="quiz-stat-label">LIQUIDITY</div><div class="quiz-stat-value">' + q.liquidity + '</div></div>' +
-        '<div class="quiz-stat"><div class="quiz-stat-label">AGE</div><div class="quiz-stat-value">' + q.age + '</div></div>' +
-        '<div class="quiz-stat"><div class="quiz-stat-label">HOLDERS</div><div class="quiz-stat-value">' + q.holders + '</div></div>' +
-        '<div class="quiz-stat"><div class="quiz-stat-label">CONTRACT</div><div class="quiz-stat-value">' + q.contract + '</div></div>' +
-        '<div class="quiz-stat"><div class="quiz-stat-label">TAX (B/S)</div><div class="quiz-stat-value">' + q.tax + '</div></div>' +
-        '<div class="quiz-stat"><div class="quiz-stat-label">MINT</div><div class="quiz-stat-value">' + q.mint + '</div></div>' +
-        '<div class="quiz-stat"><div class="quiz-stat-label">LP LOCKED</div><div class="quiz-stat-value">' + q.lpLocked + '</div></div>' +
-        '<div class="quiz-stat"><div class="quiz-stat-label">TOP WALLET</div><div class="quiz-stat-value">' + q.topWallet + '</div></div>' +
-      '</div>' +
-      '<div id="quiz-answer" style="display:flex;gap:10px;">' +
-        '<button class="quiz-btn gem" onclick="answerQuiz(\'gem\')">💎 GEM</button>' +
-        '<button class="quiz-btn rug" onclick="answerQuiz(\'rug\')">🚩 RUG</button>' +
-      '</div>' +
-      '<div id="quiz-result"></div>' +
-    '</div>';
-}
-
-function answerQuiz(answer) {
-  var q = quizData[quizState.current];
-  var correct = answer === q.answer;
-  if (correct) quizState.score++;
-  quizState.answers.push(correct);
-
-  var resultDiv = document.getElementById('quiz-result');
-  var btnDiv = document.getElementById('quiz-answer');
-  btnDiv.innerHTML = '<button class="quiz-btn gem" style="opacity:0.3;cursor:default;" disabled>💎 GEM</button><button class="quiz-btn rug" style="opacity:0.3;cursor:default;" disabled>🚩 RUG</button>';
-
-  resultDiv.innerHTML = '<div class="quiz-result ' + (correct ? 'correct' : 'wrong') + '">' +
-    (correct ? '✅ Correct!' : '❌ Wrong! It was a <strong>' + q.answer.toUpperCase() + '</strong>') +
-    '<br><br>' + q.explain + '</div>' +
-    '<button onclick="quizState.current++;renderQuizQuestion()" style="width:100%;margin-top:12px;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-weight:700;cursor:pointer;font-size:13px;">' +
-    (quizState.current < quizData.length - 1 ? 'Next Question →' : 'See Results →') + '</button>';
-}
-
-function renderQuizScore() {
-  var container = document.getElementById('quiz-container');
-  var pct = Math.round((quizState.score / quizData.length) * 100);
-  var grade, color, msg;
-  if (pct >= 80) { grade = 'ALPHA DEGEN'; color = '#86EFAC'; msg = 'Ser you have the instincts. Trusty approves. You can spot a rug from a mile away.'; }
-  else if (pct >= 50) { grade = 'LEARNING DEGEN'; color = '#FDE68A'; msg = 'Not bad fren. You caught some rugs but missed a few. Keep studying the cheat sheet.'; }
-  else { grade = 'NGMI (for now)'; color = '#FCA5A5'; msg = 'Bestie... you would have been rugged. Go back to the cheat sheet and study the red flags before you ape anything.'; }
-
-  var progress = quizState.answers.map(function(correct) {
-    return '<div class="quiz-dot ' + (correct ? 'correct' : 'wrong') + '"></div>';
-  }).join('');
-
-  container.innerHTML =
-    '<div class="quiz-progress">' + progress + '</div>' +
-    '<div class="quiz-card"><div class="quiz-score">' +
-      '<div class="quiz-score-num" style="color:' + color + ';">' + quizState.score + '/' + quizData.length + '</div>' +
-      '<div style="font-family:var(--display);font-size:22px;color:' + color + ';letter-spacing:2px;margin-bottom:12px;">' + grade + '</div>' +
-      '<div style="font-size:13px;color:var(--muted);line-height:1.6;max-width:400px;margin:0 auto;">' + msg + '</div>' +
-      '<button onclick="startQuiz()" style="margin-top:20px;padding:12px 28px;border-radius:10px;border:none;background:var(--blue);color:white;font-weight:700;cursor:pointer;font-size:14px;">🔄 Try Again</button>' +
-    '</div></div>';
 }
 
 // ══ FEATURED TOKENS ══
