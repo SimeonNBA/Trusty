@@ -23,14 +23,32 @@ Four.meme sits at the centre of this problem — 812,000 daily users, $1B+ tradi
 
 Trusty is an AI-powered meme coin evaluator on BNB Smart Chain. Paste a contract address, and in under 10 seconds Trusty pulls live market data from DexScreener and a full contract safety scan from GoPlus + Honeypot.is — then translates all of it into one plain-English verdict: **Ape**, **Caution**, or **Run**. Every number is explained in degen language, not audit jargon.
 
+But scanning alone doesn't keep users. So Trusty is built as a **scan → learn → earn loop** that gives people a reason to come back every day.
+
 ### Core Features
 
-- **Token Scanner** — Live market data (price, mcap, liquidity, volume, buy/sell ratio, age, holders) + full contract safety scan (honeypot, mint authority, LP lock, sell tax, whale concentration) + AI "Trusty Says" verdict in plain English
+**Scan**
+- **Token Scanner** — Live market data (price, mcap, liquidity, volume, buy/sell ratio, age, holders) + full contract safety scan (honeypot, mint authority, LP lock, sell tax, whale concentration) + AI "Trusty Says" verdict
 - **Gut Check** — Five honest questions (bull or bear market, flip or hold, real $100M path, can you sleep holding this tonight) that dynamically adjust the final recommendation and position size. The mirror most tools skip.
-- **Academy** — Cheat Sheet (Ape vs Run signals, Risk Matrix, Narrative Playbooks), Degen Glossary, Alpha Threads, History (Trust Wallet / BNB Chain / Crypto)
 - **Watchlist** — Save tokens, re-scan anytime. localStorage only, no account required.
+- **PDF Report + Share** — One-click download and share-to-X so users can pass the scan along.
+
+**Learn**
+- **Cheat Sheet** — Ape vs Run signals, Narrative Risk Matrix, Narrative Playbooks
+- **Degen Glossary** — Every term a new trader needs, A-Z
+- **Alpha Threads** — Curated long-reads from the best traders on X
+- **History** — Trust Wallet (2017 to today), BNB Chain, and the full crypto lore
 - **Weekly Trenches Report** — Weekly recap of what pumped, what rugged, and what the meta is this week on BNB Chain
-- **PDF Report + Share** — One-click PDF download and share-to-X so users can pass the scan along
+
+**Earn (test mode)** — the retention loop
+- **Trusty Points** — Every scan (+10), every lesson completed (+50), every streak day tracked. Points stored in localStorage until Phase 2 activates on-chain rewards.
+- **Trenches 101** — A 5-lesson course on BNB launchpads (how they work, the first 5 minutes of a launch, rug patterns, reading a Trusty scan, your first scouting run). Each lesson has a quiz. Wrong answers lock the lesson for 24 hours — no point-farming.
+- **Daily Streak** — 🔥 counter that resets if you skip a day. One scan a day keeps it alive.
+- **6 Missions** — First Scan, Scout Status (10 scans), 3-Day Streak, Watchlist Loader, Read Trenches, Trenches Scholar (finish the course).
+- **Scout Leaderboard** — Top 10 by weekly points. Phase 2 adds weekly $TRUSTY prize pools for the top 3.
+- **"You vs The Trenches"** — Personal stats showing tokens scanned, RUN verdicts flagged, APE signals seen, days active.
+
+Everything in Earn is clearly labelled **TEST** — points are local, no tokens are distributed yet. The full on-chain reward system launches in Phase 2.
 
 ---
 
@@ -51,15 +69,22 @@ And there's one more thing: **$TRUSTY is the OG Trust Wallet mascot from 2019** 
 - **Chain:** BNB Smart Chain
 - **APIs:** DexScreener (market data), GoPlus Security (contract risk), Honeypot.is (honeypot detection)
 - **AI:** "Trusty Says" verdict generator — context-aware scoring across 7 weighted categories
-- **Content pipeline:** `data/articles.json` + `data/featured.json` + `data/trending.json` (trending refreshed via GitHub Actions every 15 min)
+- **Retention:** Points / streak / course progress / scan stats, all client-side (localStorage). No backend account system yet.
+- **Content pipeline:** `data/articles.json` (Trenches Report) + `data/featured.json` (featured tokens) + `data/trending.json` (trending, refreshed via GitHub Actions every 15 min)
 
 ## Architecture
 
 ```
 User → trustyai.tech (GitHub Pages)
-         ├── Token Scan → DexScreener + GoPlus + Honeypot.is
+         ├── Scan → DexScreener + GoPlus + Honeypot.is
          ├── Gut Check → Client-side logic, adjusts verdict + position size
-         ├── Academy → Static content (cheat sheet, narratives, history)
+         ├── Learn → Static content (Cheat Sheet, Glossary, Threads, History)
+         ├── Earn (test) → localStorage
+         │      ├── Trusty Points store
+         │      ├── Daily streak tracker
+         │      ├── Trenches 101 completion + 24h lock on wrong answers
+         │      ├── Missions auto-check
+         │      └── Leaderboard (seed + user row)
          ├── Watchlist → localStorage (no account)
          └── Trenches Report → data/articles.json + GitHub Pages
 ```
@@ -80,13 +105,13 @@ cd Trusty
 
 ## Roadmap
 
-**Phase 2 — Profiles & reputation.** Sign-in, personal scan history, on-chain reputation badges for users who consistently flag rugs early.
+**Phase 2 — Activate the Earn loop.** Sign-in, on-chain reputation profile, convert Trusty Points to $TRUSTY airdrops, weekly prize pool for the top 3 on the Scout Leaderboard. The test-mode system already shipped is the preview of this.
 
 **Phase 3 — CA-Hunt tournaments.** Weekly scouting competitions where degens submit tokens, the community verdicts them, and the best scouts (fastest to flag a rug, first to find a 10x) win $TRUSTY and partner prizes.
 
-**Phase 4 — Learn-and-Earn partnerships.** BNB Chain projects pay Trusty to run quizzes, academy modules, and guided scans for their token. Users earn, projects onboard educated holders, Trusty earns recurring revenue.
+**Phase 4 — B2B education partnerships.** BNB Chain projects pay Trusty to run bespoke courses, guided scans, and quizzes for their holders. Users earn, projects onboard educated communities, Trusty earns recurring revenue.
 
-**Phase 5 — Telegram bot + API.** Let other BNB dApps embed Trusty scans directly into their own interfaces.
+**Phase 5 — Telegram bot + public API.** Let other BNB dApps embed Trusty scans directly into their interfaces.
 
 ---
 
