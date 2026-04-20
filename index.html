@@ -3991,6 +3991,646 @@ body::before {
 .academy-subpanel { display: none; }
 .academy-subpanel.active { display: block; }
 
+/* ── LEARN & EARN switcher (top-level inside tab-academy) ── */
+.le-switcher {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 20px 0;
+  padding: 6px;
+  background: var(--bg3);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+.le-switcher-btn {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.le-switcher-btn:hover { color: var(--text); }
+.le-switcher-btn.active {
+  background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(96,165,250,0.2));
+  color: var(--text);
+  box-shadow: 0 0 0 1px rgba(168,85,247,0.4);
+}
+.le-badge {
+  background: rgba(243,186,47,0.18);
+  color: #F3BA2F;
+  font-size: 9px;
+  font-family: var(--mono);
+  padding: 2px 6px;
+  border-radius: 10px;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+.le-panel { display: none; }
+.le-panel.active { display: block; }
+
+/* ── EARN hero ── */
+.earn-hero {
+  background: linear-gradient(135deg, rgba(243,186,47,0.12), rgba(168,85,247,0.08));
+  border: 1px solid rgba(243,186,47,0.25);
+  border-radius: 18px;
+  padding: 22px;
+  margin-bottom: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.earn-hero::before {
+  content: "";
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(243,186,47,0.25) 0%, transparent 60%);
+  pointer-events: none;
+}
+.earn-hero-title {
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 2px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.earn-hero-sub {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 520px;
+  margin-bottom: 18px;
+}
+.earn-hero-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+}
+.earn-stat {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+}
+.earn-stat-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+}
+.earn-stat-value {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 800;
+  color: #F3BA2F;
+  line-height: 1;
+}
+.earn-stat-value.points { color: #F3BA2F; }
+.earn-stat-value.streak { color: #F97316; }
+.earn-stat-value.missions { color: #C084FC; }
+
+.earn-progress-wrap {
+  margin-top: 4px;
+  position: relative;
+  z-index: 1;
+}
+.earn-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  letter-spacing: 1px;
+}
+.earn-progress-bar {
+  height: 10px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.earn-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #F3BA2F, #F97316);
+  border-radius: 5px;
+  transition: width 0.4s ease;
+}
+.earn-claim-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1.5px dashed rgba(243,186,47,0.45);
+  background: rgba(243,186,47,0.08);
+  color: #F3BA2F;
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: not-allowed;
+  opacity: 0.85;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+.earn-claim-btn small {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+/* ── Mission cards grid ── */
+.mission-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.mission-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.mission-card:hover {
+  border-color: rgba(243,186,47,0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.mission-card.locked { opacity: 0.5; cursor: not-allowed; }
+.mission-card.locked:hover { transform: none; border-color: var(--border); box-shadow: none; }
+.mission-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mission-icon {
+  font-size: 26px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg3);
+  border-radius: 10px;
+}
+.mission-title-wrap { flex: 1; min-width: 0; }
+.mission-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+.mission-reward {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #F3BA2F;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+.mission-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.mission-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.mission-status .pill {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 700;
+}
+.pill.open { background: rgba(96,165,250,0.15); color: #60A5FA; }
+.pill.done { background: rgba(34,197,94,0.18); color: #86EFAC; }
+.pill.locked { background: rgba(148,163,184,0.15); color: #94A3B8; }
+
+/* ── Trenches 101 inline lesson list ── */
+.t101-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+.t101-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.t101-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  background: linear-gradient(135deg, rgba(243,186,47,0.2), rgba(168,85,247,0.15));
+  border: 1px solid rgba(243,186,47,0.3);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.t101-title {
+  font-family: var(--display);
+  font-size: 18px;
+  letter-spacing: 1.5px;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.t101-sub { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.t101-list { display: flex; flex-direction: column; gap: 8px; }
+.t101-lesson {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.t101-lesson:hover { border-color: rgba(168,85,247,0.5); transform: translateX(4px); }
+.t101-lesson.done { opacity: 0.65; }
+.t101-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(168,85,247,0.15);
+  border: 1px solid rgba(168,85,247,0.4);
+  color: #C084FC;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.t101-lesson.done .t101-num {
+  background: rgba(34,197,94,0.2);
+  border-color: rgba(34,197,94,0.5);
+  color: #86EFAC;
+}
+.t101-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); }
+.t101-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+.t101-badge.open { background: rgba(96,165,250,0.15); color: #60A5FA; }
+.t101-badge.done { background: rgba(34,197,94,0.18); color: #86EFAC; }
+.t101-cert {
+  margin-top: 14px;
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(243,186,47,0.12), rgba(168,85,247,0.1));
+  border: 1px dashed rgba(243,186,47,0.4);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ── Lesson modal ── */
+.lesson-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 1500;
+  overflow-y: auto;
+  padding: 20px;
+}
+.lesson-modal.open { display: block; }
+.lesson-inner {
+  max-width: 680px;
+  margin: 20px auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+}
+.lesson-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lesson-close:hover { color: var(--text); border-color: var(--blue); }
+.lesson-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #C084FC;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+.lesson-title {
+  font-family: var(--display);
+  font-size: 26px;
+  letter-spacing: 1px;
+  color: var(--text);
+  margin-bottom: 14px;
+  line-height: 1.2;
+}
+.lesson-body {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.lesson-body p { margin: 0 0 12px 0; }
+.lesson-body strong { color: #F3BA2F; }
+.lesson-quiz {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+}
+.lesson-q {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.lesson-opts { display: flex; flex-direction: column; gap: 8px; }
+.lesson-opt {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg3);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+.lesson-opt:hover { border-color: var(--blue); }
+.lesson-opt.correct {
+  background: rgba(34,197,94,0.15);
+  border-color: rgba(34,197,94,0.5);
+  color: #86EFAC;
+}
+.lesson-opt.wrong {
+  background: rgba(239,68,68,0.12);
+  border-color: rgba(239,68,68,0.5);
+  color: #FCA5A5;
+}
+.lesson-opt:disabled { cursor: default; }
+.lesson-feedback {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  display: none;
+}
+.lesson-feedback.show { display: block; }
+.lesson-feedback.ok { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86EFAC; }
+.lesson-feedback.no { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #FCA5A5; }
+.lesson-complete-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #F3BA2F, #E89B10);
+  color: #0a0a0a;
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+.lesson-complete-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── "You saved yourself from" stats panel ── */
+.saved-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+.saved-title {
+  font-family: var(--display);
+  font-size: 16px;
+  letter-spacing: 1.5px;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.saved-sub { font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+.saved-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+.saved-cell {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.saved-num {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 800;
+  color: #F3BA2F;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.saved-num.red { color: #FCA5A5; }
+.saved-num.green { color: #86EFAC; }
+.saved-num.blue { color: #60A5FA; }
+.saved-lbl {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 1.2px;
+}
+
+/* ── Leaderboard ── */
+.lb-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+.lb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.lb-title {
+  font-family: var(--display);
+  font-size: 16px;
+  letter-spacing: 1.5px;
+  color: var(--text);
+}
+.lb-period {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  padding: 4px 10px;
+  background: var(--bg3);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+.lb-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+.lb-row:last-child { border-bottom: none; }
+.lb-rank {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--muted);
+  text-align: center;
+}
+.lb-rank.gold { color: #F3BA2F; }
+.lb-rank.silver { color: #CBD5E1; }
+.lb-rank.bronze { color: #CD7F32; }
+.lb-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lb-points {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #F3BA2F;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lb-row.you {
+  background: linear-gradient(90deg, rgba(168,85,247,0.1), transparent);
+  border-radius: 8px;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-bottom: none;
+  margin: 6px 0;
+}
+.lb-row.you .lb-name::after {
+  content: " · YOU";
+  font-family: var(--mono);
+  font-size: 9px;
+  color: #C084FC;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+}
+
+/* ── Streak widget (compact, shown on scanner after a scan) ── */
+.streak-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(120px);
+  background: linear-gradient(135deg, #F3BA2F, #E89B10);
+  color: #0a0a0a;
+  padding: 12px 20px;
+  border-radius: 30px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 12px 32px rgba(243,186,47,0.35);
+  z-index: 2000;
+  transition: transform 0.35s cubic-bezier(.2,.8,.2,1);
+  white-space: nowrap;
+}
+.streak-toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  .earn-hero { padding: 18px; }
+  .earn-hero-title { font-size: 18px; letter-spacing: 1.5px; }
+  .earn-hero-stats { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .earn-stat { padding: 10px 6px; }
+  .earn-stat-value { font-size: 18px; }
+  .earn-stat-label { font-size: 8px; }
+  .earn-claim-btn { padding: 12px; font-size: 12px; letter-spacing: 1.5px; }
+  .mission-grid { grid-template-columns: 1fr; }
+  .t101-head { gap: 10px; }
+  .t101-icon { width: 40px; height: 40px; font-size: 22px; }
+  .t101-title { font-size: 15px; letter-spacing: 1px; }
+  .t101-lesson { padding: 10px; gap: 10px; }
+  .t101-name { font-size: 12px; }
+  .lesson-inner { margin: 10px auto; padding: 18px; }
+  .lesson-title { font-size: 22px; }
+  .saved-grid { grid-template-columns: 1fr 1fr; }
+  .saved-num { font-size: 20px; }
+  .lb-row { grid-template-columns: 28px 1fr auto; gap: 8px; }
+  .lb-name { font-size: 12px; }
+  .lb-points { font-size: 11px; }
+  .le-switcher-btn { font-size: 12px; padding: 10px 8px; }
+}
+
 /* inline glossary */
 .inline-glossary-term {
   background: var(--card);
@@ -4471,7 +5111,7 @@ body::before {
         🔍 SCANNER
       </button>
       <button class="main-nav-btn academy-btn" id="nav-academy" onclick="switchTab('academy')">
-        📚 ACADEMY
+        🎓 LEARN &amp; EARN
       </button>
       <button class="main-nav-btn token-btn" id="nav-token" onclick="switchTab('token')">
         🪙 Token
@@ -4913,10 +5553,19 @@ body::before {
       <div class="token-page" style="padding:8px 0 24px;">
 
         <!-- Header -->
-        <div style="text-align:center;margin-bottom:24px;">
-          <div style="font-family:var(--display);font-size:36px;letter-spacing:3px;background:linear-gradient(135deg,#C084FC,#818CF8,#60A5FA);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;">📚 TRUSTY ACADEMY</div>
-          <div style="font-size:14px;color:var(--muted);max-width:480px;margin:0 auto;line-height:1.6;">Learn the meme coin meta, understand the narratives, and know what to scan for before you invest.</div>
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="font-family:var(--display);font-size:36px;letter-spacing:3px;background:linear-gradient(135deg,#C084FC,#818CF8,#60A5FA);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;">🎓 LEARN &amp; EARN</div>
+          <div style="font-size:14px;color:var(--muted);max-width:520px;margin:0 auto;line-height:1.6;">Learn the meta. Stack Trusty Points. Claim $TRUSTY rewards when Phase 2 drops.</div>
         </div>
+
+        <!-- LEARN / EARN SWITCHER -->
+        <div class="le-switcher">
+          <button class="le-switcher-btn active" id="le-btn-learn" onclick="showLEPanel('learn')">📚 Learn</button>
+          <button class="le-switcher-btn" id="le-btn-earn" onclick="showLEPanel('earn')">💰 Earn <span class="le-badge">BETA</span></button>
+        </div>
+
+        <!-- LEARN PANEL (existing Academy content) -->
+        <div class="le-panel active" id="le-learn">
 
         <!-- ACADEMY SECTION NAV -->
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
@@ -5159,6 +5808,99 @@ body::before {
           </div>
 
         </div><!-- end asec-history -->
+
+        </div><!-- end le-learn panel -->
+
+        <!-- ═════════════════════════════
+             EARN PANEL (beta)
+             ═════════════════════════════ -->
+        <div class="le-panel" id="le-earn">
+
+          <!-- Hero with stats + claim CTA -->
+          <div class="earn-hero">
+            <div class="earn-hero-title">💰 EARN $TRUSTY</div>
+            <div class="earn-hero-sub">Stack Trusty Points by scanning tokens, completing missions, and keeping your streak alive. Points convert to $TRUSTY airdrops when Phase 2 drops.</div>
+            <div class="earn-hero-stats">
+              <div class="earn-stat">
+                <div class="earn-stat-label">POINTS</div>
+                <div class="earn-stat-value points" id="eh-points">0</div>
+              </div>
+              <div class="earn-stat">
+                <div class="earn-stat-label">STREAK</div>
+                <div class="earn-stat-value streak" id="eh-streak">0🔥</div>
+              </div>
+              <div class="earn-stat">
+                <div class="earn-stat-label">MISSIONS</div>
+                <div class="earn-stat-value missions" id="eh-missions">0/6</div>
+              </div>
+            </div>
+            <div class="earn-progress-wrap">
+              <div class="earn-progress-label">
+                <span>Overall progress</span>
+                <span id="eh-pct">0%</span>
+              </div>
+              <div class="earn-progress-bar">
+                <div class="earn-progress-fill" id="eh-fill" style="width:0%"></div>
+              </div>
+            </div>
+            <button class="earn-claim-btn" disabled>
+              🎁 CLAIM REWARDS
+              <small>COMING SOON — PHASE 2</small>
+            </button>
+          </div>
+
+          <!-- Trenches 101 course -->
+          <div class="t101-wrap">
+            <div class="t101-head">
+              <div class="t101-icon">🏕️</div>
+              <div>
+                <div class="t101-title">TRENCHES 101</div>
+                <div class="t101-sub">A 5-lesson survival guide to BNB meme launches. Each lesson has a quiz. Pass it, stack points, earn a badge.</div>
+              </div>
+            </div>
+            <div class="t101-list" id="t101-list"></div>
+            <div class="t101-cert" id="t101-cert" style="display:none;">🎓 <strong style="color:#F3BA2F;">Trenches Scholar</strong> — you finished all 5 lessons. Badge unlocked. Higher-tier rewards incoming in Phase 2.</div>
+          </div>
+
+          <!-- Missions grid -->
+          <div style="margin-bottom:10px;font-family:var(--display);font-size:16px;letter-spacing:1.5px;color:var(--text);">⚔️ MORE MISSIONS</div>
+          <div class="mission-grid" id="mission-grid"></div>
+
+          <!-- "You saved yourself from" stats -->
+          <div class="saved-panel">
+            <div class="saved-title">🛡️ YOU VS THE TRENCHES</div>
+            <div class="saved-sub">Stats from your scan history. Every RUN verdict you acted on is a bag you didn't bleed.</div>
+            <div class="saved-grid">
+              <div class="saved-cell">
+                <div class="saved-num blue" id="sv-scans">0</div>
+                <div class="saved-lbl">TOKENS SCANNED</div>
+              </div>
+              <div class="saved-cell">
+                <div class="saved-num red" id="sv-runs">0</div>
+                <div class="saved-lbl">🚩 RUN FLAGGED</div>
+              </div>
+              <div class="saved-cell">
+                <div class="saved-num green" id="sv-apes">0</div>
+                <div class="saved-lbl">💎 APE SIGNALS</div>
+              </div>
+              <div class="saved-cell">
+                <div class="saved-num" id="sv-days">0</div>
+                <div class="saved-lbl">DAYS ACTIVE</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Leaderboard -->
+          <div class="lb-panel">
+            <div class="lb-head">
+              <div class="lb-title">🏆 SCOUT LEADERBOARD</div>
+              <div class="lb-period">THIS WEEK</div>
+            </div>
+            <div id="lb-rows"></div>
+            <div style="margin-top:12px;text-align:center;font-size:11px;color:var(--muted);font-family:var(--mono);letter-spacing:1px;">TOP 3 EACH WEEK SHARE $TRUSTY POOL · COMING PHASE 2</div>
+          </div>
+
+        </div><!-- end le-earn panel -->
 
       </div>
     </div><!-- end tab-academy -->
@@ -6048,6 +6790,23 @@ body::before {
   </div><!-- end history-inner -->
 </div><!-- end history-page -->
 
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  TRENCHES 101 LESSON MODAL                            -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="lesson-modal" id="lessonModal" onclick="if(event.target===this) closeLesson()">
+  <div class="lesson-inner">
+    <button class="lesson-close" onclick="closeLesson()">✕</button>
+    <div class="lesson-eyebrow" id="lsn-eyebrow">TRENCHES 101 · LESSON 1 OF 5</div>
+    <div class="lesson-title" id="lsn-title">Lesson title</div>
+    <div class="lesson-body" id="lsn-body"></div>
+    <div class="lesson-quiz" id="lsn-quiz">
+      <div class="lesson-q" id="lsn-q">Question?</div>
+      <div class="lesson-opts" id="lsn-opts"></div>
+      <div class="lesson-feedback" id="lsn-feedback"></div>
+    </div>
+    <button class="lesson-complete-btn" id="lsn-complete-btn" disabled onclick="completeLesson()">✓ CLAIM +50 POINTS</button>
+  </div>
+</div>
 
 
 <!-- ══════════════════════════════════════════════════════ -->
@@ -7167,6 +7926,9 @@ async function scanCA() {
     caTokenData = pair;
     renderTokenData(pair, ca);
     autoFillFromCA(pair);
+
+    // Log scan for points + streak + stats
+    try { if (typeof tscLog === 'function') tscLog(ca); } catch(e) {}
 
     loadingEl.classList.remove('visible');
     dataCard.classList.add('visible');
@@ -10215,6 +10977,398 @@ function showAcademySub(parent, subId, btn) {
     renderInlineCryptoHistory();
   }
 }
+
+// ══════════════════════════════════════════════════════
+//  LEARN & EARN — panel switcher + points/streak/course
+// ══════════════════════════════════════════════════════
+function showLEPanel(which) {
+  ['learn','earn'].forEach(id => {
+    var p = document.getElementById('le-' + id);
+    var b = document.getElementById('le-btn-' + id);
+    if (!p || !b) return;
+    if (id === which) { p.classList.add('active'); b.classList.add('active'); }
+    else { p.classList.remove('active'); b.classList.remove('active'); }
+  });
+  if (which === 'earn') renderEarnHome();
+}
+
+// ── Points store ──
+var TP_KEY = 'trusty_points_v1';
+function tpGet() { try { return parseInt(localStorage.getItem(TP_KEY) || '0', 10) || 0; } catch(e) { return 0; } }
+function tpAdd(n, reason) {
+  try {
+    var cur = tpGet() + n;
+    localStorage.setItem(TP_KEY, String(cur));
+    // floating toast
+    showStreakToast('+' + n + ' Trusty Points — ' + (reason || 'nice'));
+    renderEarnHome();
+  } catch(e) {}
+}
+
+// ── Streak store ──
+var TS_KEY = 'trusty_streak_v1';
+function tsGet() { try { return JSON.parse(localStorage.getItem(TS_KEY) || '{"last":null,"count":0}'); } catch(e) { return {last:null,count:0}; } }
+function tsTick() {
+  try {
+    var today = new Date().toISOString().slice(0,10);
+    var s = tsGet();
+    if (s.last === today) return s;
+    var y = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+    if (s.last === y) s.count += 1;
+    else s.count = 1;
+    s.last = today;
+    localStorage.setItem(TS_KEY, JSON.stringify(s));
+    if (s.count > 1) showStreakToast('🔥 ' + s.count + '-day streak — keep it alive');
+    return s;
+  } catch(e) { return {last:null,count:0}; }
+}
+function tsCurrent() {
+  try {
+    var s = tsGet();
+    if (!s.last) return 0;
+    var today = new Date().toISOString().slice(0,10);
+    var y = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+    if (s.last === today || s.last === y) return s.count;
+    return 0; // streak broken
+  } catch(e) { return 0; }
+}
+
+// ── Course store ──
+var TC_KEY = 'trusty_course_v1';
+function tcGet() { try { return JSON.parse(localStorage.getItem(TC_KEY) || '{}'); } catch(e) { return {}; } }
+function tcSet(id) { try { var c = tcGet(); c[id] = true; localStorage.setItem(TC_KEY, JSON.stringify(c)); } catch(e) {} }
+function tcDone(id) { return !!tcGet()[id]; }
+function tcCount() { return Object.keys(tcGet()).length; }
+
+// ── Toast ──
+var _toastTimer = null;
+function showStreakToast(msg) {
+  var existing = document.getElementById('streakToast');
+  if (!existing) {
+    existing = document.createElement('div');
+    existing.id = 'streakToast';
+    existing.className = 'streak-toast';
+    document.body.appendChild(existing);
+  }
+  existing.textContent = msg;
+  existing.classList.add('show');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function() { existing.classList.remove('show'); }, 3200);
+}
+
+// ── Scan history store (for "you saved yourself from" stats) ──
+var TSC_KEY = 'trusty_scan_stats_v1';
+function tscGet() { try { return JSON.parse(localStorage.getItem(TSC_KEY) || '{"scans":0,"runs":0,"apes":0,"firstDate":null,"seenCAs":[]}'); } catch(e) { return {scans:0,runs:0,apes:0,firstDate:null,seenCAs:[]}; } }
+function tscLog(ca, verdict) {
+  try {
+    var s = tscGet();
+    var caKey = (ca || '').toLowerCase();
+    if (!caKey) return s;
+    var isNew = s.seenCAs.indexOf(caKey) === -1;
+    if (isNew) {
+      s.seenCAs.push(caKey);
+      if (s.seenCAs.length > 500) s.seenCAs = s.seenCAs.slice(-500);
+      s.scans += 1;
+      if (!s.firstDate) s.firstDate = new Date().toISOString().slice(0,10);
+    }
+    if (verdict === 'run' || verdict === 'RUN') s.runs += 1;
+    if (verdict === 'ape' || verdict === 'APE') s.apes += 1;
+    localStorage.setItem(TSC_KEY, JSON.stringify(s));
+    if (isNew) {
+      tpAdd(10, 'scan logged');
+      tsTick();
+    }
+    return s;
+  } catch(e) { return tscGet(); }
+}
+
+// ── Trenches 101 lesson data ──
+var t101Lessons = [
+  {
+    id: 'l1',
+    title: 'How BNB Meme Launches Work',
+    body: "<p>BNB Chain has become the new home of meme coin season — <strong>812,000 daily users</strong> on Four.meme alone, with over <strong>$1 billion in trading volume</strong>. Understanding how these launchpads work is step one to not getting rugged.</p><p>Most BNB launchpads use a <strong>bonding curve model</strong>: the token starts at a low price, and every buy pushes the price up along a mathematical curve. Early buyers get the lowest prices. When a token hits a certain market cap threshold (called <strong>graduation</strong>), liquidity migrates to PancakeSwap as a proper trading pair.</p><p>This creates two totally different phases: the <em>pre-graduation</em> bonding curve phase (high risk, high reward, small caps) and the <em>post-graduation</em> DEX phase (lower risk, tighter spreads, bigger caps). Your evaluation needs to change depending on which phase the token is in.</p>",
+    q: 'What does "graduation" mean on a BNB launchpad?',
+    opts: [
+      { text: 'The dev abandons the project', ok: false },
+      { text: 'Liquidity migrates to PancakeSwap at a threshold market cap', ok: true },
+      { text: 'The contract gets renounced automatically', ok: false },
+      { text: 'The price resets to zero', ok: false }
+    ],
+    explain: 'Graduation is the moment the bonding-curve pool converts into a real PancakeSwap pair. Before graduation, trading happens on the launchpad itself. After, the token lives on the DEX with open liquidity.'
+  },
+  {
+    id: 'l2',
+    title: 'The First 5 Minutes of a Launch',
+    body: "<p>The window right after a token launches is where most rugs happen — and where the biggest gains live. A few checks you should run <strong>before the first 60 seconds pass</strong>:</p><p><strong>Sniper wallets.</strong> Check the first 10 buys. If three or more wallets bought in the same block as the deploy, those are sniper bots — they'll dump the second price pumps.</p><p><strong>Dev pre-mint.</strong> Look at the deployer's wallet. If they hold more than 5% of supply before public trading opens, that's a red flag. They can dump the entire supply on the first 2x.</p><p><strong>Graduation distance.</strong> A token 10% away from graduation has a very different risk profile than one 90% away. Closer to graduation = more stable. Further away = higher chance of failed launch.</p>",
+    q: 'A fresh token has 3 wallets that bought in the deploy block. What does this suggest?',
+    opts: [
+      { text: 'Strong community interest', ok: false },
+      { text: 'Sniper bots — they will dump on the first pump', ok: true },
+      { text: 'The contract is verified', ok: false },
+      { text: 'The LP is locked', ok: false }
+    ],
+    explain: 'Snipers buy in the deploy block using bots watching the mempool. They have no conviction — their whole strategy is to sell into the first wave of organic buyers. Treat their presence as a warning.'
+  },
+  {
+    id: 'l3',
+    title: 'Launchpad Rug Patterns',
+    body: "<p>Most launchpad rugs follow one of five patterns. Learn to spot them and you skip most of the pain.</p><p><strong>1. Dev pre-mint dump.</strong> Dev holds 20%+ before launch, waits for the first pump, sells the whole bag into your buy orders.</p><p><strong>2. Instant-dump post-graduation.</strong> The LP migrates to PancakeSwap, and the dev immediately pulls the LP or dumps their bag because the launchpad safety rails are gone.</p><p><strong>3. Honeypot migration.</strong> Token trades fine on the launchpad, but the PancakeSwap contract has a transfer block so you can't sell after graduation.</p><p><strong>4. Fake social raid.</strong> Bots inflate the Telegram and X followers to fake momentum. Real chat is dead, only bots posting rocket emojis.</p><p><strong>5. Copycat rug.</strong> A trending token gets copied with the same name and a fresh CA. The copy has no community, just a scam contract hoping for lazy traders.</p>",
+    q: 'A token trades fine before graduation but you suddenly cannot sell after it migrates to PancakeSwap. This is most likely:',
+    opts: [
+      { text: 'Normal slippage', ok: false },
+      { text: 'Network congestion', ok: false },
+      { text: 'A honeypot migration — the post-graduation contract blocks sells', ok: true },
+      { text: 'The graduation has not completed yet', ok: false }
+    ],
+    explain: 'Honeypot migrations are devious because the pre-graduation bonding curve forces equal buy/sell mechanics, so you can sell freely. Post-graduation, the dev-controlled contract takes over and the sell function gets blocked or hit with a 99% tax.'
+  },
+  {
+    id: 'l4',
+    title: 'Reading a Trusty Scan on a Fresh Launch',
+    body: "<p>When you paste a brand-new launchpad CA into Trusty, the scan shows numbers — but those numbers mean different things depending on how old the token is.</p><p><strong>Liquidity.</strong> On a bonded token, liquidity is controlled by the curve — it grows as buys come in. Don't panic if it's low on a 10-minute-old token. For post-graduation tokens, under <strong>$20K liquidity</strong> is dangerous.</p><p><strong>Holder count.</strong> 50 holders on a 5-minute-old token is normal. 50 holders on a 3-day-old token with a $2M market cap is a red flag — it means a few wallets hold everything.</p><p><strong>Sell tax.</strong> Always 0% on bonded tokens (the curve doesn't allow custom tax). The moment of risk is the graduation snapshot — if the dev introduces tax in the migrated contract, assume malicious intent.</p><p><strong>Gut Check.</strong> For fresh launches, the Gut Check matters more than the raw scan. Are you entering because a friend sent the CA? Because a famous account shilled it? Be honest — the mirror is the filter.</p>",
+    q: 'A brand-new bonded Four.meme token shows 0% sell tax and $4K liquidity. What is the correct read?',
+    opts: [
+      { text: 'Both are red flags — dump immediately', ok: false },
+      { text: 'Both are normal — bonded tokens always have 0% tax, liquidity grows with the curve', ok: true },
+      { text: 'The dev is hiding something', ok: false },
+      { text: 'The graduation has already happened', ok: false }
+    ],
+    explain: 'Bonded tokens always have 0% tax (the curve contract does not support custom tax). Liquidity is a function of how much has been bought into the curve — low liquidity on a 10-minute-old token just means early. The risk moves to post-graduation.'
+  },
+  {
+    id: 'l5',
+    title: 'Your First Scouting Run',
+    body: "<p>Theory is worthless until you put it to work. Here is the field exercise:</p><p><strong>1.</strong> Pick 3 BNB launchpad tokens currently live. Pull them from DexScreener's BSC new-pairs feed or Four.meme's trending page.</p><p><strong>2.</strong> Scan each one in Trusty. Read the full output — not just the verdict, the whole breakdown.</p><p><strong>3.</strong> Write down your prediction for each (APE / CAUTION / RUN) and why. One sentence.</p><p><strong>4.</strong> Save them to your Watchlist. Check back in 48 hours and see what happened.</p><p><strong>5.</strong> Track your hit rate. After 20 scouts, you'll have a real sense of whether your degen instincts are alpha or cope.</p><p>This is how professional traders build conviction — not by watching others, but by making calls and grading themselves. The Leaderboard picks up hit-rate in Phase 2.</p>",
+    q: 'What is the point of logging your prediction <em>before</em> checking a token 48h later?',
+    opts: [
+      { text: 'It looks professional', ok: false },
+      { text: 'You need proof to post on X', ok: false },
+      { text: 'It builds honest self-awareness — you learn your real hit-rate instead of remembering the wins', ok: true },
+      { text: 'The blockchain requires it', ok: false }
+    ],
+    explain: 'Humans remember wins and forget losses. The only way to know your real skill is to log predictions before you see the outcome. 20 logged scouts gives you more useful data than 200 unlogged trades.'
+  }
+];
+
+var _currentLesson = null;
+
+function renderT101List() {
+  var host = document.getElementById('t101-list');
+  if (!host) return;
+  var html = '';
+  t101Lessons.forEach(function(l, i) {
+    var done = tcDone(l.id);
+    html += '<div class="t101-lesson ' + (done ? 'done' : '') + '" onclick="openLesson(' + i + ')">' +
+      '<div class="t101-num">' + (done ? '✓' : (i + 1)) + '</div>' +
+      '<div class="t101-name">' + l.title + '</div>' +
+      '<div class="t101-badge ' + (done ? 'done' : 'open') + '">' + (done ? 'DONE' : '+50 PTS') + '</div>' +
+    '</div>';
+  });
+  host.innerHTML = html;
+  var allDone = t101Lessons.every(function(l) { return tcDone(l.id); });
+  var cert = document.getElementById('t101-cert');
+  if (cert) cert.style.display = allDone ? 'block' : 'none';
+}
+
+function openLesson(idx) {
+  var l = t101Lessons[idx];
+  if (!l) return;
+  _currentLesson = idx;
+  document.getElementById('lsn-eyebrow').textContent = 'TRENCHES 101 · LESSON ' + (idx + 1) + ' OF ' + t101Lessons.length;
+  document.getElementById('lsn-title').textContent = l.title;
+  document.getElementById('lsn-body').innerHTML = l.body;
+  document.getElementById('lsn-q').innerHTML = l.q;
+  var optsHost = document.getElementById('lsn-opts');
+  optsHost.innerHTML = '';
+  l.opts.forEach(function(o, i) {
+    var btn = document.createElement('button');
+    btn.className = 'lesson-opt';
+    btn.innerHTML = o.text;
+    btn.onclick = function() { pickOption(i); };
+    optsHost.appendChild(btn);
+  });
+  document.getElementById('lsn-feedback').className = 'lesson-feedback';
+  document.getElementById('lsn-feedback').innerHTML = '';
+  var cbtn = document.getElementById('lsn-complete-btn');
+  cbtn.disabled = true;
+  cbtn.textContent = tcDone(l.id) ? '✓ ALREADY COMPLETED' : '✓ CLAIM +50 POINTS';
+  if (tcDone(l.id)) cbtn.disabled = true;
+  document.getElementById('lessonModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function pickOption(i) {
+  if (_currentLesson === null) return;
+  var l = t101Lessons[_currentLesson];
+  var optBtns = document.querySelectorAll('#lsn-opts .lesson-opt');
+  optBtns.forEach(function(b, j) {
+    b.disabled = true;
+    if (l.opts[j].ok) b.classList.add('correct');
+    if (j === i && !l.opts[j].ok) b.classList.add('wrong');
+  });
+  var ok = l.opts[i].ok;
+  var fb = document.getElementById('lsn-feedback');
+  fb.className = 'lesson-feedback show ' + (ok ? 'ok' : 'no');
+  fb.innerHTML = (ok ? '✅ Correct. ' : '❌ Not quite. ') + l.explain;
+  if (ok && !tcDone(l.id)) {
+    document.getElementById('lsn-complete-btn').disabled = false;
+  }
+}
+
+function completeLesson() {
+  if (_currentLesson === null) return;
+  var l = t101Lessons[_currentLesson];
+  if (tcDone(l.id)) return;
+  tcSet(l.id);
+  tpAdd(50, l.title);
+  document.getElementById('lsn-complete-btn').disabled = true;
+  document.getElementById('lsn-complete-btn').textContent = '✓ CLAIMED';
+  renderT101List();
+  renderMissions();
+  setTimeout(closeLesson, 900);
+}
+
+function closeLesson() {
+  document.getElementById('lessonModal').classList.remove('open');
+  document.body.style.overflow = '';
+  _currentLesson = null;
+}
+
+// ── Missions data (beyond Trenches 101) ──
+var missions = [
+  { id: 'm-first-scan', icon: '🔍', title: 'First Scan', desc: 'Scan your first token in the Scanner tab.', reward: 10, check: function() { return tscGet().scans >= 1; } },
+  { id: 'm-10-scans', icon: '⚡', title: 'Scout Status', desc: 'Scan 10 unique tokens.', reward: 100, check: function() { return tscGet().scans >= 10; } },
+  { id: 'm-streak-3', icon: '🔥', title: 'Three-Day Streak', desc: 'Scan on 3 consecutive days.', reward: 75, check: function() { return tsCurrent() >= 3; } },
+  { id: 'm-watchlist-5', icon: '⭐', title: 'Load the Watchlist', desc: 'Add 5 tokens to your watchlist.', reward: 50, check: function() { try { return (JSON.parse(localStorage.getItem('trusty_watchlist_v1') || '[]') || []).length >= 5; } catch(e) { return false; } } },
+  { id: 'm-read-trenches', icon: '📰', title: 'Read the Trenches Report', desc: 'Check this week\'s report on the Trenches tab.', reward: 25, check: function() { return !!localStorage.getItem('trusty_read_trenches_v1'); } },
+  { id: 'm-trenches-101', icon: '🎓', title: 'Trenches Scholar', desc: 'Finish all 5 Trenches 101 lessons.', reward: 250, check: function() { return t101Lessons.every(function(l) { return tcDone(l.id); }); } }
+];
+
+function renderMissions() {
+  var host = document.getElementById('mission-grid');
+  if (!host) return;
+  var completedIds = new Set();
+  try { completedIds = new Set(JSON.parse(localStorage.getItem('trusty_missions_done_v1') || '[]')); } catch(e) {}
+  var html = '';
+  missions.forEach(function(m) {
+    var done = completedIds.has(m.id);
+    var nowDone = m.check();
+    if (nowDone && !done) {
+      // award retroactively, but silently
+      completedIds.add(m.id);
+      try { localStorage.setItem('trusty_missions_done_v1', JSON.stringify([...completedIds])); } catch(e) {}
+      tpAdd(m.reward, m.title);
+      done = true;
+    }
+    var cls = done ? 'done' : 'open';
+    html += '<div class="mission-card ' + (done ? '' : '') + '">' +
+      '<div class="mission-head">' +
+        '<div class="mission-icon">' + m.icon + '</div>' +
+        '<div class="mission-title-wrap">' +
+          '<div class="mission-title">' + m.title + '</div>' +
+          '<div class="mission-reward">+' + m.reward + ' PTS</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mission-desc">' + m.desc + '</div>' +
+      '<div class="mission-status">' +
+        '<span>' + (done ? 'Complete' : 'In progress') + '</span>' +
+        '<span class="pill ' + cls + '">' + (done ? '✓ DONE' : 'OPEN') + '</span>' +
+      '</div>' +
+    '</div>';
+  });
+  host.innerHTML = html;
+  // update missions stat
+  var missionsStat = document.getElementById('eh-missions');
+  if (missionsStat) missionsStat.textContent = [...completedIds].length + '/' + missions.length;
+}
+
+// ── Leaderboard (seeded mock + "YOU" row inserted by points) ──
+var lbSeed = [
+  { name: 'cz_is_watching.bnb', pts: 4820 },
+  { name: '0xRugKiller', pts: 3110 },
+  { name: 'fourmeme_scout', pts: 2745 },
+  { name: 'trenches_chan', pts: 2210 },
+  { name: 'honeypot_sniper', pts: 1890 },
+  { name: 'pancake_samurai', pts: 1555 },
+  { name: 'bnb_diamond', pts: 1210 },
+  { name: 'liquidity_mage', pts: 985 },
+  { name: 'rug_or_gem_og', pts: 740 },
+  { name: 'trusty_enjoyer', pts: 520 }
+];
+
+function renderLeaderboard() {
+  var host = document.getElementById('lb-rows');
+  if (!host) return;
+  var you = { name: 'You', pts: tpGet(), you: true };
+  var combined = lbSeed.slice().concat(you).sort(function(a,b){ return b.pts - a.pts; });
+  var yourRank = combined.findIndex(function(r) { return r.you; }) + 1;
+  var html = '';
+  combined.slice(0, 10).forEach(function(r, i) {
+    var rankCls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    html += '<div class="lb-row ' + (r.you ? 'you' : '') + '">' +
+      '<div class="lb-rank ' + rankCls + '">' + (i + 1) + '</div>' +
+      '<div class="lb-name">' + r.name + '</div>' +
+      '<div class="lb-points">' + r.pts.toLocaleString() + ' ⭐</div>' +
+    '</div>';
+  });
+  // If user not in top 10, show them at bottom
+  if (yourRank > 10) {
+    html += '<div class="lb-row you" style="margin-top:10px;border-top:1px dashed var(--border);padding-top:10px;">' +
+      '<div class="lb-rank">#' + yourRank + '</div>' +
+      '<div class="lb-name">You</div>' +
+      '<div class="lb-points">' + you.pts.toLocaleString() + ' ⭐</div>' +
+    '</div>';
+  }
+  host.innerHTML = html;
+}
+
+// ── Saved-from stats ──
+function renderSavedStats() {
+  var s = tscGet();
+  var set = function(id, val) { var el = document.getElementById(id); if (el) el.textContent = String(val); };
+  set('sv-scans', s.scans || 0);
+  set('sv-runs', s.runs || 0);
+  set('sv-apes', s.apes || 0);
+  var days = 0;
+  if (s.firstDate) {
+    var d1 = new Date(s.firstDate).getTime();
+    days = Math.max(1, Math.floor((Date.now() - d1) / 86400000) + 1);
+  }
+  set('sv-days', days);
+}
+
+// ── Main Earn home render ──
+function renderEarnHome() {
+  var ptsEl = document.getElementById('eh-points');
+  var strEl = document.getElementById('eh-streak');
+  if (ptsEl) ptsEl.textContent = tpGet().toLocaleString();
+  if (strEl) strEl.textContent = tsCurrent() + '🔥';
+  // progress = lessons + missions done / total
+  var done = tcCount();
+  var totalLessons = t101Lessons.length;
+  var completedMissions = 0;
+  try { completedMissions = (JSON.parse(localStorage.getItem('trusty_missions_done_v1') || '[]') || []).length; } catch(e) {}
+  var pctLessons = done / totalLessons;
+  var pctMissions = completedMissions / missions.length;
+  var pct = Math.round(((pctLessons + pctMissions) / 2) * 100);
+  var pctEl = document.getElementById('eh-pct'); if (pctEl) pctEl.textContent = pct + '%';
+  var fill = document.getElementById('eh-fill'); if (fill) fill.style.width = pct + '%';
+  renderT101List();
+  renderMissions();
+  renderLeaderboard();
+  renderSavedStats();
+}
+
+// Mark trenches as read when user opens the meme tab
+(function wireTrenchesRead(){
+  var memeBtn = document.getElementById('nav-meme');
+  if (memeBtn) {
+    memeBtn.addEventListener('click', function() {
+      try { localStorage.setItem('trusty_read_trenches_v1', '1'); } catch(e) {}
+    });
+  }
+})();
 
 function renderInlineGlossary(query) {
  
