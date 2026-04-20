@@ -4431,6 +4431,41 @@ body::before {
   color: #FCA5A5;
 }
 .lesson-opt:disabled { cursor: default; }
+.lesson-opt.selected {
+  border-color: #60A5FA;
+  background: rgba(96,165,250,0.08);
+  box-shadow: 0 0 0 1px rgba(96,165,250,0.4);
+}
+.lesson-confirm-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #60A5FA, #3B82F6);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lesson-confirm-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.lesson-confirm-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.lesson-cooldown {
+  margin-top: 14px;
+  padding: 18px;
+  border-radius: 12px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #FCA5A5;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+}
+.lesson-cooldown strong { color: #F87171; display: block; font-size: 15px; margin-bottom: 6px; font-family: var(--display); letter-spacing: 1px; }
+.lesson-cooldown .lc-countdown { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: 2px; margin-top: 8px; }
 .lesson-feedback {
   margin-top: 12px;
   padding: 12px;
@@ -5561,7 +5596,7 @@ body::before {
         <!-- LEARN / EARN SWITCHER -->
         <div class="le-switcher">
           <button class="le-switcher-btn active" id="le-btn-learn" onclick="showLEPanel('learn')">📚 Learn</button>
-          <button class="le-switcher-btn" id="le-btn-earn" onclick="showLEPanel('earn')">💰 Earn <span class="le-badge">BETA</span></button>
+          <button class="le-switcher-btn" id="le-btn-earn" onclick="showLEPanel('earn')">💰 Earn <span class="le-badge" style="background:rgba(239,68,68,0.18);color:#FCA5A5;">TEST</span></button>
         </div>
 
         <!-- LEARN PANEL (existing Academy content) -->
@@ -5816,10 +5851,18 @@ body::before {
              ═════════════════════════════ -->
         <div class="le-panel" id="le-earn">
 
+          <!-- TEST disclaimer banner -->
+          <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start;">
+            <div style="font-size:18px;line-height:1;">⚠️</div>
+            <div style="font-size:12px;color:#FCA5A5;line-height:1.55;">
+              <strong style="color:#F87171;letter-spacing:1px;">TEST MODE</strong> — This is a preview of the Earn system. Trusty Points are local only (stored in your browser). No tokens are distributed yet. The real $TRUSTY rewards launch in Phase 2.
+            </div>
+          </div>
+
           <!-- Hero with stats + claim CTA -->
           <div class="earn-hero">
-            <div class="earn-hero-title">💰 EARN $TRUSTY</div>
-            <div class="earn-hero-sub">Stack Trusty Points by scanning tokens, completing missions, and keeping your streak alive. Points convert to $TRUSTY airdrops when Phase 2 drops.</div>
+            <div class="earn-hero-title">💰 EARN $TRUSTY <span style="font-family:var(--mono);font-size:10px;background:rgba(239,68,68,0.18);color:#FCA5A5;padding:3px 8px;border-radius:20px;letter-spacing:2px;vertical-align:middle;margin-left:4px;">TEST</span></div>
+            <div class="earn-hero-sub">Stack Trusty Points by scanning tokens, completing missions, and keeping your streak alive. Points will convert to $TRUSTY airdrops when Phase 2 ships — this page is a preview of that system.</div>
             <div class="earn-hero-stats">
               <div class="earn-stat">
                 <div class="earn-stat-label">POINTS</div>
@@ -6802,8 +6845,10 @@ body::before {
     <div class="lesson-quiz" id="lsn-quiz">
       <div class="lesson-q" id="lsn-q">Question?</div>
       <div class="lesson-opts" id="lsn-opts"></div>
+      <button class="lesson-confirm-btn" id="lsn-confirm-btn" disabled onclick="confirmAnswer()">CONFIRM ANSWER</button>
       <div class="lesson-feedback" id="lsn-feedback"></div>
     </div>
+    <div class="lesson-cooldown" id="lsn-cooldown" style="display:none;"></div>
     <button class="lesson-complete-btn" id="lsn-complete-btn" disabled onclick="completeLesson()">✓ CLAIM +50 POINTS</button>
   </div>
 </div>
@@ -11152,6 +11197,27 @@ var t101Lessons = [
 ];
 
 var _currentLesson = null;
+var _currentPick = null; // selected option index before confirm
+var _cooldownTimer = null;
+
+// ── Lesson cooldown (24h after wrong answer, so users can't farm) ──
+var TL_KEY = 'trusty_lesson_lock_v1';
+var LESSON_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+function lockGet() { try { return JSON.parse(localStorage.getItem(TL_KEY) || '{}'); } catch(e) { return {}; } }
+function lockSet(id) { try { var m = lockGet(); m[id] = Date.now(); localStorage.setItem(TL_KEY, JSON.stringify(m)); } catch(e) {} }
+function lockRemaining(id) {
+  var m = lockGet();
+  if (!m[id]) return 0;
+  var left = LESSON_COOLDOWN_MS - (Date.now() - m[id]);
+  return left > 0 ? left : 0;
+}
+function fmtCountdown(ms) {
+  var s = Math.floor(ms / 1000);
+  var h = Math.floor(s / 3600);
+  var m = Math.floor((s % 3600) / 60);
+  var sec = s % 60;
+  return (h > 0 ? h + 'h ' : '') + (m < 10 && h > 0 ? '0' + m : m) + 'm ' + (sec < 10 ? '0' + sec : sec) + 's';
+}
 
 function renderT101List() {
   var host = document.getElementById('t101-list');
@@ -11175,44 +11241,128 @@ function openLesson(idx) {
   var l = t101Lessons[idx];
   if (!l) return;
   _currentLesson = idx;
+  _currentPick = null;
+  if (_cooldownTimer) { clearInterval(_cooldownTimer); _cooldownTimer = null; }
   document.getElementById('lsn-eyebrow').textContent = 'TRENCHES 101 · LESSON ' + (idx + 1) + ' OF ' + t101Lessons.length;
   document.getElementById('lsn-title').textContent = l.title;
   document.getElementById('lsn-body').innerHTML = l.body;
   document.getElementById('lsn-q').innerHTML = l.q;
+
+  // Reset state
   var optsHost = document.getElementById('lsn-opts');
   optsHost.innerHTML = '';
+  var fb = document.getElementById('lsn-feedback');
+  fb.className = 'lesson-feedback';
+  fb.innerHTML = '';
+  var confirmBtn = document.getElementById('lsn-confirm-btn');
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = 'CONFIRM ANSWER';
+  var cbtn = document.getElementById('lsn-complete-btn');
+  cbtn.disabled = true;
+  cbtn.textContent = tcDone(l.id) ? '✓ ALREADY COMPLETED' : '✓ CLAIM +50 POINTS';
+  var quizBox = document.getElementById('lsn-quiz');
+  var cdBox = document.getElementById('lsn-cooldown');
+  cdBox.style.display = 'none';
+  cdBox.innerHTML = '';
+  quizBox.style.display = 'block';
+  confirmBtn.style.display = '';
+
+  // If already done — show done state, hide quiz inputs
+  if (tcDone(l.id)) {
+    confirmBtn.style.display = 'none';
+    // render options as disabled but show correct answer highlighted
+    l.opts.forEach(function(o, i) {
+      var btn = document.createElement('button');
+      btn.className = 'lesson-opt' + (o.ok ? ' correct' : '');
+      btn.innerHTML = o.text;
+      btn.disabled = true;
+      optsHost.appendChild(btn);
+    });
+    fb.className = 'lesson-feedback show ok';
+    fb.innerHTML = '✅ ' + l.explain;
+    document.getElementById('lessonModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    return;
+  }
+
+  // Cooldown check — locked for 24h after a wrong answer
+  var remaining = lockRemaining(l.id);
+  if (remaining > 0) {
+    confirmBtn.style.display = 'none';
+    optsHost.innerHTML = '';
+    cdBox.style.display = 'block';
+    cdBox.innerHTML = '<strong>⏳ LOCKED — TRY AGAIN LATER</strong>You answered this lesson wrong recently. To keep the Trusty Points system honest, each wrong attempt locks the lesson for 24 hours.<div class="lc-countdown" id="lc-cd">' + fmtCountdown(remaining) + '</div>';
+    _cooldownTimer = setInterval(function() {
+      var left = lockRemaining(l.id);
+      if (left <= 0) {
+        clearInterval(_cooldownTimer);
+        _cooldownTimer = null;
+        // reopen to refresh state
+        if (document.getElementById('lessonModal').classList.contains('open')) openLesson(idx);
+        return;
+      }
+      var cd = document.getElementById('lc-cd');
+      if (cd) cd.textContent = fmtCountdown(left);
+    }, 1000);
+    document.getElementById('lessonModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    return;
+  }
+
+  // Fresh attempt — render clickable options (select-only, no reveal yet)
   l.opts.forEach(function(o, i) {
     var btn = document.createElement('button');
     btn.className = 'lesson-opt';
     btn.innerHTML = o.text;
-    btn.onclick = function() { pickOption(i); };
+    btn.onclick = function() { selectOption(i); };
     optsHost.appendChild(btn);
   });
-  document.getElementById('lsn-feedback').className = 'lesson-feedback';
-  document.getElementById('lsn-feedback').innerHTML = '';
-  var cbtn = document.getElementById('lsn-complete-btn');
-  cbtn.disabled = true;
-  cbtn.textContent = tcDone(l.id) ? '✓ ALREADY COMPLETED' : '✓ CLAIM +50 POINTS';
-  if (tcDone(l.id)) cbtn.disabled = true;
+
   document.getElementById('lessonModal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
-function pickOption(i) {
+function selectOption(i) {
   if (_currentLesson === null) return;
+  _currentPick = i;
+  var optBtns = document.querySelectorAll('#lsn-opts .lesson-opt');
+  optBtns.forEach(function(b, j) {
+    b.classList.toggle('selected', j === i);
+  });
+  document.getElementById('lsn-confirm-btn').disabled = false;
+}
+
+function confirmAnswer() {
+  if (_currentLesson === null || _currentPick === null) return;
   var l = t101Lessons[_currentLesson];
   var optBtns = document.querySelectorAll('#lsn-opts .lesson-opt');
   optBtns.forEach(function(b, j) {
     b.disabled = true;
+    b.classList.remove('selected');
     if (l.opts[j].ok) b.classList.add('correct');
-    if (j === i && !l.opts[j].ok) b.classList.add('wrong');
+    if (j === _currentPick && !l.opts[j].ok) b.classList.add('wrong');
   });
-  var ok = l.opts[i].ok;
+  var ok = l.opts[_currentPick].ok;
   var fb = document.getElementById('lsn-feedback');
   fb.className = 'lesson-feedback show ' + (ok ? 'ok' : 'no');
   fb.innerHTML = (ok ? '✅ Correct. ' : '❌ Not quite. ') + l.explain;
+  document.getElementById('lsn-confirm-btn').style.display = 'none';
+
   if (ok && !tcDone(l.id)) {
     document.getElementById('lsn-complete-btn').disabled = false;
+  } else if (!ok) {
+    // Wrong answer — set 24h lock + show cooldown banner below feedback
+    lockSet(l.id);
+    var cdBox = document.getElementById('lsn-cooldown');
+    cdBox.style.display = 'block';
+    var left = LESSON_COOLDOWN_MS;
+    cdBox.innerHTML = '<strong>⏳ LOCKED — COME BACK IN 24H</strong>No point-farming here fren. Revisit the lesson above, then retry tomorrow.<div class="lc-countdown" id="lc-cd">' + fmtCountdown(left) + '</div>';
+    _cooldownTimer = setInterval(function() {
+      var rem = lockRemaining(l.id);
+      if (rem <= 0) { clearInterval(_cooldownTimer); _cooldownTimer = null; return; }
+      var cd = document.getElementById('lc-cd');
+      if (cd) cd.textContent = fmtCountdown(rem);
+    }, 1000);
   }
 }
 
@@ -11232,7 +11382,9 @@ function completeLesson() {
 function closeLesson() {
   document.getElementById('lessonModal').classList.remove('open');
   document.body.style.overflow = '';
+  if (_cooldownTimer) { clearInterval(_cooldownTimer); _cooldownTimer = null; }
   _currentLesson = null;
+  _currentPick = null;
 }
 
 // ── Missions data (beyond Trenches 101) ──
