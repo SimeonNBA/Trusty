@@ -123,7 +123,7 @@ Community revival of the Trust Wallet shield character from 2019. Launched in 20
 
 Contract on BNB Smart Chain: `0x65aea108c21439693468FCD542D81C29E8df4444`
 
-- X: [@Trusty_BNB](https://x.com/Trusty_BNB) · [@Trusty_BSC](https://x.com/Trusty_BSC)
+- X: [@Trusty_BSC](https://x.com/Trusty_BSC)
 
 ## License
 
