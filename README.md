@@ -58,7 +58,9 @@ Four.meme's mission is democratising meme coin creation. Trusty's mission is dem
 
 Someone mints a token on Four.meme in 30 seconds. Someone else should be able to evaluate that same token in 10 seconds. Right now, that second half doesn't exist for the average person — Trusty closes that gap.
 
-And there's one more thing: **$TRUSTY is the OG Trust Wallet mascot from 2019** — the little blue shield from Telegram stickers and blog posts. Relaunched in 2025 as a community takeover, no VCs, no presale. The face of the platform is already trusted by the exact audience Four.meme wants to keep.
+And there's one more thing: **$TRUSTY is a community revival of the little blue shield** that appeared across Trust Wallet's early marketing in 2019 — Telegram stickers, blog posts, product announcements. In 2025 the community launched $TRUSTY on BNB Chain as a CTO: no VCs, no presale, no official partnership with Trust Wallet. The character is already familiar to the exact audience Four.meme wants to keep.
+
+*$TRUSTY is a community project. Not affiliated with or endorsed by Trust Wallet.*
 
 ---
 
@@ -117,7 +119,7 @@ cd Trusty
 
 ## $TRUSTY
 
-OG Trust Wallet mascot since 2019. Community takeover in 2025.
+Community revival of the Trust Wallet shield character from 2019. Launched in 2025 as a community takeover — not affiliated with or endorsed by Trust Wallet.
 
 Contract on BNB Smart Chain: `0x65aea108c21439693468FCD542D81C29E8df4444`
 
