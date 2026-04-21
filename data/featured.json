@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-04-18",
+  "updatedAt": "2026-04-19",
   "tokens": [
     {
       "name": "$TRUSTY",
@@ -7,6 +7,13 @@
       "ca": "0x65aea108c21439693468FCD542D81C29E8df4444",
       "reason": "Trust Wallet OG mascot since 2019",
       "emoji": "🛡️"
+    },
+    {
+      "name": "$SKI",
+      "symbol": "SKI",
+      "ca": "0x768BE13e1680b5ebE0024C42c896E3dB59ec0149",
+      "reason": "The real dog on Base",
+      "emoji": "🐕"
     },
     {
       "name": "$TEARY",

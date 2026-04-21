@@ -4514,6 +4514,73 @@ body::before {
 }
 .lesson-complete-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Image Lightbox (zoomable images across the app) ── */
+.img-zoomable { cursor: zoom-in; transition: filter 0.15s; }
+.img-zoomable:hover { filter: brightness(1.08); }
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.94);
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  cursor: zoom-out;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.lightbox.open { display: flex; }
+.lightbox-img {
+  max-width: 96vw;
+  max-height: 92vh;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.7);
+  /* let the browser do native pinch-zoom on mobile */
+  touch-action: pinch-zoom;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.lightbox-close {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  z-index: 3001;
+}
+.lightbox-close:hover { background: rgba(255,255,255,0.18); }
+.lightbox-hint {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.55);
+  text-align: center;
+  pointer-events: none;
+  z-index: 3001;
+}
+@media (max-width: 600px) {
+  .lightbox { padding: 8px; }
+  .lightbox-close { top: 12px; right: 12px; width: 38px; height: 38px; font-size: 16px; }
+}
+
 /* ── "You saved yourself from" stats panel ── */
 .saved-panel {
   background: var(--card);
@@ -6871,6 +6938,16 @@ body::before {
     <div class="lesson-cooldown" id="lsn-cooldown" style="display:none;"></div>
     <button class="lesson-complete-btn" id="lsn-complete-btn" disabled onclick="completeLesson()">✓ CLAIM +50 POINTS</button>
   </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--  IMAGE LIGHTBOX (zoomable images)                     -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="lightbox" id="imgLightbox" onclick="closeLightbox(event)">
+  <button class="lightbox-close" id="lightboxClose" onclick="closeLightbox(event, true)">✕</button>
+  <img class="lightbox-img" id="lightboxImg" alt="" onclick="event.stopPropagation()" />
+  <div class="lightbox-hint">TAP OUTSIDE OR PRESS ESC TO CLOSE · PINCH TO ZOOM ON MOBILE</div>
 </div>
 
 
@@ -11531,6 +11608,98 @@ function renderEarnHome() {
   renderLeaderboard();
   renderSavedStats();
 }
+
+// ══════════════════════════════════════════════════════
+//  IMAGE LIGHTBOX — click any significant image to zoom
+// ══════════════════════════════════════════════════════
+function openLightbox(src, alt) {
+  var lb = document.getElementById('imgLightbox');
+  var img = document.getElementById('lightboxImg');
+  if (!lb || !img) return;
+  img.src = src;
+  img.alt = alt || '';
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox(ev, fromClose) {
+  if (ev && ev.target && !fromClose) {
+    // Only close if click was on backdrop, not on image itself
+    if (ev.target.id !== 'imgLightbox') return;
+  }
+  var lb = document.getElementById('imgLightbox');
+  if (!lb) return;
+  lb.classList.remove('open');
+  document.body.style.overflow = '';
+}
+// ESC to close
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var lb = document.getElementById('imgLightbox');
+    if (lb && lb.classList.contains('open')) closeLightbox(null, true);
+  }
+});
+// Delegated click handler — any eligible img opens lightbox
+(function wireZoomableImages() {
+  // Zones where images should be zoomable
+  var ZOOM_SELECTORS = [
+    '#meme-content img',                     // Trenches Report articles
+    '#tab-token img',                        // $TRUSTY token page
+    '#history-page img',                     // Trust Wallet / BNB / Crypto history
+    '#asec-history img',                     // Academy inline history
+    '.lore-card img',                        // lore cards across site
+    '.article-cover',                        // article covers
+    'img[data-zoom]'                         // opt-in via attribute
+  ];
+  var SKIP = [
+    'main-nav-btn', 'logo', 'mascot', 'trusty-sidebar',
+    'trending-icon', 'sh-item-icon', 'portfolio-token-icon',
+    'emoji', 'favicon', 'featured-icon', 'lightbox-img'
+  ];
+  function isEligible(img) {
+    if (!img || img.tagName !== 'IMG') return false;
+    // Must match one of the zoom zones
+    var matches = ZOOM_SELECTORS.some(function(sel) {
+      try { return img.matches(sel) || img.closest(sel.split(' ')[0]); } catch(e) { return false; }
+    });
+    if (!matches) return false;
+    // Skip based on class names of img or its ancestors
+    var el = img;
+    while (el && el !== document.body) {
+      var cls = (el.className && el.className.baseVal) || el.className || '';
+      if (typeof cls === 'string') {
+        for (var i = 0; i < SKIP.length; i++) {
+          if (cls.indexOf(SKIP[i]) !== -1) return false;
+        }
+      }
+      el = el.parentElement;
+    }
+    // Skip explicitly tiny images only if they have defined dimensions
+    if (img.naturalWidth && img.naturalWidth < 80) return false;
+    return true;
+  }
+  function decorate() {
+    document.querySelectorAll('img').forEach(function(img) {
+      if (img.dataset.zoomChecked === '1') return;
+      img.dataset.zoomChecked = '1';
+      if (isEligible(img)) {
+        img.classList.add('img-zoomable');
+        img.addEventListener('click', function(ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          openLightbox(img.currentSrc || img.src, img.alt);
+        });
+      }
+    });
+  }
+  // Initial pass + observe DOM for dynamically-added images (articles, etc.)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', decorate);
+  } else {
+    decorate();
+  }
+  var observer = new MutationObserver(function() { decorate(); });
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
 
 // Mark trenches as read when user opens the meme tab
 (function wireTrenchesRead(){
