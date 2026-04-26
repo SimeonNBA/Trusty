@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 600" width="1500" height="600">
+  <defs>
+    <!-- Subtle radial vignette for depth -->
+    <radialGradient id="bgVignette" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="60%" stop-color="#050505"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+
+    <!-- Grid pattern, very faint gold -->
+    <pattern id="grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(243,186,47,0.04)" stroke-width="1"/>
+    </pattern>
+
+    <!-- Gold gradient for BNB title -->
+    <linearGradient id="titleGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFE894"/>
+      <stop offset="40%" stop-color="#F3BA2F"/>
+      <stop offset="100%" stop-color="#B8860B"/>
+    </linearGradient>
+
+    <!-- Glow filter for BNB -->
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feFlood flood-color="#F3BA2F" flood-opacity="0.55"/>
+      <feComposite in2="blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Subtle glow for the horizontal lines -->
+    <filter id="lineGlow" x="-10%" y="-200%" width="120%" height="500%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <!-- Background layers -->
+  <rect width="1500" height="600" fill="url(#bgVignette)"/>
+  <rect width="1500" height="600" fill="url(#grid)"/>
+
+  <!-- Soft gold halo behind BNB -->
+  <ellipse cx="750" cy="240" rx="380" ry="120" fill="rgba(243,186,47,0.08)" filter="url(#lineGlow)"/>
+
+  <!-- Top horizontal line -->
+  <rect x="180" y="155" width="1140" height="2" fill="rgba(243,186,47,0.5)" filter="url(#lineGlow)"/>
+  <rect x="180" y="155" width="1140" height="1" fill="#F3BA2F"/>
+
+  <!-- BNB headline -->
+  <text x="750" y="335"
+        font-family="'Cinzel', 'Trajan Pro', 'Times New Roman', Georgia, serif"
+        font-size="220"
+        font-weight="700"
+        fill="url(#titleGold)"
+        text-anchor="middle"
+        letter-spacing="14"
+        filter="url(#glow)">BNB</text>
+
+  <!-- Bottom horizontal line -->
+  <rect x="180" y="378" width="1140" height="2" fill="rgba(243,186,47,0.5)" filter="url(#lineGlow)"/>
+  <rect x="180" y="378" width="1140" height="1" fill="#F3BA2F"/>
+
+  <!-- WEEKLY TRENCHES (in white serif) -->
+  <text x="750" y="450"
+        font-family="'Cinzel', 'Trajan Pro', 'Times New Roman', Georgia, serif"
+        font-size="46"
+        font-weight="500"
+        fill="#F0F0F0"
+        text-anchor="middle"
+        letter-spacing="10">WEEKLY TRENCHES</text>
+
+  <!-- REPORT -->
+  <text x="750" y="500"
+        font-family="'Cinzel', 'Trajan Pro', 'Times New Roman', Georgia, serif"
+        font-size="46"
+        font-weight="500"
+        fill="#F0F0F0"
+        text-anchor="middle"
+        letter-spacing="10">REPORT</text>
+
+  <!-- Date range -->
+  <text x="750" y="555"
+        font-family="ui-monospace, 'SF Mono', Consolas, Menlo, monospace"
+        font-size="16"
+        fill="#9a7a30"
+        text-anchor="middle"
+        letter-spacing="6">20.04.2026  ——  26.04.2026</text>
+
+  <!-- Corner brackets, gold -->
+  <!-- top-left -->
+  <path d="M 30 70 L 30 30 L 70 30" stroke="#F3BA2F" stroke-width="2" fill="none"/>
+  <!-- top-right -->
+  <path d="M 1430 30 L 1470 30 L 1470 70" stroke="#F3BA2F" stroke-width="2" fill="none"/>
+  <!-- bottom-left -->
+  <path d="M 30 530 L 30 570 L 70 570" stroke="#F3BA2F" stroke-width="2" fill="none"/>
+  <!-- bottom-right -->
+  <path d="M 1430 570 L 1470 570 L 1470 530" stroke="#F3BA2F" stroke-width="2" fill="none"/>
+</svg>
