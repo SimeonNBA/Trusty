@@ -4581,6 +4581,55 @@ body::before {
   .lightbox-close { top: 12px; right: 12px; width: 38px; height: 38px; font-size: 16px; }
 }
 
+/* ── Trenches Report article cards (collapsible) ── */
+.article-card { transition: all 0.25s ease; }
+.article-card.collapsed { padding-bottom: 14px; }
+.article-card .art-cover {
+  width: 100%;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  object-fit: cover;
+  transition: max-height 0.3s ease;
+  cursor: zoom-in;
+}
+.article-card.expanded .art-cover { max-height: 280px; }
+.article-card.collapsed .art-cover { max-height: 160px; }
+.article-card .art-body { transition: opacity 0.3s ease; }
+.article-card.collapsed .art-body { display: none; }
+.article-card.collapsed .art-takeaway-full { display: none; }
+.article-card.collapsed .art-takeaway-preview {
+  background: rgba(243,186,47,0.06);
+  border-left: 3px solid var(--yellow);
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #FDE68A;
+  line-height: 1.6;
+  font-style: italic;
+}
+.article-card.expanded .art-takeaway-preview { display: none; }
+.art-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 9px 16px;
+  border: 1.5px solid var(--border);
+  background: var(--bg3);
+  color: var(--blue2);
+  border-radius: 20px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.art-toggle:hover { border-color: var(--blue); color: var(--text); transform: translateX(2px); }
+.article-card.expanded .art-toggle { color: var(--muted); }
+.article-card.expanded .art-toggle:hover { transform: translateX(-2px); }
+
 /* ── "You saved yourself from" stats panel ── */
 .saved-panel {
   background: var(--card);
@@ -10791,22 +10840,49 @@ async function renderMemeArticles() {
       return;
     }
     if (empty) empty.style.display = 'none';
-    content.innerHTML = articles.map(function(a) {
+    content.innerHTML = articles.map(function(a, idx) {
+      // Newest article (idx 0) starts expanded; everything else starts collapsed.
+      var isLatest = idx === 0;
+      var stateClass = isLatest ? 'expanded' : 'collapsed';
+      var safeId = (a.id || ('art-' + idx)).replace(/[^a-zA-Z0-9_-]/g, '-');
       var tags = (a.tags || []).map(function(t) { return '<span style="font-size:10px;font-family:var(--mono);background:var(--bg3);color:var(--blue2);padding:2px 8px;border-radius:10px;">' + t + '</span>'; }).join(' ');
-      var cover = a.cover ? '<img src="' + a.cover + '" style="width:100%;max-height:280px;object-fit:cover;border-radius:10px;margin-bottom:14px;" onerror="this.style.display=\'none\'" />' : '';
-      var takeaway = a.takeaway ? '<div style="background:rgba(243,186,47,0.08);border-left:3px solid var(--yellow);padding:12px 14px;border-radius:8px;margin-top:14px;font-size:13px;color:#FDE68A;line-height:1.6;">🛡️ <strong>Trusty takeaway:</strong> ' + a.takeaway + '</div>' : '';
-      return '<article class="lore-card" style="margin-bottom:14px;">' +
+      var cover = a.cover ? '<img class="art-cover" src="' + a.cover + '" alt="' + (a.title || '') + '" onerror="this.style.display=\'none\'" />' : '';
+      var takeawayBox = a.takeaway ? '<div class="art-takeaway-full" style="background:rgba(243,186,47,0.08);border-left:3px solid var(--yellow);padding:12px 14px;border-radius:8px;margin-top:14px;font-size:13px;color:#FDE68A;line-height:1.6;">🛡️ <strong>Trusty takeaway:</strong> ' + a.takeaway + '</div>' : '';
+      var takeawayPreview = a.takeaway ? '<div class="art-takeaway-preview">🛡️ ' + a.takeaway + '</div>' : '';
+      var toggleLabel = isLatest ? 'Collapse ↑' : 'Read full →';
+      return '<article class="lore-card article-card ' + stateClass + '" id="article-' + safeId + '" style="margin-bottom:14px;">' +
         '<div style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:2px;margin-bottom:6px;">' + (a.date || '') + '</div>' +
         '<h3 style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:10px;line-height:1.3;">' + a.title + '</h3>' +
         (tags ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">' + tags + '</div>' : '') +
         cover +
-        '<div style="font-size:14px;color:var(--text);line-height:1.7;">' + (a.body || '') + '</div>' +
-        takeaway +
+        takeawayPreview +
+        '<div class="art-body" style="font-size:14px;color:var(--text);line-height:1.7;">' + (a.body || '') + '</div>' +
+        takeawayBox +
+        '<button class="art-toggle" onclick="toggleArticle(\'' + safeId + '\', this)">' + toggleLabel + '</button>' +
       '</article>';
     }).join('');
   } catch(e) {
     console.error('Meme articles load error:', e);
     content.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);">Could not load articles. Try again in a bit fren.</div>';
+  }
+}
+
+function toggleArticle(safeId, btn) {
+  var card = document.getElementById('article-' + safeId);
+  if (!card) return;
+  var wasCollapsed = card.classList.contains('collapsed');
+  if (wasCollapsed) {
+    card.classList.remove('collapsed');
+    card.classList.add('expanded');
+    if (btn) btn.textContent = 'Collapse ↑';
+  } else {
+    card.classList.remove('expanded');
+    card.classList.add('collapsed');
+    if (btn) btn.textContent = 'Read full →';
+    // smooth scroll the card top into view so the user doesn't get lost
+    setTimeout(function() {
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
   }
 }
 
