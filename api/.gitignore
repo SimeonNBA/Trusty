@@ -1,0 +1,10 @@
+# Dependencies
+node_modules/
+
+# Wrangler local state (build cache, dev session info)
+.wrangler/
+
+# Local secrets (use `wrangler secret put` for prod)
+.dev.vars
+.env
+.env.local

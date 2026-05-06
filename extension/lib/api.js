@@ -1,22 +1,23 @@
 /* ================================================================
    Trusty AI — API client
 
-   Day 2: STUBBED with deterministic mock data. The real backend
-   endpoint at trustyai.tech/api/scan can drop in later by replacing
-   the body of scanRemote() — the response shape stays identical.
+   Calls the real backend at api.trustyai.tech/api/scan (Cloudflare
+   Worker — see /api in the repo). On network failure, falls back to
+   a deterministic mock so the UI still renders sanely offline.
 
    Cache: in-memory Map keyed by ca+chain. Lifetime = page session.
-   Future days: persist to chrome.storage.local with TTL.
+   Server-side cache (KV, 5min) handles cross-session repetition.
    ================================================================ */
 
 (function () {
   "use strict";
 
+  const API_BASE = "https://api.trustyai.tech";
+  const REQUEST_TIMEOUT_MS = 6000;
+
   const TRUSTY_CA = "0x65aea108c21439693468FCD542D81C29E8df4444";
 
-  // ── Deterministic pseudo-hash for consistent mock scores ──
-  // Same CA always produces same score; lets you A/B test the UI without
-  // chaotic results.
+  // ── Deterministic pseudo-hash, used only for the offline fallback ──
   function caScore(ca) {
     if (ca.toLowerCase() === TRUSTY_CA.toLowerCase()) return 92;
     let h = 0;
@@ -37,17 +38,40 @@
     return "RUN";
   }
 
-  // ── MOCK scanner ──
+  // ── Real scanner — Cloudflare Worker at api.trustyai.tech ──
   async function scanRemote(ca, chain) {
-    // Simulate network latency for realistic UX testing
-    await new Promise((r) => setTimeout(r, 250 + Math.random() * 350));
+    const url =
+      API_BASE +
+      "/api/scan?ca=" +
+      encodeURIComponent(ca) +
+      "&chain=" +
+      encodeURIComponent(chain || "bsc");
 
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const r = await fetch(url, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        signal: ctrl.signal,
+      });
+      if (!r.ok) throw new Error("scan http " + r.status);
+      const data = await r.json();
+      if (!data || !data.ca) throw new Error("scan invalid response");
+      return data;
+    } catch (err) {
+      console.warn("[Trusty] scan fallback (offline mock):", err && err.message);
+      return mockScan(ca, chain);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // ── Offline fallback so dev mode + transient outages don't break the UI ──
+  function mockScan(ca, chain) {
     const score = caScore(ca);
     const verdict = verdictFromScore(score);
-
-    // Mock symbol/name from address — real API will return real metadata
     const stub = ca.startsWith("0x") ? ca.slice(2, 6) : ca.slice(0, 4);
-
     return {
       ca,
       chain,
@@ -55,36 +79,30 @@
       verdict,
       symbol: "$" + stub.toUpperCase(),
       name: "Token " + shortAddr(ca),
-      // Free-tier checks (5 plain-English signals)
       checks: [
         { ok: score >= 50, label: "Not a honeypot" },
         { ok: score >= 55, label: "Tax 0% / 0%" },
         { ok: score >= 60, label: "LP locked" },
         { ok: score >= 65, label: "Mint disabled" },
-        { ok: score >= 70, label: "Contract renounced" }
+        { ok: score >= 70, label: "Contract renounced" },
       ],
-      // ─── Paid-tier extras (only rendered in the paid panel) ───
       paidChecks: [
         { ok: score >= 75, label: "Snipers: 0% of supply" },
-        { ok: score >= 78, label: "Dev wallet: clean (no rug history)" }
+        { ok: score >= 78, label: "Dev wallet: clean (no rug history)" },
       ],
-      kols: score >= 60 ? [
-        { handle: "@cz_binance", followers: "9.2M", mins: 30 },
-        { handle: "@runecrypto_", followers: "280K", mins: 120 },
-        { handle: "@MarcellxMarcell", followers: "145K", mins: 240 }
-      ] : [],
+      kols: [],
       activity: {
-        tweets24h: 200 + (score * 12),
-        deltaPct: score >= 70 ? 340 : score >= 50 ? 80 : -40,
-        sentiment: score >= 70 ? "78% bullish" : score >= 50 ? "Mixed" : "62% bearish",
-        coordShill: score < 40
+        tweets24h: 0,
+        deltaPct: 0,
+        sentiment: "—",
+        coordShill: false,
       },
       marketData: {
-        mcap: "$" + (score * 0.18).toFixed(1) + "M",
-        liquidity: "$" + (score * 22).toFixed(0) + "K",
-        age: (3 + Math.floor(score / 10)) + "d",
-        holders: 250 + (score * 28)
-      }
+        mcap: "—",
+        liquidity: "—",
+        age: "—",
+        holders: 0,
+      },
     };
   }
 

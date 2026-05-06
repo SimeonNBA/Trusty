@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Trusty AI",
   "short_name": "Trusty AI",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AI-powered safety verdict for crypto contract addresses on X, Reddit, and DexScreener. Don't ape blind.",
 
   "icons": {
@@ -89,6 +89,7 @@
 
   "host_permissions": [
     "https://trustyai.tech/*",
+    "https://api.trustyai.tech/*",
     "https://bsc-dataseed.binance.org/*",
     "https://bsc-dataseed1.defibit.io/*",
     "https://bsc-dataseed1.ninicoin.io/*",
