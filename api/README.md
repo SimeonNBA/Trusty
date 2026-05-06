@@ -71,7 +71,7 @@ on the client.
   "symbol": "$TRUSTY",
   "name": "Trusty AI",
   "checks":     [{ "ok": bool, "label": "Not a honeypot" }, ...],   // 5
-  "paidChecks": [{ "ok": bool, "label": "Snipers: ..." }, ...],     // 2
+  "paidChecks": [{ "ok": bool, "label": "Top 5 wallets ..." }, ...], // 2
   "kols":       [],   // populated by TweetScout integration (task #2)
   "activity":   { "tweets24h": 0, "deltaPct": 0, "sentiment": "—", "coordShill": false },
   "marketData": { "mcap": "$1.2M", "liquidity": "$340K", "age": "12d", "holders": 1842 }
@@ -87,7 +87,7 @@ on the client.
 | LP locked (≥95%)    |     15 | GoPlus `lp_holders`|
 | Mint disabled       |     10 | GoPlus             |
 | Contract renounced  |     10 | GoPlus             |
-| Snipers <10%        |     15 | GoPlus `holders`   |
+| Top 5 wallets <10%  |     15 | GoPlus `holders`   |
 | Dev wallet <5%      |     10 | GoPlus `creator_*` |
 
 Verdict thresholds: `≥70 APE`, `≥40 CAUTION`, `<40 RUN`.

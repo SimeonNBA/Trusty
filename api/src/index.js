@@ -210,13 +210,13 @@ function isRenounced(g) {
 function buildPaidChecks(g) {
   if (!g) {
     return [
-      { ok: false, label: "Snipers: data unavailable" },
+      { ok: false, label: "Top wallets: data unavailable" },
       { ok: false, label: "Dev wallet: data unavailable" },
     ];
   }
   // Top non-contract, non-LP, non-burn holders
   const holders = g.holders || [];
-  let sniperShare = 0;
+  let topShare = 0;
   let counted = 0;
   for (const h of holders) {
     if (counted >= 5) break;
@@ -225,18 +225,18 @@ function buildPaidChecks(g) {
     if (addr === ZERO || addr === DEAD) continue;
     if (/burn|liquidity|lp|locker/i.test(tag)) continue;
     if (h.is_contract === 1 || h.is_contract === "1") continue;
-    sniperShare += parseFloat(h.percent || "0");
+    topShare += parseFloat(h.percent || "0");
     counted++;
   }
   const creatorPct = parseFloat(g.creator_percent || "0");
 
   return [
     {
-      ok: sniperShare < 0.10,
+      ok: topShare < 0.10,
       label:
-        sniperShare < 0.10
-          ? "Snipers: <10% of supply"
-          : `Snipers: top 5 hold ${(sniperShare * 100).toFixed(0)}%`,
+        topShare < 0.10
+          ? "Top 5 wallets hold <10%"
+          : `Top 5 wallets hold ${(topShare * 100).toFixed(0)}%`,
     },
     {
       ok: creatorPct < 0.05,
@@ -257,7 +257,7 @@ function computeScore(g, checks, paidChecks) {
     "LP locked": 15,
     "Mint disabled": 10,
     "Contract renounced": 10,
-    snipers: 15,
+    topWallets: 15,
     dev: 10,
   };
   let s = 0;
@@ -268,7 +268,7 @@ function computeScore(g, checks, paidChecks) {
   }
   for (const c of paidChecks) {
     if (!c.ok) continue;
-    if (/^Snipers/i.test(c.label)) s += w.snipers;
+    if (/^Top \d+ wallets/i.test(c.label)) s += w.topWallets;
     else if (/^Dev wallet/i.test(c.label)) s += w.dev;
   }
   return Math.max(0, Math.min(100, s));

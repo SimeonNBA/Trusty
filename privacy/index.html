@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Privacy Policy — Trusty AI</title>
+<meta name="description" content="Privacy policy for the Trusty AI Chrome extension. What we do and don't collect, in plain English.">
+<link rel="canonical" href="https://trustyai.tech/privacy/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #05080f;
+    --bg2: #0a1120;
+    --card: #111d33;
+    --card2: #162440;
+    --border: rgba(80,140,255,0.18);
+    --border2: rgba(80,140,255,0.35);
+    --blue: #3B82F6;
+    --blue2: #60A5FA;
+    --green: #22C55E;
+    --yellow: #F3BA2F;
+    --red: #EF4444;
+    --text: #E2EEFF;
+    --muted: #6B85B0;
+    --font: 'Space Grotesk', sans-serif;
+    --display: 'Bangers', cursive;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.65;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
+  }
+  .nav-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--blue2);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.06);
+    transition: all 0.15s ease;
+  }
+  .nav-back:hover {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: var(--border2);
+    color: #93C5FD;
+  }
+  .nav-brand {
+    font-family: var(--display);
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    background: linear-gradient(135deg, #60A5FA, #3B82F6, #818CF8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero {
+    margin-bottom: 32px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(42px, 8vw, 64px);
+    letter-spacing: 2.5px;
+    line-height: 1;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #60A5FA, #3B82F6, #A855F7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .updated {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg2);
+  }
+  .updated::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+  }
+
+  .lede {
+    font-size: 16px;
+    color: var(--text);
+    margin: 24px 0 8px;
+  }
+
+  h2 {
+    font-family: var(--display);
+    font-size: 24px;
+    letter-spacing: 1.5px;
+    color: var(--yellow);
+    margin: 36px 0 12px;
+    padding-top: 6px;
+  }
+
+  h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--blue2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 18px 0 8px;
+  }
+
+  p { margin-bottom: 14px; color: var(--text); font-size: 15px; }
+  p.muted { color: var(--muted); font-size: 14px; }
+
+  ul { margin: 8px 0 14px 22px; }
+  li { margin-bottom: 8px; font-size: 15px; }
+  li code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: rgba(243, 186, 47, 0.08);
+    color: var(--yellow);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(243, 186, 47, 0.18);
+  }
+
+  a { color: var(--blue2); }
+  a:hover { color: #93C5FD; }
+
+  strong { color: #fff; font-weight: 700; }
+
+  .callout {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin: 16px 0;
+  }
+  .callout.green { border-color: rgba(34, 197, 94, 0.35); background: rgba(34, 197, 94, 0.05); }
+  .callout-title {
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .footer p + p { margin-top: 8px; }
+  .footer a { font-weight: 600; }
+
+  @media (max-width: 600px) {
+    .wrap { padding: 24px 18px 60px; }
+    h1 { font-size: 44px; letter-spacing: 1.5px; }
+    h2 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <nav class="nav">
+    <a href="/" class="nav-back">← Back to Trusty AI</a>
+    <span class="nav-brand">🛡️ TRUSTY</span>
+  </nav>
+
+  <header class="hero">
+    <h1>Privacy Policy</h1>
+    <span class="updated">Last updated 2026-05-06</span>
+    <p class="lede">
+      Trusty AI is a Chrome extension that flags risky contract addresses on
+      the websites you already visit. This page explains, in plain English,
+      exactly what the extension collects and what it doesn't.
+    </p>
+  </header>
+
+  <h2>What the extension does</h2>
+  <p>
+    When you visit a supported page, Trusty scans the page text in your
+    browser to find cryptocurrency contract addresses (EVM
+    <code>0x…</code> and Solana base58 mints). For each address it finds,
+    Trusty fetches a safety verdict from our backend. Hover the pill for a
+    summary; click for the full report.
+  </p>
+  <p>Supported sites today:</p>
+  <ul>
+    <li><code>x.com</code> and <code>twitter.com</code></li>
+    <li><code>reddit.com</code>, <code>old.reddit.com</code>, <code>new.reddit.com</code>, <code>sh.reddit.com</code></li>
+    <li><code>dexscreener.com</code></li>
+  </ul>
+
+  <h2>What we collect</h2>
+
+  <h3>On-device only — never leaves your browser</h3>
+  <ul>
+    <li>Page text, used purely to find contract addresses. Nothing stored, nothing transmitted.</li>
+    <li>An in-memory cache of recent scan results, scoped to your current page session.</li>
+    <li>Your tier preferences (paid wallet address, expiry timestamp), saved in <code>chrome.storage.local</code>.</li>
+  </ul>
+
+  <h3>Sent to our backend (api.trustyai.tech)</h3>
+  <ul>
+    <li>The contract address you scanned (e.g. <code>0xabc…123</code>).</li>
+    <li>A best-guess chain identifier (<code>bsc</code>, <code>ethereum</code>, <code>solana</code>).</li>
+    <li>Standard HTTP headers your browser automatically sends to any website.</li>
+  </ul>
+
+  <h3>Sent to public BNB Smart Chain RPC nodes (only when you verify a paid wallet)</h3>
+  <ul>
+    <li>Your BSC wallet address, embedded in a standard ERC-20 <code>balanceOf</code> read call, sent to a public RPC endpoint (Binance, defibit, publicnode, ninicoin).</li>
+  </ul>
+
+  <div class="callout green">
+    <div class="callout-title">🛡️ That's it.</div>
+    <p class="muted" style="margin: 0;">
+      We do not send the page URL, tweet content, your X/Reddit account,
+      your IP-derived identity, or any other identifying data. The contract
+      address you scan is public on-chain information.
+    </p>
+  </div>
+
+  <h2>What we do not collect</h2>
+  <ul>
+    <li>Your X/Twitter account, posts, follows, DMs, or profile data.</li>
+    <li>Your Reddit account, posts, comments, or karma.</li>
+    <li>Any text other than the contract address you scanned.</li>
+    <li>Which sites you visit or how long you spend on them.</li>
+    <li>Cookies, fingerprinting, or third-party analytics from inside the extension.</li>
+  </ul>
+  <p><strong>We never sell, share, or rent any data.</strong></p>
+
+  <h2>Server-side caching</h2>
+  <p>
+    Our backend caches scan results for ~5 minutes per contract address to
+    reduce load on the data sources we query (DexScreener, GoPlus, and
+    others). The cache is keyed only by the contract address — it
+    contains no information about who requested the scan.
+  </p>
+
+  <h2>Paid tier and wallet addresses</h2>
+  <p>
+    If you unlock the paid tier by linking a $TRUSTY wallet address, that
+    address is stored in <code>chrome.storage.local</code> on your
+    device. We make periodic read-only calls (every 30 days, or when you
+    click "Re-verify") to public BSC RPC endpoints to check whether the
+    address still holds the required $TRUSTY balance.
+  </p>
+  <ul>
+    <li>We never request signatures, transactions, approvals, seed phrases, or private keys.</li>
+    <li>We never broadcast anything on your behalf.</li>
+    <li>The wallet address is not sent to our servers — only to public BSC RPC nodes, which already see this kind of public on-chain query.</li>
+    <li>The address is removed from local storage when you click "Re-verify" and replace it, or when you uninstall the extension.</li>
+  </ul>
+
+  <h2>Permissions, explained</h2>
+  <ul>
+    <li><code>storage</code> — to remember your tier and recent scans on your device.</li>
+    <li><code>https://trustyai.tech/*</code> — for the website and click-through reports.</li>
+    <li><code>https://api.trustyai.tech/*</code> — to call the Trusty scanning API.</li>
+    <li><code>https://bsc-dataseed.binance.org/*</code>, <code>https://bsc-dataseed1.defibit.io/*</code>, <code>https://bsc.publicnode.com/*</code>, <code>https://bsc-dataseed1.ninicoin.io/*</code> — to verify your $TRUSTY balance via public RPC nodes.</li>
+    <li>Content scripts on <code>x.com</code>, <code>twitter.com</code>, <code>reddit.com</code>, <code>dexscreener.com</code> — to detect contract addresses on the pages you visit.</li>
+  </ul>
+  <p class="muted">
+    The extension does not have access to the rest of the web. It cannot
+    read your other tabs, your bookmarks, your downloads, or any site
+    that isn't listed above.
+  </p>
+
+  <h2>Children</h2>
+  <p>
+    Trusty is not directed at children under 13 and we do not knowingly
+    collect data from minors.
+  </p>
+
+  <h2>Changes</h2>
+  <p>
+    This policy may be updated as new platforms (Telegram, Discord,
+    Farcaster) or features ship. Material changes are announced via the
+    project's X account, and the "Last updated" date at the top of this
+    page is bumped.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    Questions about this policy? Reach us on
+    <a href="https://x.com/Trusty_BSC" target="_blank" rel="noopener">X</a>
+    or
+    <a href="https://t.me/TRUSTYCTO" target="_blank" rel="noopener">Telegram</a>.
+  </p>
+
+  <div class="footer">
+    <p>
+      $TRUSTY is a community project. Not affiliated with or endorsed by
+      Trust Wallet.
+    </p>
+    <p>
+      Trusty AI provides informational risk indicators and is not financial
+      advice. Always do your own research.
+    </p>
+    <p>
+      <a href="/">← Back to Trusty AI</a>
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>
