@@ -1,0 +1,38 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor folders
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (in case we ever add tooling)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+package-lock.json
+yarn.lock
+
+# Build artifacts (none yet, but reserve)
+dist/
+build/
+*.zip
+*.crx
+*.pem
+
+# Local environment / secrets
+.env
+.env.*
+*.local
+
+# Logs
+logs/
+*.log
+
+# Temp / scratch
+tmp/
+*.bak

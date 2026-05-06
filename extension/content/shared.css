@@ -1,0 +1,347 @@
+/* ================================================================
+   Trusty AI — pill + tooltip styles for x.com / twitter.com
+
+   All classes prefixed with `trusty-` to avoid conflicts with X.
+   Designed to match X's tweet text size and look like a native badge.
+   ================================================================ */
+
+/* ── Score pill (inline next to CA) ────────────────────────────── */
+
+.trusty-pill {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+  margin: 0 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  vertical-align: baseline;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  border: 1px solid;
+  white-space: nowrap;
+
+  /* Default loading state — overridden by tier classes */
+  background: rgba(148, 163, 184, 0.18);
+  color: rgba(148, 163, 184, 1);
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.trusty-pill:hover { transform: translateY(-1px); filter: brightness(1.1); }
+.trusty-pill:active { transform: translateY(0); }
+
+.trusty-pill-icon {
+  font-size: 11px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+}
+
+.trusty-pill-score {
+  font-family: ui-monospace, "SF Mono", "Menlo", Consolas, monospace !important;
+  font-weight: 800 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.5px;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* Loading dot */
+.trusty-pill-loading .trusty-pill-score {
+  letter-spacing: 1.5px;
+  opacity: 0.7;
+  animation: trusty-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes trusty-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ── Verdict tiers ─────────────────────────────────────────────── */
+
+.trusty-pill-ape {
+  background: rgba(34, 197, 94, 0.18);
+  color: #22C55E;
+  border-color: rgba(34, 197, 94, 0.45);
+}
+.trusty-pill-caution {
+  background: rgba(251, 191, 36, 0.18);
+  color: #F59E0B;
+  border-color: rgba(251, 191, 36, 0.45);
+}
+.trusty-pill-run {
+  background: rgba(239, 68, 68, 0.18);
+  color: #EF4444;
+  border-color: rgba(239, 68, 68, 0.45);
+}
+.trusty-pill-error {
+  background: rgba(148, 163, 184, 0.12);
+  color: rgba(148, 163, 184, 1);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+/* ── Hover tooltip ─────────────────────────────────────────────── */
+
+.trusty-tooltip {
+  position: fixed;
+  z-index: 2147483646;          /* near max — sit above X chrome */
+  width: 290px;
+  padding: 14px;
+  background: #0a0f1c;
+  color: #f5f5f7;
+  border: 1px solid #233247;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif !important;
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.trusty-tooltip.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.trusty-tooltip * {
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.trusty-tt-loading {
+  text-align: center;
+  color: #8b95a8;
+  padding: 10px 0;
+  font-size: 12px;
+}
+
+/* Header with verdict + score */
+.trusty-tt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #233247;
+}
+
+.trusty-tt-verdict {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.trusty-tt-score {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #8b95a8;
+}
+
+.trusty-tt-verdict-ape    .trusty-tt-verdict { color: #22C55E; }
+.trusty-tt-verdict-caution .trusty-tt-verdict { color: #F59E0B; }
+.trusty-tt-verdict-run    .trusty-tt-verdict { color: #EF4444; }
+
+/* Token meta line */
+.trusty-tt-meta {
+  font-size: 12px;
+  color: #f5f5f7;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.trusty-tt-meta .trusty-tt-chain {
+  color: #8b95a8;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+/* Checks list */
+.trusty-tt-checks {
+  list-style: none;
+  margin: 0 0 12px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trusty-tt-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.trusty-tt-check-icon {
+  flex: 0 0 auto;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.trusty-tt-check-label {
+  flex: 1 1 auto;
+  color: #f5f5f7;
+}
+
+.trusty-tt-check-bad .trusty-tt-check-label { color: #FCA5A5; }
+.trusty-tt-check-ok  .trusty-tt-check-label { color: #f5f5f7; }
+
+/* Footer / upsell */
+.trusty-tt-footer {
+  font-size: 11px;
+  color: #8b95a8;
+  line-height: 1.55;
+  padding-top: 10px;
+  border-top: 1px solid #233247;
+  text-align: center;
+}
+
+.trusty-tt-footer strong {
+  color: #F3BA2F;
+  font-weight: 700;
+}
+
+/* ================================================================
+   Trusty AI — Paid floating panel (premium tier only)
+   Opened when a paid user clicks any pill. Modal-style overlay
+   with full safety breakdown + KOLs + X activity + market data.
+   ================================================================ */
+
+.trusty-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2147483646;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.trusty-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2147483647;
+  width: 380px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #0a0f1c;
+  color: #f5f5f7;
+  border: 1px solid #233247;
+  border-radius: 16px;
+  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.7);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 18px;
+}
+
+.trusty-panel * { font-family: inherit; box-sizing: border-box; }
+
+.trusty-pp-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #233247;
+  background: rgba(255,255,255,0.04);
+  color: #8b95a8;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.trusty-pp-close:hover { color: #f5f5f7; border-color: #3B82F6; }
+
+.trusty-pp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #233247;
+}
+.trusty-pp-verdict { font-size: 16px; font-weight: 800; letter-spacing: 1px; }
+.trusty-pp-score { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 14px; color: #8b95a8; font-weight: 700; }
+.trusty-pp-meta { font-size: 13px; color: #f5f5f7; font-weight: 600; margin-bottom: 14px; }
+.trusty-pp-meta .trusty-pp-chain { color: #8b95a8; font-weight: 500; font-size: 11px; }
+
+.trusty-pp-section { margin-top: 14px; padding-top: 14px; border-top: 1px solid #233247; }
+.trusty-pp-section:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+
+.trusty-pp-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #8b95a8;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.trusty-pp-kol-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+.trusty-pp-kol-handle { color: #f5f5f7; font-weight: 600; }
+.trusty-pp-kol-followers { color: #8b95a8; font-family: ui-monospace, monospace; font-size: 11px; }
+.trusty-pp-kol-time { color: #8b95a8; font-size: 11px; }
+
+.trusty-pp-empty { font-size: 12px; color: #8b95a8; font-style: italic; }
+
+.trusty-pp-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.trusty-pp-stat {
+  background: #18243d;
+  border: 1px solid #233247;
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.trusty-pp-stat-num { font-size: 13px; font-weight: 700; color: #f5f5f7; }
+.trusty-pp-stat-num.up { color: #22C55E; }
+.trusty-pp-stat-num.down { color: #EF4444; }
+.trusty-pp-stat-lbl {
+  font-size: 9px;
+  color: #8b95a8;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.trusty-pp-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #233247;
+  font-size: 11px;
+  color: #8b95a8;
+  text-align: center;
+}
+.trusty-pp-footer a { color: #60A5FA; text-decoration: none; font-weight: 600; }
+.trusty-pp-footer a:hover { color: #93C5FD; }
+
+@media (max-width: 480px) {
+  .trusty-panel { width: calc(100vw - 24px); max-width: 380px; padding: 14px; }
+}

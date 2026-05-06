@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="220" height="220">
+  <defs>
+    <linearGradient id="hShield" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#5BAAEE"/>
+      <stop offset="35%" stop-color="#2E72D2"/>
+      <stop offset="100%" stop-color="#0E3A9C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shield body (same path as on trustyai.tech, repositioned to fill viewBox) -->
+  <path d="M30 8 L190 8 C200 8 210 16 210 26 L210 100 C210 148 172 186 110 208 C48 186 10 148 10 100 L10 26 C10 16 20 8 30 8Z" fill="url(#hShield)"/>
+  <path d="M38 16 L182 16 C190 16 200 22 200 30 L200 100 C200 143 166 178 110 198 C54 178 20 143 20 100 L20 30 C20 22 30 16 38 16Z" fill="rgba(255,255,255,0.06)"/>
+  <rect x="10" y="8" width="200" height="18" rx="10" fill="rgba(255,255,255,0.13)"/>
+
+  <!-- Eyes -->
+  <circle cx="86" cy="96" r="9" fill="#0a0a0a"/>
+  <circle cx="134" cy="96" r="9" fill="#0a0a0a"/>
+  <circle cx="82" cy="92" r="3" fill="rgba(255,255,255,0.8)"/>
+  <circle cx="130" cy="92" r="3" fill="rgba(255,255,255,0.8)"/>
+
+  <!-- Mouth -->
+  <path d="M74 118 Q110 138 146 118" stroke="#0a0a0a" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <path d="M79 122 Q110 140 141 122 Q130 135 110 138 Q90 135 79 122Z" fill="#E85D20"/>
+</svg>

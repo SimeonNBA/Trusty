@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Trusty Icon Generator</title>
+<style>
+  body{margin:0;padding:24px;font-family:system-ui;background:#0a0f1c;color:#fff;}
+  h1{margin:0 0 8px 0;font-size:18px;}
+  p{font-size:13px;color:#8b95a8;margin:0 0 16px 0;}
+  .row{display:flex;gap:16px;align-items:flex-end;margin-bottom:16px;}
+  .row .item{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  canvas{background:transparent;border:1px dashed #233247;}
+  button{padding:8px 14px;background:#3B82F6;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;}
+  button:hover{filter:brightness(1.1);}
+  .label{font-size:10px;color:#8b95a8;font-family:ui-monospace,monospace;letter-spacing:1px;}
+</style></head>
+<body>
+<h1>Trusty icon generator</h1>
+<p>Click the button to generate and download the three icon sizes Chrome wants.</p>
+<div class="row">
+  <div class="item"><canvas id="c128" width="128" height="128"></canvas><div class="label">128 × 128</div></div>
+  <div class="item"><canvas id="c48" width="48" height="48"></canvas><div class="label">48 × 48</div></div>
+  <div class="item"><canvas id="c16" width="16" height="16"></canvas><div class="label">16 × 16</div></div>
+</div>
+<button onclick="generate()">Generate &amp; download all 3</button>
+
+<script>
+const SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220">
+  <defs>
+    <linearGradient id="hShield" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#5BAAEE"/>
+      <stop offset="35%" stop-color="#2E72D2"/>
+      <stop offset="100%" stop-color="#0E3A9C"/>
+    </linearGradient>
+  </defs>
+  <path d="M30 8 L190 8 C200 8 210 16 210 26 L210 100 C210 148 172 186 110 208 C48 186 10 148 10 100 L10 26 C10 16 20 8 30 8Z" fill="url(#hShield)"/>
+  <path d="M38 16 L182 16 C190 16 200 22 200 30 L200 100 C200 143 166 178 110 198 C54 178 20 143 20 100 L20 30 C20 22 30 16 38 16Z" fill="rgba(255,255,255,0.06)"/>
+  <rect x="10" y="8" width="200" height="18" rx="10" fill="rgba(255,255,255,0.13)"/>
+  <circle cx="86" cy="96" r="9" fill="#0a0a0a"/>
+  <circle cx="134" cy="96" r="9" fill="#0a0a0a"/>
+  <circle cx="82" cy="92" r="3" fill="rgba(255,255,255,0.8)"/>
+  <circle cx="130" cy="92" r="3" fill="rgba(255,255,255,0.8)"/>
+  <path d="M74 118 Q110 138 146 118" stroke="#0a0a0a" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <path d="M79 122 Q110 140 141 122 Q130 135 110 138 Q90 135 79 122Z" fill="#E85D20"/>
+</svg>`;
+
+function drawTo(canvas) {
+  return new Promise((resolve, reject) => {
+    const blob = new Blob([SVG], {type: 'image/svg+xml'});
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+async function previewAll() {
+  await drawTo(document.getElementById('c128'));
+  await drawTo(document.getElementById('c48'));
+  await drawTo(document.getElementById('c16'));
+}
+
+function downloadCanvas(canvas, filename) {
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
+}
+
+async function generate() {
+  await previewAll();
+  downloadCanvas(document.getElementById('c128'), 'icon-128.png');
+  setTimeout(() => downloadCanvas(document.getElementById('c48'), 'icon-48.png'), 300);
+  setTimeout(() => downloadCanvas(document.getElementById('c16'), 'icon-16.png'), 600);
+}
+
+// preview on load
+previewAll();
+</script>
+</body></html>

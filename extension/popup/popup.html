@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trusty AI</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="shield">🛡️</div>
+    <div class="brand">
+      <div class="brand-name">Trusty AI</div>
+      <div class="brand-tag">Cross-chain Safety Layer</div>
+    </div>
+    <span class="version" id="versionBadge">v0.1.0</span>
+  </header>
+
+  <main class="body">
+
+    <!-- Tier status block -->
+    <section class="tier" id="tierBlock">
+      <div class="tier-header">
+        <span class="tier-pill" id="tierPill">FREE</span>
+        <span class="tier-label" id="tierLabel">Hold $TRUSTY to unlock paid features</span>
+      </div>
+
+      <div class="tier-body" id="tierBody">
+        <input
+          type="text"
+          id="walletInput"
+          class="wallet-input"
+          placeholder="Paste your BSC wallet (0x…)"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="verify-btn" id="verifyBtn">Verify wallet</button>
+        <div class="tier-hint" id="tierHint">
+          We check your $TRUSTY balance via BscScan.<br>
+          Hold ≥ <strong>325,000 $TRUSTY</strong> (~$50) for unlimited scans, KOL data, and X activity.
+        </div>
+      </div>
+
+      <div class="tier-verified" id="tierVerified" style="display:none;">
+        <div class="tier-verified-row">
+          <span class="tier-verified-label">Wallet</span>
+          <span class="tier-verified-val mono" id="tierAddr">—</span>
+        </div>
+        <div class="tier-verified-row">
+          <span class="tier-verified-label">$TRUSTY balance</span>
+          <span class="tier-verified-val" id="tierBalance">—</span>
+        </div>
+        <div class="tier-verified-row">
+          <span class="tier-verified-label">Renews</span>
+          <span class="tier-verified-val" id="tierExpires">—</span>
+        </div>
+        <button class="verify-btn ghost" id="recheckBtn">Re-verify</button>
+      </div>
+    </section>
+
+    <div class="cta-wrap">
+      <a class="cta primary" href="https://trustyai.tech" target="_blank" rel="noopener">
+        Open trustyai.tech →
+      </a>
+      <a class="cta secondary" href="https://x.com/Trusty_BSC" target="_blank" rel="noopener">
+        Follow @Trusty_BSC
+      </a>
+    </div>
+
+    <div class="footnote">
+      Trusty is a community project. Not affiliated with Trust Wallet.<br />
+      Not financial advice. DYOR.
+    </div>
+  </main>
+
+  <script src="../lib/tier.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

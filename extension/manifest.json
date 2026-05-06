@@ -1,0 +1,97 @@
+{
+  "manifest_version": 3,
+  "name": "Trusty AI",
+  "short_name": "Trusty AI",
+  "version": "0.1.0",
+  "description": "AI-powered safety verdict for crypto contract addresses on X, Reddit, and DexScreener. Don't ape blind.",
+
+  "icons": {
+    "16": "assets/icon-16.png",
+    "48": "assets/icon-48.png",
+    "128": "assets/icon-128.png"
+  },
+
+  "action": {
+    "default_title": "Trusty",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "assets/icon-16.png",
+      "48": "assets/icon-48.png",
+      "128": "assets/icon-128.png"
+    }
+  },
+
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ],
+      "js": [
+        "lib/ca-detector.js",
+        "lib/api.js",
+        "lib/tier.js",
+        "lib/pill-injector.js",
+        "content/x-content.js"
+      ],
+      "css": [
+        "content/shared.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.reddit.com/*",
+        "https://reddit.com/*",
+        "https://old.reddit.com/*",
+        "https://new.reddit.com/*",
+        "https://sh.reddit.com/*"
+      ],
+      "js": [
+        "lib/ca-detector.js",
+        "lib/api.js",
+        "lib/tier.js",
+        "lib/pill-injector.js",
+        "content/reddit-content.js"
+      ],
+      "css": [
+        "content/shared.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://dexscreener.com/*",
+        "https://www.dexscreener.com/*"
+      ],
+      "js": [
+        "lib/ca-detector.js",
+        "lib/api.js",
+        "lib/tier.js",
+        "lib/pill-injector.js",
+        "content/dexscreener-content.js"
+      ],
+      "css": [
+        "content/shared.css",
+        "content/dexscreener-content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "permissions": [
+    "storage"
+  ],
+
+  "host_permissions": [
+    "https://trustyai.tech/*",
+    "https://bsc-dataseed.binance.org/*",
+    "https://bsc-dataseed1.defibit.io/*",
+    "https://bsc-dataseed1.ninicoin.io/*",
+    "https://bsc.publicnode.com/*"
+  ]
+}

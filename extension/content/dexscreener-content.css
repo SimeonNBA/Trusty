@@ -1,0 +1,68 @@
+/* ================================================================
+   Trusty AI — DexScreener-specific styles
+
+   Two contexts:
+
+     1) Row anchors (trending list / watchlist) — pills are injected
+        inside the anchor next to the token logo. We scope a few
+        adjustments to keep the row layout clean.
+
+     2) Token page pill — a fixed-position floating pill at the
+        top-centre of the viewport so the user can see the verdict
+        for the token they are currently viewing.
+   ================================================================ */
+
+/* Page-mode pill — token page only.
+
+   Pinned below DexScreener's two top bars (the trending tickers ribbon
+   ~40px + the chain/DEX nav ~40px) so it doesn't overlap any of their
+   buttons. Sits at the top of the right-panel area where there's
+   always empty space above the token logo.                          */
+#trusty-page-pill {
+  position: fixed;
+  top: 90px;                   /* clears trending tickers + chain/DEX bars */
+  right: 16px;
+  z-index: 2147483645;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 4px;
+  background: rgba(10, 15, 28, 0.95);
+  border: 1px solid rgba(35, 50, 71, 0.8);
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  pointer-events: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif;
+}
+
+#trusty-page-pill::before {
+  content: "TRUSTY";
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #8b95a8;
+  padding-left: 4px;
+  user-select: none;
+}
+
+@media (max-width: 720px) {
+  #trusty-page-pill {
+    top: 70px;
+    right: 8px;
+  }
+  #trusty-page-pill::before {
+    display: none;            /* tighten on small screens */
+  }
+}
+
+/* Pills inside DexScreener row anchors — keep them tight so they
+   don't shift the row's existing column layout. */
+a[href*="/0x"] > .trusty-pill,
+a[href*="dexscreener.com"] .trusty-pill {
+  margin: 0 4px;
+  flex-shrink: 0;
+}
