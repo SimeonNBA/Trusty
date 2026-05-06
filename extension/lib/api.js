@@ -100,6 +100,7 @@
       marketData: {
         mcap: "—",
         liquidity: "—",
+        volume24h: "—",
         age: "—",
         holders: 0,
       },

@@ -3,14 +3,13 @@ main = "src/index.js"
 compatibility_date = "2025-11-01"
 workers_dev = true
 
-# After `wrangler kv namespace create SCAN_KV`, paste the id here.
+routes = [
+  { pattern = "api.trustyai.tech", custom_domain = true }
+]
+
 [[kv_namespaces]]
 binding = "SCAN_KV"
 id = "2066ce5114e2480fa26bf991faeb0ef6"
-
-routes = [
-  { pattern = "api.trustyai.tech/*", custom_domain = true }
-]
 
 [vars]
 SCAN_TTL_SECONDS = "300"

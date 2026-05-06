@@ -68,6 +68,9 @@
     }).join("");
 
     const chainLabel = (result.chain || "EVM").toUpperCase();
+    const md = result.marketData || {};
+    const mcap = md.mcap || "—";
+    const vol = md.volume24h || "—";
 
     return (
       '<div class="trusty-tt-header ' + verdictClass + '">' +
@@ -77,6 +80,17 @@
       '<div class="trusty-tt-meta">' +
         result.symbol +
         ' <span class="trusty-tt-chain">on ' + chainLabel + '</span>' +
+      '</div>' +
+      '<div class="trusty-tt-market">' +
+        '<div class="trusty-tt-market-cell">' +
+          '<div class="trusty-tt-market-num">' + mcap + '</div>' +
+          '<div class="trusty-tt-market-lbl">Market Cap</div>' +
+        '</div>' +
+        '<div class="trusty-tt-market-divider"></div>' +
+        '<div class="trusty-tt-market-cell">' +
+          '<div class="trusty-tt-market-num">' + vol + '</div>' +
+          '<div class="trusty-tt-market-lbl">Vol 24h</div>' +
+        '</div>' +
       '</div>' +
       '<ul class="trusty-tt-checks">' + checksHtml + '</ul>' +
       '<div class="trusty-tt-footer">' +
@@ -259,8 +273,9 @@
 
       '<div class="trusty-pp-section">' +
         '<div class="trusty-pp-section-title">📊 Market</div>' +
-        '<div class="trusty-pp-stat-grid">' +
+        '<div class="trusty-pp-stat-grid trusty-pp-stat-grid-3">' +
           '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (md.mcap || "—") + '</div><div class="trusty-pp-stat-lbl">market cap</div></div>' +
+          '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (md.volume24h || "—") + '</div><div class="trusty-pp-stat-lbl">vol 24h</div></div>' +
           '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (md.liquidity || "—") + '</div><div class="trusty-pp-stat-lbl">liquidity</div></div>' +
           '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (md.age || "—") + '</div><div class="trusty-pp-stat-lbl">age</div></div>' +
           '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (md.holders || 0).toLocaleString() + '</div><div class="trusty-pp-stat-lbl">holders</div></div>' +

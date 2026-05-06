@@ -151,6 +151,7 @@ async function fetchDex(ca) {
     priceUsd: parseFloat(top.priceUsd) || 0,
     mcap: top.marketCap || top.fdv || 0,
     liquidityUsd: top.liquidity?.usd || 0,
+    volume24h: top.volume?.h24 || 0,
     pairCreatedAt: top.pairCreatedAt || 0,
   };
 }
@@ -277,6 +278,7 @@ function computeScore(g, checks, paidChecks) {
 function marketData(d, g) {
   const mcap = d?.mcap || 0;
   const liq = d?.liquidityUsd || 0;
+  const vol = d?.volume24h || 0;
   const ageDays = d?.pairCreatedAt
     ? Math.max(1, Math.floor((Date.now() - d.pairCreatedAt) / 86400000))
     : 0;
@@ -285,6 +287,7 @@ function marketData(d, g) {
   return {
     mcap: fmtUsd(mcap),
     liquidity: fmtUsd(liq),
+    volume24h: fmtUsd(vol),
     age: ageDays ? ageDays + "d" : "—",
     holders,
   };
