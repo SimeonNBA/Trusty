@@ -122,9 +122,62 @@
     return promise;
   }
 
+  // ── Sorsa-backed KOLs + activity ─────────────────────────────
+  // Lazy-fetched only when a paid user opens the inline panel — so
+  // free-tier hovers never burn Sorsa quota.
+  async function scanKolsRemote(ca, chain) {
+    const url =
+      API_BASE +
+      "/api/kols?ca=" +
+      encodeURIComponent(ca) +
+      "&chain=" +
+      encodeURIComponent(chain || "bsc");
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const r = await fetch(url, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        signal: ctrl.signal,
+      });
+      if (!r.ok) throw new Error("kols http " + r.status);
+      const data = await r.json();
+      return {
+        kols: Array.isArray(data?.kols) ? data.kols : [],
+        activity: data?.activity || {
+          tweets24h: 0,
+          deltaPct: 0,
+          sentiment: "—",
+          coordShill: false,
+        },
+      };
+    } catch (err) {
+      console.warn("[Trusty] kols fetch failed:", err && err.message);
+      return {
+        kols: [],
+        activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  const kolsCache = new Map();
+  function scanKols(ca, chain) {
+    const key = (ca + ":" + (chain || "evm")).toLowerCase();
+    if (kolsCache.has(key)) return kolsCache.get(key);
+    const promise = scanKolsRemote(ca, chain).catch((e) => {
+      kolsCache.delete(key);
+      throw e;
+    });
+    kolsCache.set(key, promise);
+    return promise;
+  }
+
   // Expose globally for content scripts
   window.TrustyAPI = {
     scan,
+    scanKols,
     shortAddr,
     verdictFromScore
   };

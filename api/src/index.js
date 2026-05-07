@@ -1,12 +1,14 @@
 /* ================================================================
-   Trusty AI — /api/scan worker
+   Trusty AI — Worker
 
    GET /api/scan?ca=0x...&chain=bsc
+     Token-security (GoPlus) + market data (Dexscreener), scored 0-100.
+     Cached 5 min. Public, no quota concerns.
 
-   Pulls token-security signals from GoPlus and market data from
-   Dexscreener, scores them, and returns the same shape the extension
-   stub returns. The shape MUST match extension/lib/api.js so the
-   client is a drop-in swap.
+   GET /api/kols?ca=0x...&chain=bsc
+     KOL mentions + X activity from Sorsa (formerly TweetScout).
+     Lazy-loaded only by the paid panel — free-tier hovers never hit.
+     Cached 6 hr per CA to stretch the 10K-req/mo Sorsa tier.
    ================================================================ */
 
 const CORS = {
@@ -29,9 +31,6 @@ export default {
     if (url.pathname === "/" || url.pathname === "/health") {
       return json({ ok: true, service: "trusty-api" });
     }
-    if (url.pathname !== "/api/scan") {
-      return json({ error: "not found" }, 404);
-    }
     if (request.method !== "GET") {
       return json({ error: "method not allowed" }, 405);
     }
@@ -43,27 +42,58 @@ export default {
       return json({ error: "invalid ca" }, 400);
     }
 
-    const cacheKey = `scan:${chain}:${ca}`;
-    if (env.SCAN_KV) {
-      const cached = await env.SCAN_KV.get(cacheKey, "json");
-      if (cached) return json(cached);
+    if (url.pathname === "/api/scan") {
+      return handleScan(ca, chain, env);
     }
-
-    const result = await scanToken(ca, chain);
-
-    if (env.SCAN_KV) {
-      const ttl = parseInt(env.SCAN_TTL_SECONDS || "300", 10);
-      // fire-and-forget; don't block response on KV write
-      try {
-        await env.SCAN_KV.put(cacheKey, JSON.stringify(result), {
-          expirationTtl: ttl,
-        });
-      } catch (_) {}
+    if (url.pathname === "/api/kols") {
+      return handleKols(ca, chain, env);
     }
-
-    return json(result);
+    return json({ error: "not found" }, 404);
   },
 };
+
+/* ── /api/scan ── token security + market data, 5min cache ── */
+async function handleScan(ca, chain, env) {
+  const cacheKey = `scan:${chain}:${ca}`;
+  if (env.SCAN_KV) {
+    const cached = await env.SCAN_KV.get(cacheKey, "json");
+    if (cached) return json(cached);
+  }
+
+  const result = await scanToken(ca, chain);
+
+  if (env.SCAN_KV) {
+    const ttl = parseInt(env.SCAN_TTL_SECONDS || "300", 10);
+    try {
+      await env.SCAN_KV.put(cacheKey, JSON.stringify(result), {
+        expirationTtl: ttl,
+      });
+    } catch (_) {}
+  }
+
+  return json(result);
+}
+
+/* ── /api/kols ── Sorsa-backed KOL mentions, 6h cache ── */
+async function handleKols(ca, chain, env) {
+  const cacheKey = `kols:${chain}:${ca}`;
+  if (env.SCAN_KV) {
+    const cached = await env.SCAN_KV.get(cacheKey, "json");
+    if (cached) return json(cached);
+  }
+
+  const result = await fetchKols(ca, chain, env);
+
+  if (env.SCAN_KV) {
+    try {
+      await env.SCAN_KV.put(cacheKey, JSON.stringify(result), {
+        expirationTtl: 21600, // 6 hours
+      });
+    } catch (_) {}
+  }
+
+  return json(result);
+}
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -303,4 +333,212 @@ function fmtUsd(n) {
 
 function shortAddr(ca) {
   return ca.slice(0, 6) + "..." + ca.slice(-4);
+}
+
+/* ================================================================
+   Sorsa (formerly TweetScout) — KOL mentions + X activity
+   ================================================================ */
+
+const EMPTY_KOLS = {
+  kols: [],
+  activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
+};
+
+async function fetchKols(ca, chain, env) {
+  if (!env.SORSA_API_KEY) return EMPTY_KOLS;
+
+  // 1) Search recent tweets mentioning the CA. Sorsa's query field uses
+  //    Twitter Advanced Search syntax; we hand it the CA as plain text.
+  const searchResult = await sorsaSearchTweets(ca, env.SORSA_API_KEY);
+  const tweets = searchResult.tweets;
+  const tweets24h = countWithin(tweets, 24 * 3600 * 1000);
+
+  if (!tweets.length) return EMPTY_KOLS;
+
+  // 2) Collect unique authors from the most recent 30 mentions.
+  const authors = uniqueAuthorsFromTweets(tweets, 30);
+  if (!authors.length) {
+    return {
+      kols: [],
+      activity: {
+        tweets24h,
+        deltaPct: 0,
+        sentiment: "—",
+        coordShill: detectCoordShill(tweets),
+      },
+    };
+  }
+
+  // 3) Pull follower count for those handles in one batch.
+  const enriched = await sorsaInfoBatch(authors, env.SORSA_API_KEY);
+
+  // 4) Rank by follower count, take top 5, look up each one's most-recent
+  //    mention from the search results. Filter out tiny accounts
+  //    (<500 followers) — they're almost certainly bots/eggs.
+  const tweetByAuthor = indexLatestByAuthor(tweets);
+  const ranked = enriched
+    .filter((u) => u && u.handle && u.followers >= 500)
+    .sort((a, b) => b.followers - a.followers)
+    .slice(0, 5)
+    .map((u) => {
+      const tw = tweetByAuthor[u.handle.toLowerCase()];
+      const minsAgo = tw ? Math.max(1, Math.floor((Date.now() - tw.ts) / 60000)) : 0;
+      const tweetUrl = tw && tw.id
+        ? "https://x.com/" + encodeURIComponent(u.handle) + "/status/" + encodeURIComponent(tw.id)
+        : null;
+      return {
+        handle: "@" + u.handle,
+        followers: fmtCompact(u.followers),
+        mins: minsAgo,
+        tweetUrl,
+      };
+    });
+
+  return {
+    kols: ranked,
+    activity: {
+      tweets24h,
+      deltaPct: 0, // requires a 2nd window-search; defer to save quota
+      sentiment: "—", // Sorsa doesn't expose; leave honest
+      coordShill: detectCoordShill(tweets),
+    },
+  };
+}
+
+async function sorsaSearchTweets(query, apiKey) {
+  try {
+    const r = await fetch("https://api.sorsa.io/v3/search-tweets", {
+      method: "POST",
+      headers: {
+        ApiKey: apiKey,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ query, order: "latest" }),
+    });
+    if (!r.ok) {
+      console.warn("sorsa search-tweets", r.status);
+      return { tweets: [] };
+    }
+    const data = await r.json();
+    const list = Array.isArray(data?.tweets) ? data.tweets : [];
+    const tweets = list
+      .map((t) => ({
+        id: t.id || "",
+        text: t.full_text || t.text || "",
+        ts: parseTs(t.created_at),
+        author: pickAuthor(t),
+      }))
+      .filter((t) => t.author);
+    return { tweets };
+  } catch (e) {
+    console.warn("sorsa search-tweets error", e?.message);
+    return { tweets: [] };
+  }
+}
+
+async function sorsaInfoBatch(handles, apiKey) {
+  if (!handles.length) return [];
+  try {
+    // Sorsa expects REPEATED query keys: ?usernames=a&usernames=b&usernames=c
+    // (Not comma-separated.) Field name is `usernames`, not `handles`.
+    const params = handles
+      .map((h) => "usernames=" + encodeURIComponent(h))
+      .join("&");
+    const url = "https://api.sorsa.io/v3/info-batch?" + params;
+    const r = await fetch(url, {
+      headers: { ApiKey: apiKey, Accept: "application/json" },
+    });
+    if (!r.ok) {
+      console.warn("sorsa info-batch", r.status);
+      return [];
+    }
+    const data = await r.json();
+    const list = Array.isArray(data?.users) ? data.users : [];
+    return list.map((u) => ({
+      handle: u.username || "",
+      followers: u.followers_count || 0,
+      // Sorsa Score isn't in /info-batch; would need a /score call per
+      // handle. We rank by follower count for v1 to stay quota-friendly.
+    }));
+  } catch (e) {
+    console.warn("sorsa info-batch error", e?.message);
+    return [];
+  }
+}
+
+/* ── Sorsa helpers ── */
+
+function pickAuthor(t) {
+  const a = t.author || t.user || {};
+  const handle =
+    a.handle || a.username || a.screen_name || t.username || t.handle;
+  if (!handle) return null;
+  return { handle: String(handle).replace(/^@/, "") };
+}
+
+function parseTs(v) {
+  if (!v) return 0;
+  if (typeof v === "number") return v < 1e12 ? v * 1000 : v;
+  const t = Date.parse(v);
+  return isNaN(t) ? 0 : t;
+}
+
+function uniqueAuthorsFromTweets(tweets, limit) {
+  const seen = new Set();
+  const handles = [];
+  for (const t of tweets) {
+    const h = t.author?.handle?.toLowerCase();
+    if (!h || seen.has(h)) continue;
+    seen.add(h);
+    handles.push(t.author.handle);
+    if (handles.length >= limit) break;
+  }
+  return handles;
+}
+
+function indexLatestByAuthor(tweets) {
+  const byAuthor = {};
+  for (const t of tweets) {
+    const h = t.author?.handle?.toLowerCase();
+    if (!h) continue;
+    if (!byAuthor[h] || t.ts > byAuthor[h].ts) byAuthor[h] = t;
+  }
+  return byAuthor;
+}
+
+function countWithin(tweets, windowMs) {
+  const cutoff = Date.now() - windowMs;
+  let n = 0;
+  for (const t of tweets) if (t.ts >= cutoff) n++;
+  return n;
+}
+
+// Crude coord-shill heuristic: 4+ mentions within 60 seconds with mostly-identical text.
+function detectCoordShill(tweets) {
+  if (tweets.length < 4) return false;
+  const sorted = [...tweets].sort((a, b) => a.ts - b.ts);
+  for (let i = 0; i + 3 < sorted.length; i++) {
+    const burst = sorted.slice(i, i + 4);
+    if (burst[3].ts - burst[0].ts > 60_000) continue;
+    const texts = burst.map((t) => normalizeText(t.text));
+    const uniq = new Set(texts);
+    if (uniq.size <= 2) return true;
+  }
+  return false;
+}
+
+function normalizeText(s) {
+  return (s || "")
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/[^a-z0-9$@]/g, "")
+    .slice(0, 60);
+}
+
+function fmtCompact(n) {
+  if (!n || !isFinite(n)) return "0";
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
+  return String(Math.round(n));
 }

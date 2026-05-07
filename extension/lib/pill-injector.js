@@ -189,6 +189,112 @@
     document.documentElement.style.overflow = "";
   }
 
+  /* ── Body renderers for the lazy-loaded KOL + activity sections ── */
+
+  function renderKolsCta() {
+    return (
+      '<button class="trusty-pp-reveal-cta" type="button">' +
+        '<span class="trusty-pp-reveal-icon">✨</span>' +
+        '<span class="trusty-pp-reveal-text">Reveal KOL mentions + X activity</span>' +
+        '<span class="trusty-pp-reveal-meta">Top 5 followers · last 24h</span>' +
+      '</button>'
+    );
+  }
+
+  function revealKols(ca, chain) {
+    const live = document.getElementById(PANEL_ID);
+    if (!live) return;
+    const kolsBody = live.querySelector('[data-trusty-section="kols"]');
+    const actBody = live.querySelector('[data-trusty-section="activity"]');
+    if (kolsBody) {
+      kolsBody.innerHTML =
+        '<div class="trusty-pp-section-title">🐦 KOLs last 24h</div>' +
+        renderKolsBody(null); // pulse "Loading…"
+    }
+    if (window.TrustyAPI && window.TrustyAPI.scanKols) {
+      window.TrustyAPI.scanKols(ca, chain).then(function (data) {
+        const stillLive = document.getElementById(PANEL_ID);
+        if (!stillLive) return; // user closed before fetch resolved
+        const k = stillLive.querySelector('[data-trusty-section="kols"]');
+        const a = stillLive.querySelector('[data-trusty-section="activity"]');
+        if (k) {
+          k.innerHTML =
+            '<div class="trusty-pp-section-title">🐦 KOLs last 24h</div>' +
+            renderKolsBody(data.kols || []);
+        }
+        if (a) {
+          a.style.display = "";
+          a.innerHTML =
+            '<div class="trusty-pp-section-title">📈 X activity</div>' +
+            renderActivityBody(data.activity || {});
+        }
+      }).catch(function () {
+        const k = document.getElementById(PANEL_ID)?.querySelector('[data-trusty-section="kols"]');
+        if (k) {
+          k.innerHTML =
+            '<div class="trusty-pp-section-title">🐦 KOLs last 24h</div>' +
+            '<div class="trusty-pp-empty">Couldn\'t load KOL data — try again later.</div>';
+        }
+      });
+    }
+  }
+
+  function renderKolsBody(kols) {
+    if (kols === null) {
+      return '<div class="trusty-pp-empty trusty-pp-loading-line">Loading KOL mentions…</div>';
+    }
+    if (!kols.length) {
+      return '<div class="trusty-pp-empty">No KOL mentions in the last 24h.</div>';
+    }
+    return kols.map(function (k) {
+      const ago = k.mins < 60 ? (k.mins + "m ago") :
+                  k.mins < 1440 ? (Math.floor(k.mins / 60) + "h ago") :
+                  (Math.floor(k.mins / 1440) + "d ago");
+      const inner =
+        '<span class="trusty-pp-kol-handle">' + escapeHtml(k.handle) + '</span>' +
+        '<span class="trusty-pp-kol-followers">' + escapeHtml(k.followers) + '</span>' +
+        '<span class="trusty-pp-kol-time">' + ago + '</span>';
+      if (k.tweetUrl) {
+        return '<a class="trusty-pp-kol-row trusty-pp-kol-link"' +
+                  ' href="' + escapeHtml(k.tweetUrl) + '"' +
+                  ' target="_blank" rel="noopener noreferrer"' +
+                  ' title="View tweet on X">' +
+                  inner +
+                  '<span class="trusty-pp-kol-arrow" aria-hidden="true">↗</span>' +
+                '</a>';
+      }
+      return '<div class="trusty-pp-kol-row">' + inner + '</div>';
+    }).join("");
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function renderActivityBody(act) {
+    if (act === null) {
+      return '<div class="trusty-pp-empty trusty-pp-loading-line">Loading X activity…</div>';
+    }
+    const tweets = act.tweets24h || 0;
+    const deltaPct = act.deltaPct || 0;
+    const deltaSign = deltaPct >= 0 ? "↑" : "↓";
+    const deltaCls = deltaPct >= 0 ? "up" : "down";
+    const deltaCell = deltaPct === 0
+      ? '<div class="trusty-pp-stat-num">—</div>'
+      : '<div class="trusty-pp-stat-num ' + deltaCls + '">' + deltaSign + ' ' + Math.abs(deltaPct) + '%</div>';
+    return '<div class="trusty-pp-stat-grid">' +
+      '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + tweets.toLocaleString() + '</div><div class="trusty-pp-stat-lbl">tweets / 24h</div></div>' +
+      '<div class="trusty-pp-stat">' + deltaCell + '<div class="trusty-pp-stat-lbl">vs yesterday</div></div>' +
+      '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (act.sentiment || "—") + '</div><div class="trusty-pp-stat-lbl">sentiment</div></div>' +
+      '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num ' + (act.coordShill ? 'down' : 'up') + '">' + (act.coordShill ? "DETECTED" : "Clean") + '</div><div class="trusty-pp-stat-lbl">coord. shill</div></div>' +
+    '</div>';
+  }
+
   function openPaidPanel(result, ca, chain) {
     closePaidPanel();
     if (!result) {
@@ -225,21 +331,7 @@
               '</li>';
     }).join("");
 
-    const kolsHtml = (result.kols && result.kols.length) ? result.kols.map(function (k) {
-      const ago = k.mins < 60 ? (k.mins + "m ago") :
-                  k.mins < 1440 ? (Math.floor(k.mins / 60) + "h ago") :
-                  (Math.floor(k.mins / 1440) + "d ago");
-      return '<div class="trusty-pp-kol-row">' +
-                '<span class="trusty-pp-kol-handle">' + k.handle + '</span>' +
-                '<span class="trusty-pp-kol-followers">' + k.followers + '</span>' +
-                '<span class="trusty-pp-kol-time">' + ago + '</span>' +
-              '</div>';
-    }).join("") : '<div class="trusty-pp-empty">No KOL mentions in the last 24h.</div>';
-
-    const act = result.activity || {};
     const md = result.marketData || {};
-    const deltaSign = act.deltaPct >= 0 ? "↑" : "↓";
-    const deltaCls = act.deltaPct >= 0 ? "up" : "down";
 
     panel.innerHTML =
       '<button class="trusty-pp-close" aria-label="Close">✕</button>' +
@@ -256,19 +348,14 @@
         '<ul class="trusty-tt-checks">' + checksHtml + '</ul>' +
       '</div>' +
 
-      '<div class="trusty-pp-section">' +
+      '<div class="trusty-pp-section" data-trusty-section="kols">' +
         '<div class="trusty-pp-section-title">🐦 KOLs last 24h</div>' +
-        kolsHtml +
+        renderKolsCta() +
       '</div>' +
 
-      '<div class="trusty-pp-section">' +
+      '<div class="trusty-pp-section" data-trusty-section="activity" style="display:none;">' +
         '<div class="trusty-pp-section-title">📈 X activity</div>' +
-        '<div class="trusty-pp-stat-grid">' +
-          '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (act.tweets24h || 0).toLocaleString() + '</div><div class="trusty-pp-stat-lbl">tweets / 24h</div></div>' +
-          '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num ' + deltaCls + '">' + deltaSign + ' ' + Math.abs(act.deltaPct || 0) + '%</div><div class="trusty-pp-stat-lbl">vs yesterday</div></div>' +
-          '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (act.sentiment || "—") + '</div><div class="trusty-pp-stat-lbl">sentiment</div></div>' +
-          '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num ' + (act.coordShill ? 'down' : 'up') + '">' + (act.coordShill ? "DETECTED" : "Clean") + '</div><div class="trusty-pp-stat-lbl">coord. shill</div></div>' +
-        '</div>' +
+        renderActivityBody(null) +
       '</div>' +
 
       '<div class="trusty-pp-section">' +
@@ -290,6 +377,16 @@
     document.body.appendChild(panel);
     panel.querySelector(".trusty-pp-close").addEventListener("click", closePaidPanel);
     document.documentElement.style.overflow = "hidden";
+
+    // Click-to-reveal: paid users opt in to KOLs + activity by clicking
+    // the CTA. Saves Sorsa quota when the user just wants to glance at
+    // safety + market data, and frames the data as a VIP action.
+    const cta = panel.querySelector(".trusty-pp-reveal-cta");
+    if (cta) {
+      cta.addEventListener("click", function () {
+        revealKols(ca, chain);
+      });
+    }
 
     // ESC to close
     document.addEventListener("keydown", function escHandler(e) {
