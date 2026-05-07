@@ -35,10 +35,15 @@ export default {
       return json({ error: "method not allowed" }, 405);
     }
 
-    const ca = (url.searchParams.get("ca") || "").toLowerCase();
+    const rawCa = url.searchParams.get("ca") || "";
     const chain = (url.searchParams.get("chain") || "bsc").toLowerCase();
 
-    if (!/^0x[a-f0-9]{40}$/.test(ca)) {
+    // CAs are case-sensitive on Solana, case-insensitive on EVM. We
+    // lowercase EVM for cache stability; preserve case for Solana.
+    const isSolanaChain = chain === "solana" || chain === "sol";
+    const ca = isSolanaChain ? rawCa : rawCa.toLowerCase();
+
+    if (!isValidCa(ca, chain)) {
       return json({ error: "invalid ca" }, 400);
     }
 
@@ -46,7 +51,8 @@ export default {
       return handleScan(ca, chain, env);
     }
     if (url.pathname === "/api/kols") {
-      return handleKols(ca, chain, env);
+      const symbol = (url.searchParams.get("symbol") || "").replace(/^\$/, "").trim();
+      return handleKols(ca, chain, env, symbol);
     }
     return json({ error: "not found" }, 404);
   },
@@ -75,14 +81,18 @@ async function handleScan(ca, chain, env) {
 }
 
 /* ── /api/kols ── Sorsa-backed KOL mentions, 6h cache ── */
-async function handleKols(ca, chain, env) {
-  const cacheKey = `kols:${chain}:${ca}`;
+async function handleKols(ca, chain, env, symbol) {
+  // Cache key includes symbol so two calls for the same CA with
+  // different symbols (rare, but possible) don't conflict. In practice
+  // CAs are 1:1 with symbols so this just adds harmless precision.
+  const sk = symbol ? "+" + symbol.toLowerCase() : "";
+  const cacheKey = `kols:${chain}:${ca}${sk}`;
   if (env.SCAN_KV) {
     const cached = await env.SCAN_KV.get(cacheKey, "json");
     if (cached) return json(cached);
   }
 
-  const result = await fetchKols(ca, chain, env);
+  const result = await fetchKols(ca, chain, env, symbol);
 
   if (env.SCAN_KV) {
     try {
@@ -112,10 +122,28 @@ function chainId(chain) {
   return map[chain] || "56";
 }
 
+function isSolana(chain) {
+  return chain === "solana" || chain === "sol";
+}
+
+// ── CA shape validation per chain ──
+const SOLANA_CA = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/; // base58, no 0OIl
+const EVM_CA = /^0x[a-f0-9]{40}$/;
+
+function isValidCa(ca, chain) {
+  if (isSolana(chain)) return SOLANA_CA.test(ca);
+  return EVM_CA.test(ca);
+}
+
 async function scanToken(ca, chain) {
+  if (isSolana(chain)) return scanTokenSolana(ca, chain);
+  return scanTokenEvm(ca, chain);
+}
+
+async function scanTokenEvm(ca, chain) {
   const [gpRes, dxRes] = await Promise.allSettled([
     fetchGoPlus(chainId(chain), ca),
-    fetchDex(ca),
+    fetchDex(ca, "bsc"),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
   const d = dxRes.status === "fulfilled" ? dxRes.value : null;
@@ -129,24 +157,39 @@ async function scanToken(ca, chain) {
   const symbol = "$" + rawSym.replace(/^\$/, "").toUpperCase();
   const name = d?.name || g?.token_name || "Token " + shortAddr(ca);
 
+  return baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g));
+}
+
+async function scanTokenSolana(ca, chain) {
+  const [gpRes, dxRes, rcRes] = await Promise.allSettled([
+    fetchGoPlusSolana(ca),
+    fetchDex(ca, "solana"),
+    fetchRugCheck(ca),
+  ]);
+  const g = gpRes.status === "fulfilled" ? gpRes.value : null;
+  const d = dxRes.status === "fulfilled" ? dxRes.value : null;
+  const rc = rcRes.status === "fulfilled" ? rcRes.value : null;
+
+  const checks = buildChecksSolana(g, rc);
+  const paidChecks = buildPaidChecksSolana(g);
+  const score = computeScore(g, checks, paidChecks);
+  const verdict = score >= 70 ? "APE" : score >= 40 ? "CAUTION" : "RUN";
+
+  const rawSym = (d?.symbol || g?.metadata?.symbol || ca.slice(0, 4)).toString();
+  const symbol = "$" + rawSym.replace(/^\$/, "").toUpperCase();
+  const name = d?.name || g?.metadata?.name || "Token " + shortAddrSol(ca);
+
+  return baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketDataSolana(d, g));
+}
+
+function baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, md) {
   return {
-    ca,
-    chain,
-    score,
-    verdict,
-    symbol,
-    name,
-    checks,
-    paidChecks,
-    // KOLs and X activity stay zeroed until TweetScout integration (task #2).
+    ca, chain, score, verdict, symbol, name,
+    checks, paidChecks,
+    // KOLs/activity hydrated by /api/kols on demand
     kols: [],
-    activity: {
-      tweets24h: 0,
-      deltaPct: 0,
-      sentiment: "—",
-      coordShill: false,
-    },
-    marketData: marketData(d, g),
+    activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
+    marketData: md,
   };
 }
 
@@ -162,28 +205,94 @@ async function fetchGoPlus(cid, ca) {
   return entry && Object.keys(entry).length ? entry : null;
 }
 
-// ── Dexscreener ──
-async function fetchDex(ca) {
+// ── Dexscreener (works for both EVM and Solana — just filter chainId) ──
+async function fetchDex(ca, preferredChain) {
   const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${ca}`, {
     headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
   });
   if (!r.ok) throw new Error("dex " + r.status);
   const data = await r.json();
   if (!Array.isArray(data?.pairs) || !data.pairs.length) return null;
-  const bsc = data.pairs.filter((p) => p.chainId === "bsc");
-  const sorted = (bsc.length ? bsc : data.pairs).sort(
-    (a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
-  );
-  const top = sorted[0];
+  const filtered = preferredChain
+    ? data.pairs.filter((p) => p.chainId === preferredChain)
+    : [];
+  const candidates = filtered.length ? filtered : data.pairs;
+
+  // Choose the canonical pair by 24h volume (with a $1k liquidity floor
+  // to avoid wash-trade fake pools) — but aggregate liquidity + volume
+  // across ALL pairs of the same chain so the user sees the token's
+  // real market depth, not a single thin pool.
+  const principal = candidates
+    .filter((p) => (p.liquidity?.usd || 0) >= 1000)
+    .sort((a, b) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))[0]
+    || candidates.sort(
+      (a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
+    )[0];
+
+  let totalLiq = 0, totalVol = 0;
+  for (const p of candidates) {
+    totalLiq += p.liquidity?.usd || 0;
+    totalVol += p.volume?.h24 || 0;
+  }
+
   return {
-    symbol: top.baseToken?.symbol,
-    name: top.baseToken?.name,
-    priceUsd: parseFloat(top.priceUsd) || 0,
-    mcap: top.marketCap || top.fdv || 0,
-    liquidityUsd: top.liquidity?.usd || 0,
-    volume24h: top.volume?.h24 || 0,
-    pairCreatedAt: top.pairCreatedAt || 0,
+    symbol: principal.baseToken?.symbol,
+    name: principal.baseToken?.name,
+    priceUsd: parseFloat(principal.priceUsd) || 0,
+    mcap: principal.marketCap || principal.fdv || 0,
+    liquidityUsd: totalLiq,
+    volume24h: totalVol,
+    pairCreatedAt: principal.pairCreatedAt || 0,
   };
+}
+
+// ── RugCheck.xyz: Solana-specific LP analysis (free, no key) ──
+// GoPlus's Solana endpoint frequently omits the dex/lp_holders arrays,
+// especially for Pump.fun graduates whose LP is auto-burned on
+// migration. RugCheck explicitly reports lpLockedPct per market, so we
+// use it as the authoritative LP-locked source on Solana.
+async function fetchRugCheck(ca) {
+  const r = await fetch(`https://api.rugcheck.xyz/v1/tokens/${ca}/report`, {
+    headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
+  });
+  if (!r.ok) throw new Error("rugcheck " + r.status);
+  const data = await r.json();
+  const markets = Array.isArray(data?.markets) ? data.markets : [];
+  // Use the maximum lpLockedPct across all markets as the headline
+  // signal — if any major pool has LP locked ≥95%, the token is
+  // effectively rug-resistant on that pool.
+  let maxLockedPct = 0;
+  for (const m of markets) {
+    const pct = parseFloat(m?.lp?.lpLockedPct || 0);
+    if (pct > maxLockedPct) maxLockedPct = pct;
+  }
+  return {
+    lpLockedPct: maxLockedPct,
+    rugScore: data?.score_normalised ?? data?.score ?? null,
+    risks: Array.isArray(data?.risks) ? data.risks : [],
+  };
+}
+
+// ── GoPlus Solana token-security ──
+async function fetchGoPlusSolana(ca) {
+  const url = `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${ca}`;
+  const r = await fetch(url, {
+    headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
+  });
+  if (!r.ok) throw new Error("goplus-sol " + r.status);
+  const data = await r.json();
+  // Solana endpoint returns a result keyed by the original-case CA.
+  const entry =
+    data?.result?.[ca] ||
+    data?.result?.[ca.toLowerCase()] ||
+    data?.result?.[ca.toUpperCase()] ||
+    null;
+  // Fallback: take first key in the result map (case-insensitive lookup didn't hit)
+  if (!entry && data?.result) {
+    const keys = Object.keys(data.result);
+    if (keys.length) return data.result[keys[0]];
+  }
+  return entry && Object.keys(entry).length ? entry : null;
 }
 
 // ── checks ──
@@ -237,6 +346,157 @@ function isRenounced(g) {
   return owner === ZERO || owner === DEAD;
 }
 
+/* ──────────────── Solana check builders ──────────────── */
+
+function buildChecksSolana(g, rc) {
+  if (!g) {
+    return [
+      { ok: false, label: "Not a honeypot" },
+      { ok: false, label: "Transfer fee data unavailable" },
+      { ok: !!(rc && rc.lpLockedPct >= 95), label: "LP locked" },
+      { ok: false, label: "Mint disabled" },
+      { ok: false, label: "Authorities renounced" },
+    ];
+  }
+
+  // Honeypot equivalents on Solana: token marked non-transferable, OR
+  // an active freeze authority that could brick balances.
+  const nonTransferable = g.non_transferable === "1";
+  const freezeActive = g.freezable?.status === "1" && (g.freezable.authority || []).length > 0;
+  const notHoneypot = !nonTransferable && !freezeActive;
+
+  // Transfer fee: SPL Token-2022 fee object. Empty object = no fee. If
+  // it has bps > 0, that's the equivalent of EVM tax.
+  const tfRaw = g.transfer_fee || {};
+  const tfFutureRisk = g.transfer_fee_upgradable?.status === "1" && (g.transfer_fee_upgradable.authority || []).length > 0;
+  const feeBps = parseFloat(tfRaw.transfer_fee_bps || tfRaw.bps || tfRaw.fee_rate || "0");
+  const feePct = feeBps > 1 ? feeBps / 100 : feeBps; // bps→%
+  const feeLabel = feePct === 0 ? "No transfer fee" : `Transfer fee ${feePct.toFixed(2)}%`;
+  const feeOk = feePct === 0 && !tfFutureRisk;
+
+  // Mint authority: empty/0 = mint revoked
+  const mintDisabled = g.mintable?.status === "0";
+
+  // "Renounced" composite: all major authorities are gone.
+  const freezeRenounced = g.freezable?.status === "0";
+  const closeRenounced = g.closable?.status === "0";
+  const balanceMutRenounced = g.balance_mutable_authority?.status === "0";
+  const transferHookSafe = !Array.isArray(g.transfer_hook) || g.transfer_hook.length === 0;
+  const renounced = freezeRenounced && closeRenounced && balanceMutRenounced && transferHookSafe;
+
+  // LP locked: layered detection — RugCheck lpLockedPct is the most
+  // reliable Solana signal. Falls back to GoPlus dex burn_percent and
+  // then lp_holders.is_locked when RugCheck is unavailable.
+  const lpLocked = lpLockedSolana(g, rc);
+
+  return [
+    { ok: notHoneypot, label: "Not a honeypot" },
+    { ok: feeOk, label: feeLabel },
+    { ok: lpLocked, label: "LP locked" },
+    { ok: mintDisabled, label: "Mint disabled" },
+    { ok: renounced, label: "Authorities renounced" },
+  ];
+}
+
+function lpLockedSolana(g, rc) {
+  // Path 0 (best signal): RugCheck reports explicit lpLockedPct per
+  // market. If any pool has ≥95% locked, treat as locked.
+  if (rc && rc.lpLockedPct >= 95) return true;
+
+  // Path 1: GoPlus dex array burn_percent — share of LP tokens burned
+  // (rug-proof) per pool. If any meaningful-TVL pool has most LP tokens
+  // burned, LP is effectively locked.
+  const dex = g.dex || [];
+  for (const pool of dex) {
+    const tvl = parseFloat(pool.tvl || "0");
+    const burn = parseFloat(pool.burn_percent || "0");
+    if (tvl >= 10000 && burn >= 50) return true;
+  }
+
+  // Path 2 (fallback): explicit lp_holders is_locked flags. Used by
+  // Solana lockers like Streamflow / Jup-Lock when a project locks
+  // LP tokens via a vesting contract instead of burning.
+  const holders = g.lp_holders || [];
+  if (holders.length) {
+    const totalPct = holders.reduce((s, h) => s + parseFloat(h.percent || "0"), 0);
+    if (totalPct > 0) {
+      const lockedPct = holders.reduce((s, h) => {
+        const isLocked = h.is_locked === 1 || h.is_locked === "1";
+        return s + (isLocked ? parseFloat(h.percent || "0") : 0);
+      }, 0);
+      if (lockedPct / totalPct >= 0.95) return true;
+    }
+  }
+
+  return false;
+}
+
+function buildPaidChecksSolana(g) {
+  if (!g) {
+    return [
+      { ok: false, label: "Top wallets: data unavailable" },
+      { ok: false, label: "Dev wallet: data unavailable" },
+    ];
+  }
+  // Top non-LP holder concentration. Solana doesn't tag LP/burn the same
+  // way EVM does, so we filter by skipping locked holders (which are
+  // typically LP positions).
+  const holders = g.holders || [];
+  let topShare = 0;
+  let counted = 0;
+  for (const h of holders) {
+    if (counted >= 5) break;
+    const isLocked = h.is_locked === 1 || h.is_locked === "1";
+    if (isLocked) continue;
+    topShare += parseFloat(h.percent || "0");
+    counted++;
+  }
+  // Dev/creator concentration
+  const creators = g.creators || [];
+  const creatorPct = creators.reduce((sum, c) => sum + parseFloat(c.percent || c.balance_pct || "0"), 0);
+
+  return [
+    {
+      ok: topShare < 0.10,
+      label:
+        topShare < 0.10
+          ? "Top 5 wallets hold <10%"
+          : `Top 5 wallets hold ${(topShare * 100).toFixed(0)}%`,
+    },
+    {
+      ok: creatorPct < 0.05,
+      label:
+        creatorPct < 0.05
+          ? "Dev wallet: clean"
+          : `Dev wallet: holds ${(creatorPct * 100).toFixed(0)}%`,
+    },
+  ];
+}
+
+function marketDataSolana(d, g) {
+  // Same shape as EVM marketData(). Holder count comes from GoPlus.
+  const mcap = d?.mcap || 0;
+  const liq = d?.liquidityUsd || 0;
+  const vol = d?.volume24h || 0;
+  const ageDays = d?.pairCreatedAt
+    ? Math.max(1, Math.floor((Date.now() - d.pairCreatedAt) / 86400000))
+    : 0;
+  const holders = g?.holder_count ? parseInt(g.holder_count, 10) : 0;
+  return {
+    mcap: fmtUsd(mcap),
+    liquidity: fmtUsd(liq),
+    volume24h: fmtUsd(vol),
+    age: ageDays ? ageDays + "d" : "—",
+    holders,
+  };
+}
+
+function shortAddrSol(ca) {
+  return ca.slice(0, 4) + "..." + ca.slice(-4);
+}
+
+/* ──────────────── End Solana ──────────────── */
+
 function buildPaidChecks(g) {
   if (!g) {
     return [
@@ -283,18 +543,21 @@ function computeScore(g, checks, paidChecks) {
   if (!g) return 0;
   const w = {
     "Not a honeypot": 25,
-    tax: 15,
+    fee: 15, // EVM "Tax …" or Solana "No transfer fee" / "Transfer fee …"
     "LP locked": 15,
     "Mint disabled": 10,
-    "Contract renounced": 10,
+    renounced: 10, // EVM "Contract renounced" or Solana "Authorities renounced"
     topWallets: 15,
     dev: 10,
   };
   let s = 0;
   for (const c of checks) {
     if (!c.ok) continue;
-    if (c.label.startsWith("Tax")) s += w.tax;
-    else s += w[c.label] || 0;
+    if (c.label === "Not a honeypot") s += w["Not a honeypot"];
+    else if (c.label.startsWith("Tax") || c.label === "No transfer fee" || c.label.startsWith("Transfer fee")) s += w.fee;
+    else if (c.label === "LP locked") s += w["LP locked"];
+    else if (c.label === "Mint disabled") s += w["Mint disabled"];
+    else if (c.label === "Contract renounced" || c.label === "Authorities renounced") s += w.renounced;
   }
   for (const c of paidChecks) {
     if (!c.ok) continue;
@@ -344,12 +607,15 @@ const EMPTY_KOLS = {
   activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
 };
 
-async function fetchKols(ca, chain, env) {
+async function fetchKols(ca, chain, env, symbol) {
   if (!env.SORSA_API_KEY) return EMPTY_KOLS;
 
-  // 1) Search recent tweets mentioning the CA. Sorsa's query field uses
-  //    Twitter Advanced Search syntax; we hand it the CA as plain text.
-  const searchResult = await sorsaSearchTweets(ca, env.SORSA_API_KEY);
+  // 1) Search recent tweets mentioning the token. If we have a symbol,
+  //    use it (most tweets say "$TRUSTY" not the 42-char hex). Combine
+  //    multiple search forms with Twitter's OR operator so we catch
+  //    cashtags, hashtags, and the raw CA in one call.
+  const query = buildSearchQuery(ca, symbol);
+  const searchResult = await sorsaSearchTweets(query, env.SORSA_API_KEY);
   const tweets = searchResult.tweets;
   const tweets24h = countWithin(tweets, 24 * 3600 * 1000);
 
@@ -363,7 +629,7 @@ async function fetchKols(ca, chain, env) {
       activity: {
         tweets24h,
         deltaPct: 0,
-        sentiment: "—",
+        sentiment: scoreSentiment(tweets),
         coordShill: detectCoordShill(tweets),
       },
     };
@@ -399,10 +665,42 @@ async function fetchKols(ca, chain, env) {
     activity: {
       tweets24h,
       deltaPct: 0, // requires a 2nd window-search; defer to save quota
-      sentiment: "—", // Sorsa doesn't expose; leave honest
+      sentiment: scoreSentiment(tweets),
       coordShill: detectCoordShill(tweets),
     },
   };
+}
+
+/* ── Sorsa search: build query, broadening with symbol/hashtag if known ── */
+function buildSearchQuery(ca, symbol) {
+  const parts = [];
+  if (symbol && /^[A-Za-z0-9_]{2,12}$/.test(symbol)) {
+    parts.push("$" + symbol);
+    parts.push("#" + symbol);
+  }
+  parts.push(ca);
+  // Twitter OR is uppercase-required and space-padded.
+  return parts.join(" OR ");
+}
+
+/* ── Sentiment heuristic: bullish vs bearish word counts across tweets ── */
+const BULL_WORDS = /\b(moon(?:ing)?|pump(?:ing)?|bull(?:ish)?|ape(?:in|ing)?|send(?:ing|er)?|gem|rocket|rugproof|lfg|x(?:1\d|\d{2,})|wagmi|10x|100x|undervalued|legit|strong|mooning|gainz?)\b/gi;
+const BEAR_WORDS = /\b(rug(?:ged|pull)?|scam(?:my)?|honeypot|dump(?:ing|ed)?|dead|exit liquidity|ponzi|bear(?:ish)?|jeet|red flag|avoid|fake|sus|sketchy)\b/gi;
+
+function scoreSentiment(tweets) {
+  if (!tweets.length) return "—";
+  let bull = 0, bear = 0;
+  for (const t of tweets) {
+    const text = t.text || "";
+    bull += (text.match(BULL_WORDS) || []).length;
+    bear += (text.match(BEAR_WORDS) || []).length;
+  }
+  const total = bull + bear;
+  if (total < 3) return "—"; // not enough signal
+  const bullPct = Math.round((bull / total) * 100);
+  if (bullPct >= 60) return bullPct + "% bullish";
+  if (bullPct <= 40) return 100 - bullPct + "% bearish";
+  return "Mixed";
 }
 
 async function sorsaSearchTweets(query, apiKey) {

@@ -196,30 +196,30 @@
       '<button class="trusty-pp-reveal-cta" type="button">' +
         '<span class="trusty-pp-reveal-icon">✨</span>' +
         '<span class="trusty-pp-reveal-text">Reveal KOL mentions + X activity</span>' +
-        '<span class="trusty-pp-reveal-meta">Top 5 followers · last 24h</span>' +
+        '<span class="trusty-pp-reveal-meta">Top 5 by followers · powered by Sorsa</span>' +
       '</button>'
     );
   }
 
-  function revealKols(ca, chain) {
+  function revealKols(ca, chain, symbol) {
     const live = document.getElementById(PANEL_ID);
     if (!live) return;
     const kolsBody = live.querySelector('[data-trusty-section="kols"]');
     const actBody = live.querySelector('[data-trusty-section="activity"]');
     if (kolsBody) {
       kolsBody.innerHTML =
-        '<div class="trusty-pp-section-title">🐦 KOLs last 24h</div>' +
+        '<div class="trusty-pp-section-title">🐦 Top KOL mentions</div>' +
         renderKolsBody(null); // pulse "Loading…"
     }
     if (window.TrustyAPI && window.TrustyAPI.scanKols) {
-      window.TrustyAPI.scanKols(ca, chain).then(function (data) {
+      window.TrustyAPI.scanKols(ca, chain, symbol).then(function (data) {
         const stillLive = document.getElementById(PANEL_ID);
         if (!stillLive) return; // user closed before fetch resolved
         const k = stillLive.querySelector('[data-trusty-section="kols"]');
         const a = stillLive.querySelector('[data-trusty-section="activity"]');
         if (k) {
           k.innerHTML =
-            '<div class="trusty-pp-section-title">🐦 KOLs last 24h</div>' +
+            '<div class="trusty-pp-section-title">🐦 Top KOL mentions</div>' +
             renderKolsBody(data.kols || []);
         }
         if (a) {
@@ -232,7 +232,7 @@
         const k = document.getElementById(PANEL_ID)?.querySelector('[data-trusty-section="kols"]');
         if (k) {
           k.innerHTML =
-            '<div class="trusty-pp-section-title">🐦 KOLs last 24h</div>' +
+            '<div class="trusty-pp-section-title">🐦 Top KOL mentions</div>' +
             '<div class="trusty-pp-empty">Couldn\'t load KOL data — try again later.</div>';
         }
       });
@@ -349,7 +349,7 @@
       '</div>' +
 
       '<div class="trusty-pp-section" data-trusty-section="kols">' +
-        '<div class="trusty-pp-section-title">🐦 KOLs last 24h</div>' +
+        '<div class="trusty-pp-section-title">🐦 Top KOL mentions</div>' +
         renderKolsCta() +
       '</div>' +
 
@@ -383,8 +383,9 @@
     // safety + market data, and frames the data as a VIP action.
     const cta = panel.querySelector(".trusty-pp-reveal-cta");
     if (cta) {
+      const symbol = (result.symbol || "").replace(/^\$/, "");
       cta.addEventListener("click", function () {
-        revealKols(ca, chain);
+        revealKols(ca, chain, symbol);
       });
     }
 

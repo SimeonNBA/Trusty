@@ -125,13 +125,14 @@
   // ── Sorsa-backed KOLs + activity ─────────────────────────────
   // Lazy-fetched only when a paid user opens the inline panel — so
   // free-tier hovers never burn Sorsa quota.
-  async function scanKolsRemote(ca, chain) {
-    const url =
+  async function scanKolsRemote(ca, chain, symbol) {
+    let url =
       API_BASE +
       "/api/kols?ca=" +
       encodeURIComponent(ca) +
       "&chain=" +
       encodeURIComponent(chain || "bsc");
+    if (symbol) url += "&symbol=" + encodeURIComponent(symbol);
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
     try {
@@ -163,10 +164,10 @@
   }
 
   const kolsCache = new Map();
-  function scanKols(ca, chain) {
+  function scanKols(ca, chain, symbol) {
     const key = (ca + ":" + (chain || "evm")).toLowerCase();
     if (kolsCache.has(key)) return kolsCache.get(key);
-    const promise = scanKolsRemote(ca, chain).catch((e) => {
+    const promise = scanKolsRemote(ca, chain, symbol).catch((e) => {
       kolsCache.delete(key);
       throw e;
     });
