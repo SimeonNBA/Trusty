@@ -180,6 +180,15 @@
     });
 
     seeAll.style.display = items.length > 3 ? "block" : "none";
+
+    // Pass the persistent subId via URL hash so trustyai.tech/watchlist/
+    // can fetch the cloud list. Hash isn't sent over HTTP — stays
+    // client-side, never appears in server access logs.
+    if (items.length > 3) {
+      window.TrustyTier.getOrCreateSubId().then(function (subId) {
+        seeAll.href = "https://trustyai.tech/watchlist/#sub=" + encodeURIComponent(subId);
+      });
+    }
   }
 
   function escapeText(s) {

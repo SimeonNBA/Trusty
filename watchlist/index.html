@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Watchlist — Trusty AI</title>
+<meta name="description" content="Your saved tokens, with live safety scores and market data.">
+<link rel="canonical" href="https://trustyai.tech/watchlist/">
+<link rel="icon" type="image/png" href="../assets/mascot-hero.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #05080f;
+    --bg2: #0a1120;
+    --card: #111d33;
+    --card2: #162440;
+    --border: rgba(80,140,255,0.18);
+    --border2: rgba(80,140,255,0.35);
+    --blue: #3B82F6;
+    --blue2: #60A5FA;
+    --green: #22C55E;
+    --yellow: #F3BA2F;
+    --red: #EF4444;
+    --text: #E2EEFF;
+    --muted: #6B85B0;
+    --font: 'Space Grotesk', sans-serif;
+    --display: 'Bangers', cursive;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .nav-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--blue2);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.06);
+    transition: all 0.15s ease;
+  }
+  .nav-back:hover { background: rgba(59, 130, 246, 0.12); border-color: var(--border2); color: #93C5FD; }
+  .nav-brand {
+    font-family: var(--display);
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    background: linear-gradient(135deg, #60A5FA, #3B82F6, #818CF8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(40px, 7vw, 60px);
+    letter-spacing: 2.5px;
+    line-height: 1;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--yellow), #FFD86B);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .lede {
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 600px;
+  }
+
+  .summary {
+    display: flex;
+    gap: 12px;
+    margin: 18px 0 24px;
+    flex-wrap: wrap;
+  }
+  .summary-pill {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg2);
+  }
+  .summary-pill strong { color: var(--yellow); }
+
+  .empty-state, .loading-state, .error-state {
+    text-align: center;
+    padding: 56px 24px;
+    background: var(--card);
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+  }
+  .empty-state h2 {
+    font-family: var(--display);
+    font-size: 28px;
+    letter-spacing: 1.5px;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .empty-state p, .loading-state p, .error-state p {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  .empty-state a, .error-state a {
+    display: inline-block;
+    margin-top: 12px;
+    color: var(--blue2);
+    text-decoration: none;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(59,130,246,0.06);
+  }
+  .empty-state a:hover, .error-state a:hover { background: rgba(59,130,246,0.14); color: #93C5FD; }
+
+  .loading-spinner {
+    width: 26px; height: 26px;
+    margin: 0 auto 14px;
+    border: 3px solid rgba(96, 165, 250, 0.2);
+    border-top-color: var(--blue2);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Token rows */
+  .wl-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .wl-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+    color: inherit;
+    text-decoration: none;
+  }
+  .wl-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-1px);
+  }
+
+  .wl-chain {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.04);
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .wl-name {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+  .wl-symbol {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .wl-token-name {
+    font-size: 12px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .wl-score {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 800;
+    text-align: center;
+    min-width: 60px;
+  }
+  .wl-score.ape { color: var(--green); }
+  .wl-score.caution { color: var(--yellow); }
+  .wl-score.run { color: var(--red); }
+  .wl-score.pending { color: var(--muted); }
+  .wl-score-label {
+    display: block;
+    font-size: 8px;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+
+  .wl-mcap {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    min-width: 80px;
+    text-align: right;
+  }
+  .wl-mcap-label {
+    display: block;
+    font-size: 8px;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+
+  .wl-time {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    text-align: right;
+    min-width: 80px;
+  }
+
+  .wl-remove {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    transition: color 0.12s, border-color 0.12s;
+  }
+  .wl-remove:hover {
+    color: var(--red);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+
+  .footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+  }
+  .footer a { color: var(--blue2); text-decoration: none; font-weight: 600; }
+
+  @media (max-width: 720px) {
+    .wl-card {
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+    }
+    .wl-mcap, .wl-time { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <nav class="nav">
+    <a href="/" class="nav-back">← Back to Trusty AI</a>
+    <span class="nav-brand">⭐ TRUSTY</span>
+  </nav>
+
+  <header class="hero">
+    <h1>Your Watchlist</h1>
+    <p class="lede">Tokens you've saved from the Trusty extension. Live safety scores and market data, refreshed each time you open this page.</p>
+    <div class="summary" id="wlSummary" style="display:none;">
+      <span class="summary-pill" id="wlCount"><strong>0</strong> tokens</span>
+      <span class="summary-pill" id="wlApe"><strong>0</strong> APE</span>
+      <span class="summary-pill" id="wlCaution"><strong>0</strong> CAUTION</span>
+      <span class="summary-pill" id="wlRun"><strong>0</strong> RUN</span>
+    </div>
+  </header>
+
+  <div id="wlContainer">
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <p>Loading your watchlist…</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>
+      Don't have the extension yet?
+      <a href="https://chrome.google.com/webstore/detail/trusty-ai/" target="_blank" rel="noopener">Install Trusty AI →</a>
+    </p>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const API_BASE = "https://api.trustyai.tech";
+
+  // Read subId from URL hash. Hash is client-side only — never sent
+  // over HTTP, so the subId stays out of server access logs.
+  function readSubId() {
+    const m = (location.hash || "").match(/sub=([a-zA-Z0-9_-]{8,64})/);
+    return m ? m[1] : null;
+  }
+
+  function fmtAgo(ms) {
+    const m = Math.floor((Date.now() - ms) / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return m + "m ago";
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + "h ago";
+    const d = Math.floor(h / 24);
+    return d + "d ago";
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function renderError(msg, withInstall) {
+    document.getElementById("wlContainer").innerHTML =
+      '<div class="error-state">' +
+        '<p>' + escapeHtml(msg) + '</p>' +
+        (withInstall ? '<a href="https://chrome.google.com/webstore/detail/trusty-ai/" target="_blank" rel="noopener">Install Trusty AI →</a>' : '') +
+      '</div>';
+  }
+
+  function renderEmpty() {
+    document.getElementById("wlContainer").innerHTML =
+      '<div class="empty-state">' +
+        '<h2>No saved tokens yet</h2>' +
+        '<p>Open the Trusty extension on X, Reddit, or Dexscreener and click the ☆ on any token pill to save it here.</p>' +
+        '<a href="https://chrome.google.com/webstore/detail/trusty-ai/" target="_blank" rel="noopener">Open extension →</a>' +
+      '</div>';
+  }
+
+  async function loadList(subId) {
+    try {
+      const r = await fetch(API_BASE + "/api/watchlist?subId=" + encodeURIComponent(subId), {
+        headers: { Accept: "application/json" }
+      });
+      if (!r.ok) {
+        renderError("Couldn't reach Trusty's API. Try refreshing in a moment.");
+        return;
+      }
+      const data = await r.json();
+      const items = Array.isArray(data?.items) ? data.items : [];
+      if (!items.length) { renderEmpty(); return; }
+      // Render skeleton rows first, then refresh each scan in parallel
+      renderSkeletons(items);
+      hydrateScans(items);
+    } catch (e) {
+      renderError("Network error. Try refreshing in a moment.");
+    }
+  }
+
+  function renderSkeletons(items) {
+    const html = items.map(function (it, idx) {
+      const symbol = it.symbol ? "$" + it.symbol.toUpperCase().replace(/^\$/, "") : (it.ca || "").slice(0, 8) + "…";
+      const chainLabel = (it.chain || "evm").toUpperCase();
+      const url = "/?ca=" + encodeURIComponent(it.ca) + "&chain=" + encodeURIComponent(it.chain || "evm") + "&utm_source=watchlist";
+      return '<a class="wl-card" data-idx="' + idx + '" href="' + url + '">' +
+        '<span class="wl-chain">' + escapeHtml(chainLabel) + '</span>' +
+        '<div class="wl-name">' +
+          '<span class="wl-symbol">' + escapeHtml(symbol) + '</span>' +
+          '<span class="wl-token-name">' + escapeHtml(it.name || "Loading…") + '</span>' +
+        '</div>' +
+        '<div>' +
+          '<div class="wl-score pending" data-role="score">—</div>' +
+          '<span class="wl-score-label">SCORE</span>' +
+        '</div>' +
+        '<div>' +
+          '<div class="wl-mcap" data-role="mcap">—</div>' +
+          '<span class="wl-mcap-label">MCAP</span>' +
+        '</div>' +
+        '<span class="wl-time">' + fmtAgo(it.addedAt || Date.now()) + '</span>' +
+      '</a>';
+    }).join("");
+    document.getElementById("wlContainer").innerHTML = '<div class="wl-grid">' + html + '</div>';
+    document.getElementById("wlSummary").style.display = "flex";
+    document.getElementById("wlCount").innerHTML = '<strong>' + items.length + '</strong> tokens';
+  }
+
+  async function hydrateScans(items) {
+    let ape = 0, caution = 0, run = 0;
+    const cards = document.querySelectorAll(".wl-card");
+    await Promise.all(items.map(async function (it, idx) {
+      try {
+        const r = await fetch(API_BASE + "/api/scan?ca=" + encodeURIComponent(it.ca) +
+                               "&chain=" + encodeURIComponent(it.chain || "evm"));
+        if (!r.ok) return;
+        const data = await r.json();
+        const card = cards[idx];
+        if (!card) return;
+        const scoreEl = card.querySelector('[data-role="score"]');
+        const mcapEl = card.querySelector('[data-role="mcap"]');
+        scoreEl.textContent = String(data.score ?? "—");
+        scoreEl.classList.remove("pending", "ape", "caution", "run");
+        const cls = (data.verdict || "").toLowerCase();
+        if (cls === "ape" || cls === "caution" || cls === "run") {
+          scoreEl.classList.add(cls);
+          if (cls === "ape") ape++;
+          else if (cls === "caution") caution++;
+          else if (cls === "run") run++;
+        }
+        if (data.marketData?.mcap) mcapEl.textContent = data.marketData.mcap;
+        // Update name if we got a real one
+        if (data.name) {
+          const nameEl = card.querySelector(".wl-token-name");
+          if (nameEl) nameEl.textContent = data.name;
+        }
+      } catch (e) { /* leave skeleton in place */ }
+    }));
+    document.getElementById("wlApe").innerHTML = '<strong>' + ape + '</strong> APE';
+    document.getElementById("wlCaution").innerHTML = '<strong>' + caution + '</strong> CAUTION';
+    document.getElementById("wlRun").innerHTML = '<strong>' + run + '</strong> RUN';
+  }
+
+  // ── boot ──
+  document.addEventListener("DOMContentLoaded", function () {
+    const subId = readSubId();
+    if (!subId) {
+      renderError(
+        "No watchlist link detected. Open this page from the Trusty extension popup so we can find your saved tokens.",
+        true
+      );
+      return;
+    }
+    loadList(subId);
+  });
+})();
+</script>
+
+</body>
+</html>
