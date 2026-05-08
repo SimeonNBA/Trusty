@@ -3746,6 +3746,31 @@ body::before {
 .token-page {
   animation: fadeUp 0.3s ease both;
 }
+
+/* Trusty tab additions */
+.trusty-link-card { display:flex; align-items:center; gap:12px; padding:14px; background:var(--bg2); border:1px solid var(--border); border-radius:12px; text-decoration:none; color:inherit; transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease; }
+.trusty-link-card:hover { border-color:var(--border2); background:var(--card2); transform:translateY(-1px); }
+.trusty-link-card-soon { opacity:0.6; cursor:default; }
+.trusty-link-card-soon:hover { transform:none; background:var(--bg2); border-color:var(--border); }
+.trusty-link-card-icon { font-size:22px; line-height:1; flex-shrink:0; width:32px; text-align:center; }
+.trusty-link-card-title { font-weight:700; font-size:14px; color:var(--text); }
+.trusty-link-card-sub { font-size:11px; color:var(--muted); font-family:var(--mono); letter-spacing:0.3px; margin-top:2px; }
+.trusty-partner-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+.trusty-partner-card { padding:18px 12px; background:var(--bg2); border:1px dashed var(--border); border-radius:12px; text-align:center; transition: border-color 0.15s ease, background 0.15s ease; }
+.trusty-partner-card:hover { border-color:var(--border2); background:var(--card2); }
+.trusty-partner-soon { opacity:0.65; }
+.trusty-partner-name { font-weight:700; font-size:13px; color:var(--text); margin-bottom:6px; }
+.trusty-partner-tag { font-size:9px; letter-spacing:1.4px; color:var(--yellow); font-family:var(--mono); font-weight:600; }
+.trusty-proof-grid { display:flex; flex-direction:column; gap:10px; }
+.trusty-proof-row { display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center; padding:12px 14px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; }
+.trusty-proof-icon { font-size:18px; line-height:1; }
+.trusty-proof-text { min-width:0; }
+.trusty-proof-title { font-weight:700; font-size:13px; color:var(--text); }
+.trusty-proof-sub { font-size:11px; color:var(--muted); line-height:1.5; margin-top:2px; }
+.trusty-proof-link { flex-shrink:0; font-size:11px; color:var(--blue2); text-decoration:none; font-weight:600; padding:5px 10px; border:1px solid var(--border); border-radius:6px; background:rgba(59,130,246,0.06); white-space:nowrap; transition: background 0.12s, color 0.12s, border-color 0.12s; }
+.trusty-proof-link:hover { background:rgba(59,130,246,0.18); border-color:var(--border2); color:#93C5FD; }
+@media (max-width:600px) { .trusty-proof-row { grid-template-columns:auto 1fr; grid-template-rows:auto auto; gap:8px; } .trusty-proof-link { grid-column:1/-1; text-align:center; } }
+
 .token-hero {
   text-align: center;
   padding: 32px 0 24px;
@@ -5282,16 +5307,13 @@ body::before {
         🔍 SCANNER
       </button>
       <button class="main-nav-btn academy-btn" id="nav-academy" onclick="switchTab('academy')">
-        🎓 LEARN &amp; EARN
+        🎓 LEARN
       </button>
-      <button class="main-nav-btn token-btn" id="nav-token" onclick="switchTab('token')">
-        🪙 Token
+      <button class="main-nav-btn token-btn" id="nav-trusty" onclick="switchTab('trusty')">
+        🛡️ Trusty
       </button>
       <button class="main-nav-btn" id="nav-watchlist" onclick="switchTab('watchlist')">
         ⭐ Watchlist
-      </button>
-      <button class="main-nav-btn" id="nav-meme" onclick="switchTab('meme')">
-        📰 Weekly Trenches Report
       </button>
     </div>
 
@@ -5732,11 +5754,6 @@ body::before {
           <div style="font-size:14px;color:var(--muted);max-width:520px;margin:0 auto;line-height:1.6;">Learn the meta. Stack Trusty Points. Claim $TRUSTY rewards when Phase 2 drops.</div>
         </div>
 
-        <!-- LEARN / EARN SWITCHER -->
-        <div class="le-switcher">
-          <button class="le-switcher-btn active" id="le-btn-learn" onclick="showLEPanel('learn')">📚 Learn</button>
-          <button class="le-switcher-btn" id="le-btn-earn" onclick="showLEPanel('earn')">💰 Earn <span class="le-badge" style="background:rgba(239,68,68,0.18);color:#FCA5A5;">TEST</span></button>
-        </div>
 
         <!-- LEARN PANEL (existing Academy content) -->
         <div class="le-panel active" id="le-learn">
@@ -5988,101 +6005,6 @@ body::before {
         <!-- ═════════════════════════════
              EARN PANEL (beta)
              ═════════════════════════════ -->
-        <div class="le-panel" id="le-earn">
-
-          <!-- TEST disclaimer banner -->
-          <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start;">
-            <div style="font-size:18px;line-height:1;">⚠️</div>
-            <div style="font-size:12px;color:#FCA5A5;line-height:1.55;">
-              <strong style="color:#F87171;letter-spacing:1px;">TEST MODE</strong> — This is a preview of the Earn system. Trusty Points are local only (stored in your browser). No tokens are distributed yet. The real $TRUSTY rewards launch in Phase 2.
-            </div>
-          </div>
-
-          <!-- Hero with stats + claim CTA -->
-          <div class="earn-hero">
-            <div class="earn-hero-title">💰 EARN $TRUSTY <span style="font-family:var(--mono);font-size:10px;background:rgba(239,68,68,0.18);color:#FCA5A5;padding:3px 8px;border-radius:20px;letter-spacing:2px;vertical-align:middle;margin-left:4px;">TEST</span></div>
-            <div class="earn-hero-sub">Stack Trusty Points by scanning tokens, completing missions, and keeping your streak alive. Points will convert to $TRUSTY airdrops when Phase 2 ships — this page is a preview of that system.</div>
-            <div class="earn-hero-stats">
-              <div class="earn-stat">
-                <div class="earn-stat-label">POINTS</div>
-                <div class="earn-stat-value points" id="eh-points">0</div>
-              </div>
-              <div class="earn-stat">
-                <div class="earn-stat-label">STREAK</div>
-                <div class="earn-stat-value streak" id="eh-streak">0🔥</div>
-              </div>
-              <div class="earn-stat">
-                <div class="earn-stat-label">MISSIONS</div>
-                <div class="earn-stat-value missions" id="eh-missions">0/6</div>
-              </div>
-            </div>
-            <div class="earn-progress-wrap">
-              <div class="earn-progress-label">
-                <span>Overall progress</span>
-                <span id="eh-pct">0%</span>
-              </div>
-              <div class="earn-progress-bar">
-                <div class="earn-progress-fill" id="eh-fill" style="width:0%"></div>
-              </div>
-            </div>
-            <button class="earn-claim-btn" disabled>
-              🎁 CLAIM REWARDS
-              <small>COMING SOON — PHASE 2</small>
-            </button>
-          </div>
-
-          <!-- Trenches 101 course -->
-          <div class="t101-wrap">
-            <div class="t101-head">
-              <div class="t101-icon">🏕️</div>
-              <div>
-                <div class="t101-title">TRENCHES 101</div>
-                <div class="t101-sub">A 5-lesson survival guide to BNB meme launches. Each lesson has a quiz. Pass it, stack points, earn a badge.</div>
-              </div>
-            </div>
-            <div class="t101-list" id="t101-list"></div>
-            <div class="t101-cert" id="t101-cert" style="display:none;">🎓 <strong style="color:#F3BA2F;">Trenches Scholar</strong> — you finished all 5 lessons. Badge unlocked. Higher-tier rewards incoming in Phase 2.</div>
-          </div>
-
-          <!-- Missions grid -->
-          <div style="margin-bottom:10px;font-family:var(--display);font-size:16px;letter-spacing:1.5px;color:var(--text);">⚔️ MORE MISSIONS</div>
-          <div class="mission-grid" id="mission-grid"></div>
-
-          <!-- "You saved yourself from" stats -->
-          <div class="saved-panel">
-            <div class="saved-title">🛡️ YOU VS THE TRENCHES</div>
-            <div class="saved-sub">Stats from your scan history. Every RUN verdict you acted on is a bag you didn't bleed.</div>
-            <div class="saved-grid">
-              <div class="saved-cell">
-                <div class="saved-num blue" id="sv-scans">0</div>
-                <div class="saved-lbl">TOKENS SCANNED</div>
-              </div>
-              <div class="saved-cell">
-                <div class="saved-num red" id="sv-runs">0</div>
-                <div class="saved-lbl">🚩 RUN FLAGGED</div>
-              </div>
-              <div class="saved-cell">
-                <div class="saved-num green" id="sv-apes">0</div>
-                <div class="saved-lbl">💎 APE SIGNALS</div>
-              </div>
-              <div class="saved-cell">
-                <div class="saved-num" id="sv-days">0</div>
-                <div class="saved-lbl">DAYS ACTIVE</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Leaderboard -->
-          <div class="lb-panel">
-            <div class="lb-head">
-              <div class="lb-title">🏆 SCOUT LEADERBOARD</div>
-              <div class="lb-period">THIS WEEK</div>
-            </div>
-            <div id="lb-rows"></div>
-            <div style="margin-top:12px;text-align:center;font-size:11px;color:var(--muted);font-family:var(--mono);letter-spacing:1px;">TOP 3 EACH WEEK SHARE $TRUSTY POOL · COMING PHASE 2</div>
-          </div>
-
-        </div><!-- end le-earn panel -->
 
       </div>
     </div><!-- end tab-academy -->
@@ -6090,7 +6012,7 @@ body::before {
     <!-- ══════════════════════════════
          TAB: $TRUSTY TOKEN
          ══════════════════════════════ -->
-    <div class="tab-panel" id="tab-token">
+    <div class="tab-panel" id="tab-trusty">
       <div class="token-page">
 
         <!-- Hero -->
@@ -6122,6 +6044,146 @@ body::before {
           <div class="ca-box-label">CA</div>
           <div class="ca-box-addr" id="trusty-ca">0x65aea108c21439693468FCD542D81C29E8df4444</div>
           <button class="ca-copy-btn" onclick="copyTrustyCA()">📋 Copy</button>
+        </div>
+
+        <!-- ── BUY ON ── -->
+        <div class="lore-card" style="margin-top:16px;">
+          <div class="lore-title">💰 BUY $TRUSTY</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:10px;">
+            <a href="https://pancakeswap.finance/swap?outputCurrency=0x65aea108c21439693468FCD542D81C29E8df4444" target="_blank" rel="noopener" class="trusty-link-card">
+              <span class="trusty-link-card-icon">🥞</span>
+              <div>
+                <div class="trusty-link-card-title">PancakeSwap</div>
+                <div class="trusty-link-card-sub">DEX · BSC · Best liquidity</div>
+              </div>
+            </a>
+            <a href="https://four.meme/token/0x65aea108c21439693468fcd542d81c29e8df4444" target="_blank" rel="noopener" class="trusty-link-card">
+              <span class="trusty-link-card-icon">🚀</span>
+              <div>
+                <div class="trusty-link-card-title">Four.meme</div>
+                <div class="trusty-link-card-sub">Launchpad · Original mint</div>
+              </div>
+            </a>
+            <a href="https://dexscreener.com/bsc/0x65aea108c21439693468fcd542d81c29e8df4444" target="_blank" rel="noopener" class="trusty-link-card">
+              <span class="trusty-link-card-icon">📊</span>
+              <div>
+                <div class="trusty-link-card-title">DexScreener</div>
+                <div class="trusty-link-card-sub">Charts · Multi-DEX</div>
+              </div>
+            </a>
+            <div class="trusty-link-card trusty-link-card-soon">
+              <span class="trusty-link-card-icon">🟡</span>
+              <div>
+                <div class="trusty-link-card-title">CEX Listings</div>
+                <div class="trusty-link-card-sub">In progress · DM us</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── PARTNERS ── -->
+        <div class="lore-card" style="margin-top:16px;">
+          <div class="lore-title">🤝 PARTNERS &amp; INTEGRATIONS</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:14px;">
+            Projects building safer crypto with us. Your logo here? DM
+            <a href="https://x.com/Trusty_BSC" target="_blank" rel="noopener" style="color:var(--blue2);">@Trusty_BSC</a>.
+          </div>
+          <div class="trusty-partner-grid">
+            <div class="trusty-partner-card trusty-partner-soon">
+              <div class="trusty-partner-name">Your Project</div>
+              <div class="trusty-partner-tag">PARTNER SLOT OPEN</div>
+            </div>
+            <div class="trusty-partner-card trusty-partner-soon">
+              <div class="trusty-partner-name">Your Project</div>
+              <div class="trusty-partner-tag">PARTNER SLOT OPEN</div>
+            </div>
+            <div class="trusty-partner-card trusty-partner-soon">
+              <div class="trusty-partner-name">Your Project</div>
+              <div class="trusty-partner-tag">PARTNER SLOT OPEN</div>
+            </div>
+            <div class="trusty-partner-card trusty-partner-soon">
+              <div class="trusty-partner-name">Your Project</div>
+              <div class="trusty-partner-tag">PARTNER SLOT OPEN</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── AUDITS & SECURITY ── -->
+        <div class="lore-card" style="margin-top:16px;">
+          <div class="lore-title">🛡️ AUDITS &amp; SAFETY PROOFS</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:14px;">
+            $TRUSTY's contract proofs — verifiable on-chain, no audit firm
+            needed for these. Open-source and renounced.
+          </div>
+          <div class="trusty-proof-grid">
+            <div class="trusty-proof-row">
+              <span class="trusty-proof-icon">✅</span>
+              <div class="trusty-proof-text">
+                <div class="trusty-proof-title">Contract Renounced</div>
+                <div class="trusty-proof-sub">Owner address is 0x000…dead — nobody can mint, freeze, or modify</div>
+              </div>
+              <a href="https://bscscan.com/address/0x65aea108c21439693468FCD542D81C29E8df4444#readContract" target="_blank" rel="noopener" class="trusty-proof-link">Verify →</a>
+            </div>
+            <div class="trusty-proof-row">
+              <span class="trusty-proof-icon">🔥</span>
+              <div class="trusty-proof-text">
+                <div class="trusty-proof-title">100% LP Burned</div>
+                <div class="trusty-proof-sub">All LP tokens sent to the burn address — no rug pull possible</div>
+              </div>
+              <a href="https://bscscan.com/token/0xe2D86D6dFDE0D428f8F83260b6C7c1e7f16C8ed2#balances" target="_blank" rel="noopener" class="trusty-proof-link">Verify →</a>
+            </div>
+            <div class="trusty-proof-row">
+              <span class="trusty-proof-icon">💯</span>
+              <div class="trusty-proof-text">
+                <div class="trusty-proof-title">0% Buy / Sell Tax</div>
+                <div class="trusty-proof-sub">No transfer fees on any trade — confirmed by GoPlus</div>
+              </div>
+              <a href="https://gopluslabs.io/token-security/56/0x65aea108c21439693468fcd542d81c29e8df4444" target="_blank" rel="noopener" class="trusty-proof-link">Verify →</a>
+            </div>
+            <div class="trusty-proof-row">
+              <span class="trusty-proof-icon">🟢</span>
+              <div class="trusty-proof-text">
+                <div class="trusty-proof-title">Honeypot Check</div>
+                <div class="trusty-proof-sub">Confirmed buyable AND sellable — independent verification</div>
+              </div>
+              <a href="https://honeypot.is/?address=0x65aea108c21439693468FCD542D81C29E8df4444&chain=bsc" target="_blank" rel="noopener" class="trusty-proof-link">Verify →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── COMMUNITY ── -->
+        <div class="lore-card" style="margin-top:16px;">
+          <div class="lore-title">💬 COMMUNITY &amp; LINKS</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:10px;">
+            <a href="https://x.com/Trusty_BSC" target="_blank" rel="noopener" class="trusty-link-card">
+              <span class="trusty-link-card-icon">𝕏</span>
+              <div>
+                <div class="trusty-link-card-title">@Trusty_BSC</div>
+                <div class="trusty-link-card-sub">Daily updates &amp; KOL talk</div>
+              </div>
+            </a>
+            <a href="https://t.me/TRUSTYCTO" target="_blank" rel="noopener" class="trusty-link-card">
+              <span class="trusty-link-card-icon">📨</span>
+              <div>
+                <div class="trusty-link-card-title">Telegram</div>
+                <div class="trusty-link-card-sub">Community chat · 24/7</div>
+              </div>
+            </a>
+            <a href="https://github.com/SimeonNBA/Trusty" target="_blank" rel="noopener" class="trusty-link-card">
+              <span class="trusty-link-card-icon">⌨</span>
+              <div>
+                <div class="trusty-link-card-title">GitHub</div>
+                <div class="trusty-link-card-sub">Open-source · MIT</div>
+              </div>
+            </a>
+            <a href="https://chrome.google.com/webstore/detail/trusty-ai/" target="_blank" rel="noopener" class="trusty-link-card">
+              <span class="trusty-link-card-icon">🛡️</span>
+              <div>
+                <div class="trusty-link-card-title">Chrome Extension</div>
+                <div class="trusty-link-card-sub">Install Trusty AI</div>
+              </div>
+            </a>
+          </div>
         </div>
 
         <!-- Lore -->
@@ -6210,7 +6272,7 @@ body::before {
         </div>
 
       </div>
-    </div></div><!-- end tab-token -->
+    </div></div><!-- end tab-trusty -->
 
     <!-- ══════════════════════════════
          TAB: WATCHLIST
@@ -6233,19 +6295,6 @@ body::before {
     <!-- ══════════════════════════════
          TAB: WEEK IN MEME
          ══════════════════════════════ -->
-    <div class="tab-panel" id="tab-meme">
-      <div class="token-page" style="padding:8px 0 24px;">
-        <div style="text-align:center;margin-bottom:24px;">
-          <div style="font-family:var(--display);font-size:36px;letter-spacing:3px;background:linear-gradient(135deg,#A855F7,#EC4899,#F97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;">📰 WEEKLY TRENCHES REPORT</div>
-          <div style="font-size:14px;color:var(--muted);max-width:560px;margin:0 auto;line-height:1.6;">What's happening in the trenches — pumps, rugs, narratives, takes. Straight from Trusty.</div>
-        </div>
-        <div id="meme-empty" style="text-align:center;padding:40px 20px;display:none;">
-          <div style="font-size:40px;margin-bottom:12px;">📝</div>
-          <div style="font-size:14px;color:var(--muted);line-height:1.6;">No articles yet. Come back soon fren.</div>
-        </div>
-        <div id="meme-content"></div>
-      </div>
-    </div><!-- end tab-meme -->
 
 
   </div><!-- end main-col -->
@@ -10754,7 +10803,7 @@ function playNarrative(id) {
 // ── MAIN TABS ──
 function switchTab(tab) {
   try {
-    var tabs = ['scanner','academy','token','watchlist','meme'];
+    var tabs = ['scanner','academy','trusty','watchlist'];
     for (var i = 0; i < tabs.length; i++) {
       var tp = document.getElementById('tab-' + tabs[i]);
       var nb = document.getElementById('nav-' + tabs[i]);
@@ -10774,7 +10823,7 @@ function switchTab(tab) {
       renderWatchlist(); // immediate paint with whatever's local
       refreshWatchlistFromCloud(function () { renderWatchlist(); }); // refresh after cloud responds
     }
-    if (tab === 'meme') { renderMemeArticles(); }
+    // 'meme' tab removed in nav cleanup
   } catch(e) { console.error('switchTab error:', e); }
 }
 
@@ -11873,7 +11922,7 @@ document.addEventListener('keydown', function(e) {
   // Zones where images should be zoomable
   var ZOOM_SELECTORS = [
     '#meme-content img',                     // Trenches Report articles
-    '#tab-token img',                        // $TRUSTY token page
+    '#tab-trusty img',                        // $TRUSTY token page
     '#history-page img',                     // Trust Wallet / BNB / Crypto history
     '#asec-history img',                     // Academy inline history
     '.lore-card img',                        // lore cards across site
@@ -11931,15 +11980,7 @@ document.addEventListener('keydown', function(e) {
   observer.observe(document.body, { childList: true, subtree: true });
 })();
 
-// Mark trenches as read when user opens the meme tab
-(function wireTrenchesRead(){
-  var memeBtn = document.getElementById('nav-meme');
-  if (memeBtn) {
-    memeBtn.addEventListener('click', function() {
-      try { localStorage.setItem('trusty_read_trenches_v1', '1'); } catch(e) {}
-    });
-  }
-})();
+// Trenches tab removed in nav cleanup
 
 function renderInlineGlossary(query) {
  
