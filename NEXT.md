@@ -76,6 +76,65 @@ page that:
   signed/keyed admin variant would be useful for diagnosing future
   issues without redeploying.
 
+## Website navigation cleanup
+
+- **Remove the "Weekly Trenches Report" tab** entirely. Stale data, not
+  driving value. Delete the tab button + the panel + the data file.
+- **"Learn & Earn" → "Learn"**. Drop the "Earn" half. Whatever points/
+  tasks system was there, remove. Single-purpose tab: education.
+- **Rename "Token" tab to "Trusty"**. On this rebuilt tab, list:
+  - Every exchange where $TRUSTY is tradeable (CEX + DEX)
+  - Every project partner / integration we secure
+  - Useful $TRUSTY links (chart, contract, audits, etc.)
+
+## Cross-platform extension UX
+
+The pill experience varies a lot by host site. Audit each:
+- **x.com / twitter.com** — works well today.
+- **reddit.com** — works but UI is denser; verify pill placement on
+  comment threads and the new and old layouts both.
+- **dexscreener.com** — *concern:* one Dexscreener page can list 100+
+  CAs (trending, watchlists, search results). Auto-injecting a pill
+  on every CA means hundreds of `/api/scan` calls per page load
+  (mostly cached, but still bandwidth + KV reads). And users could
+  spam-scan a screen of tokens if pills are inviting.
+
+  Options to consider:
+  - Disable the extension on Dexscreener entirely (simplest)
+  - Only inject pills on Dexscreener token *detail* pages, not lists
+  - Lazy-inject via IntersectionObserver — only scan CAs that scroll
+    into view
+  - Hard cap of N pills per Dexscreener page
+
+  My pick: lazy-inject + cap. Test the UX before deciding to disable.
+
+## Go-to-market
+
+- **Launch checklist** — what has to be in place before we tell anyone:
+  - Web Store listing public (currently Unlisted; flip when ready)
+  - Privacy + Terms pages live (privacy is, terms isn't)
+  - Hero mascot + branding finalized
+  - At least 3 partner logos on the new "Trusty" tab
+  - Sample scan video / screenshot set for tweet thread
+- **Marketing plan**:
+  - Launch tweet thread with screen recording of the extension in
+    action on a real shill tweet — show the pill catching a honeypot
+    in real time
+  - Outreach to 5-10 Crypto Twitter KOLs in the safety/research niche
+    for organic reviews (free unlimited tier in exchange for honest
+    review)
+  - Cross-post on Reddit (r/CryptoCurrency, r/CryptoMoonShots) showing
+    the safety scoring catching real rugs from this week
+  - Telegram + Discord for the existing $TRUSTY community
+- **Video content** (record once, distribute everywhere):
+  - 30-second hero demo: paste a CA → watch the pill verdict appear →
+    open the panel → see KOLs + market data
+  - 90-second walkthrough: install, verify wallet, paid panel, watchlist
+  - 15-second clips for shorts / reels: "This token is a honeypot —
+    Trusty caught it in 1 second" with real examples
+  - How-to-find-a-rug tutorial (the educational angle that makes
+    Trusty look like the obvious answer)
+
 ## Operational
 
 - **Watch the Sorsa quota.** 10K/month plan. Engagement-only ranking
