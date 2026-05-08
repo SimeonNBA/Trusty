@@ -52,22 +52,34 @@
   text-align: center;
 }
 
-/* Watchlist star — small button at the right of the pill */
+/* Watchlist star — explicit dark color for contrast on colored pills.
+   The pill backgrounds are tinted green/yellow/red by verdict, so a
+   dark star reads cleanly on all of them. Active state flips to the
+   brand gold so saved tokens are obvious. */
 .trusty-pill-star {
-  margin-left: 2px;
-  padding: 0 2px;
+  margin-left: 4px;
+  padding: 0 3px;
   background: transparent;
   border: none;
-  color: inherit;
-  font-size: 12px;
+  color: rgba(15, 23, 42, 0.85);
+  font-size: 15px !important;
   line-height: 1;
   cursor: pointer;
-  opacity: 0.55;
-  transition: opacity 0.12s ease, transform 0.12s ease;
+  transition: color 0.12s ease, transform 0.12s ease, text-shadow 0.12s ease;
   font-family: inherit;
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.4);
 }
-.trusty-pill-star:hover { opacity: 1; transform: scale(1.15); }
-.trusty-pill-star-active { color: #F3BA2F !important; opacity: 1; }
+.trusty-pill-star:hover {
+  color: rgba(15, 23, 42, 1);
+  transform: scale(1.2);
+}
+.trusty-pill-star-active {
+  color: #F3BA2F !important;
+  text-shadow: 0 0 4px rgba(243, 186, 47, 0.6);
+}
+.trusty-pill-star-active:hover {
+  color: #FFC940 !important;
+}
 
 /* Star toast — ephemeral feedback after a click */
 .trusty-pill-toast {

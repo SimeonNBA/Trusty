@@ -89,6 +89,68 @@ page that:
   - Every project partner / integration we secure
   - Useful $TRUSTY links (chart, contract, audits, etc.)
 
+## Trending vs Featured — collapse into one paid promotion model
+
+We currently have two homepage rails:
+- **Featured Tokens** — manually curated list (data/featured.json)
+- **Trending Now** — sourced from real scan + watchlist_add activity
+
+End state: ONE rail (Trending Now), with a paid-promotion overlay
+modeled on Dexscreener:
+- Free tier: shown by real-activity rank
+- Paid spots: 1-3 slots reserved for projects who pay; sorted by
+  amount paid, displayed with a subtle "PROMOTED" badge above the
+  organic list
+- Pricing: e.g. $50/day, $300/week, $1000/month — adjust based on
+  homepage traffic once we have it
+
+Until then: hide Trending if it has <3 items, keep Featured as the
+warming-up placeholder. Switch over once Trending consistently has
+real signal across enough tokens.
+
+Implementation when ready:
+- Worker: new `/api/promotion` POST endpoint (NOWPayments-backed,
+  similar to /api/subscribe but per-promotion-slot)
+- KV: `promo:active` list, sorted by spend descending
+- /api/trending merges promo + organic, returning the unified list
+
+## Extension positioning + funnel — why users pay, why they visit the site
+
+**Why users pay (extension side):**
+- The free pill verdict is genuinely useful, BUT the paid panel is
+  where the differentiation lives: KOL mentions, X activity, sentiment,
+  unlimited scans. Need to spell this out clearly when free users hit
+  cap or hover the upgrade CTA.
+- Copy ideas to test:
+  - "See who's calling this token early" (KOLs)
+  - "Catch coordinated shills before they pump" (activity)
+  - "$5/mo. 200+ coins to pay with."
+  - Short demo video on the popup itself? (autoplay-on-open)
+- Friction points to remove:
+  - Free user clicks pill → opens trustyai.tech in new tab. Feels like
+    leaving. Maybe show inline mini-panel for free with a "Reveal full
+    breakdown" CTA inside?
+  - Watchlist 5-cap message could be more enticing than punitive
+
+**Why users visit the site (web side):**
+- Today: most traffic is from the extension's "open full report"
+  link. The site is mostly a redirect target.
+- After we remove Weekly Trenches + Earn, the value props left are:
+  - Live trending feed (community signal)
+  - Education (Learn tab, glossary)
+  - Watchlist as a richer dashboard than the popup
+  - Token info — listings, partners, $TRUSTY data (the new "Trusty" tab)
+  - PDF / share-card export of any scan
+- We need ONE primary reason for the user to keep coming back to the
+  site (not just one-off scans). Two candidates:
+  - **Trending feed as a destination** — daily check-in, "what's the
+    network watching." Works once we have real volume.
+  - **Watchlist with alerts** — score change notifications, price
+    movement on tracked tokens, KOL mentions on saved tokens. Sticky
+    if alerts work; needs email or web-push.
+
+Pick one as the "homepage hook" before launch.
+
 ## Cross-platform extension UX
 
 The pill experience varies a lot by host site. Audit each:

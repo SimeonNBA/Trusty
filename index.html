@@ -12100,7 +12100,10 @@ async function renderTrending() {
     if (!res.ok) return;
     var data = await res.json();
     var items = (data && Array.isArray(data.items)) ? data.items : [];
-    if (!items.length) return; // hide entirely until we have real activity
+    // Hide the trending rail until we have meaningful signal. A "Trending"
+    // section with 1 token looks broken; below 3 we keep it hidden and
+    // let Featured Tokens carry the homepage carousel.
+    if (items.length < 3) return;
 
     var cards = items.map(function(it) {
       var scan = it.scan || {};
