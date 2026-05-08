@@ -127,12 +127,10 @@ The community-built safety layer for crypto degens.
 ## Privacy policy URL
 
 ```
-https://trustyai.tech/privacy
+https://trustyai.tech/privacy/
 ```
 
-(Make sure this resolves before submission — the extension PRIVACY.md
-content is the source. Either host it as `/privacy` on trustyai.tech
-or add a section to the Academy that the link points to.)
+(Live as of v0.3.0 — replaces the temporary Gist URL we used for v0.1.0.)
 
 ---
 
@@ -144,12 +142,13 @@ storage:
   expiry, and local scan cache. All data stays in chrome.storage.local
   on the user's device — nothing is uploaded to our servers.
 
-host_permissions (trustyai.tech, bsc-dataseed.binance.org, bsc-dataseed1.defibit.io, bsc.publicnode.com, bsc-dataseed1.ninicoin.io):
-  trustyai.tech is the extension's API for retrieving safety scan
-  data. The four BSC RPC endpoints are used in read-only mode to
-  verify a user's $TRUSTY balance for the paid tier. Multiple
-  endpoints are listed for fallback redundancy. No write
-  transactions, no signatures, no private keys.
+host_permissions (trustyai.tech, api.trustyai.tech, bsc-dataseed.binance.org, bsc-dataseed1.defibit.io, bsc.publicnode.com, bsc-dataseed1.ninicoin.io):
+  trustyai.tech is the website the extension links to. api.trustyai.tech
+  is our scanning API endpoint, where the extension fetches safety
+  verdicts (CA + chain only — no PII, no page content). The four BSC
+  RPC endpoints are used in read-only mode to verify a user's $TRUSTY
+  balance for the paid tier. Multiple endpoints are listed for fallback
+  redundancy. No write transactions, no signatures, no private keys.
 
 content_scripts (x.com, twitter.com, reddit.com, dexscreener.com):
   Required to detect contract addresses on the pages where users
@@ -165,4 +164,33 @@ content_scripts (x.com, twitter.com, reddit.com, dexscreener.com):
 Trusty AI's single purpose is to display a safety verdict for any
 cryptocurrency contract address detected on supported web pages,
 helping users avoid risky tokens before transacting.
+```
+
+---
+
+## What's new — v0.3.0
+
+(Paste into the "What's new in this version?" field on update submission.)
+
+```
+v0.3.0 — Bigger, faster, and now on Solana.
+
+• Live backend: replaced the bootstrapped scan stub with a real API
+  at api.trustyai.tech, returning real on-chain safety signals from
+  GoPlus, market data from Dexscreener, and (on Solana) LP-locked
+  detection from RugCheck.
+• Solana support: full safety scoring on Solana tokens — LP locked,
+  mint authority, freeze/close authorities, transfer fees, top-wallet
+  concentration, dev-wallet share. Pump.fun graduates included.
+• Free-tier tooltip now shows live market cap and 24h volume above
+  the safety checks — quick "is this token alive?" gut-check without
+  leaving the feed.
+• Paid panel: real KOL mentions powered by Sorsa — top 5 wallets
+  talking about a token in the last 24h, ranked by follower count,
+  each row click-throughs to the actual tweet on X.
+• Honest sentiment: bullish/bearish percentage from tweet text,
+  coordinated-shilling detection.
+• Click-to-reveal on the paid panel keeps your scans fast and the
+  KOL data fresh.
+• Updated privacy policy now lives at trustyai.tech/privacy.
 ```
