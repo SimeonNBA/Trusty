@@ -151,6 +151,52 @@ Implementation when ready:
 
 Pick one as the "homepage hook" before launch.
 
+## Mobile
+
+### Mobile responsive — homepage carousel stacking
+
+When Trending has ≥3 items it now auto-hides Featured (single rail
+on all viewports). But the homepage has more elements that need a
+mobile pass — the right-side floating Trusty mascot panel, the
+trending-eval cards' touch targets, the scanner input.
+
+Audit pass needed at common breakpoints (375 / 414 / 768):
+- Header logo + step-tracker pip row alignment
+- Trending card spacing in the marquee strip
+- Trusty sidebar with mascot — should stack BELOW main column on
+  ≤768px instead of squeezing the main col
+- Tab bar buttons wrap or scroll horizontally
+- Wallet input + verify button stack cleanly
+- Paid-panel mascot/tooltip-bubble doesn't crash into bottom nav
+- Tap targets ≥44px everywhere (iOS HIG minimum)
+
+### Extension on mobile — what's possible
+
+Chrome on Android **does NOT support extensions**, full stop. Three
+real options for mobile users:
+
+1. **Kiwi Browser (Android)** — based on Chromium, supports the full
+   Chrome Web Store catalog. Trusty would Just Work for users on
+   Kiwi today. Recommend it in the install docs as the mobile path.
+2. **Firefox for Android** — supports a curated subset of extensions
+   via AMO (addons.mozilla.org). Would need a separate AMO submission;
+   manifest is mostly compatible (V3 supported in newer Firefox), and
+   Mozilla's review process is similar to Chrome Web Store. ~1-2 days
+   of work to submit a Firefox-compatible build.
+3. **Native iOS Safari extension** — Apple's process is heavier:
+   requires an Xcode project wrapper, Apple Developer account ($99/yr),
+   App Store review. Possible but a real lift. Defer until we have
+   meaningful demand.
+
+Pragmatic plan:
+- Ship a "Use Trusty on mobile" page on trustyai.tech pointing to
+  Kiwi as the primary recommendation, with Firefox AMO submission
+  noted as coming soon.
+- Submit to AMO when capacity allows (the manifest needs minor tweaks
+  for browser-specific keys).
+- Track demand via website surveys / Telegram before committing to
+  iOS native work.
+
 ## Cross-platform extension UX
 
 The pill experience varies a lot by host site. Audit each:
@@ -220,18 +266,31 @@ with plain-English reasons.
 
 ### Is trading risky?
 
-**Yes — and that's the niche.** Most TWAK examples will be aggressive
-(snipe-this, max-yield-that). AI agents executing real trades face:
+**Yes — and that's exactly why we DON'T do trading.** AI agents
+executing real trades face:
 - Hallucinated CAs (LLM types the wrong contract address)
 - Wrong-amount swaps from off-by-one prompt parsing
 - MEV exposure on naïve route selection
 - No safety check before approval/execution
 - No KOL/social context to flag pump-and-dump cycles
 
-Trusty's role inside an agent isn't to *trade* — it's to be the
-**safety co-pilot that audits the trade before commit**. "Are you
-sure? This token scores 32/100, top 5 wallets hold 67%, mint
-authority is active. Reply YES to confirm anyway."
+Trusty's `trusty-safety` skill stays **strictly read-only**:
+- ✅ Token security scoring (GoPlus + RugCheck)
+- ✅ Market data (Dexscreener)
+- ✅ KOL signal + sentiment (Sorsa)
+- ✅ Watchlist read
+- ✅ Trending feed read
+- ❌ Sign anything
+- ❌ Swap, transfer, approve
+- ❌ Touch a private key in any form
+
+We're the **seatbelt, not the steering wheel.** The user (or another
+agent's wallet skill) drives. Trusty audits. If the safety check
+fails, the agent should refuse the trade or require explicit
+confirmation. We carry zero trade-execution liability.
+
+This positioning is also marketing: "Don't ape blind. Don't let
+your AI agent ape blind either."
 
 ### Niche implementation: `trusty-safety` skill
 

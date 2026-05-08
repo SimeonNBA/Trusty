@@ -12134,6 +12134,10 @@ async function renderTrending() {
     '</div>' +
     '<div class="featured-strip"><div class="featured-track">' + doubled + '</div></div>';
     panel.style.display = 'block';
+    // Once Trending has real signal, retire the Featured fallback so we
+    // don't show two carousels (especially cluttered on mobile).
+    var featured = document.getElementById('featured-panel');
+    if (featured) featured.style.display = 'none';
   } catch(e) { /* silent fail — section just stays hidden */ }
 }
 
