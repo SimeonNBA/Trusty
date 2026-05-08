@@ -1746,6 +1746,12 @@ body::before {
   gap: 14px;
   margin-bottom: 16px;
 }
+.token-header > div:not(.token-icon):not(.token-chain-badge) { min-width: 0; flex: 1 1 auto; }
+@media (max-width: 480px) {
+  .token-header { flex-wrap: wrap; }
+  .token-header .token-chain-badge { margin-left: 62px; margin-top: 6px; font-size: 9px; padding: 3px 8px; flex-basis: auto; }
+  .token-header .token-name { font-size: 20px; }
+}
 
 .token-icon {
   width: 48px;
@@ -3919,7 +3925,7 @@ body::before {
 }
 .htb-content { flex: 1; }
 .htb-step-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-.htb-step-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.htb-step-desc { font-size: 13px; color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; word-break: break-word; }
 .htb-step-desc a { color: var(--blue2); text-decoration: none; }
 .htb-step-desc a:hover { text-decoration: underline; }
 
@@ -8155,6 +8161,12 @@ async function scanCA() {
       if (caVal) {
         setTimeout(() => runContractSafety(caVal, chainForSafety), 400);
       }
+      // Unify the headline score with the extension — fetch /api/scan
+      // and overwrite the homegrown score so users see the same number
+      // on both surfaces.
+      if (caVal) {
+        setTimeout(() => syncHeadlineScoreWithApi(caVal, chainForSafety), 600);
+      }
     }, 900);
 
   } catch (err) {
@@ -9238,6 +9250,55 @@ function handleCaHelpClick(e) {
 // Called after evaluate() finishes — runs in parallel with results display
 // State stored here so scoring can use it
 let contractSafetyData = null;
+
+// ── Sync the website's headline score with the extension's /api/scan ──
+// The website's evaluate() computes a market-quality score (liquidity
+// ratio, age, holders, etc.). The extension uses the GoPlus safety
+// rubric. Showing two different numbers for the same token is
+// confusing — so we overwrite the headline circle + tier badge with
+// the API's score, keeping the supplemental sub-bars + ape-size
+// guidance intact for context.
+async function syncHeadlineScoreWithApi(ca, chainId) {
+  try {
+    const chain = (chainId || 'bsc').toLowerCase();
+    const url = 'https://api.trustyai.tech/api/scan?ca=' + encodeURIComponent(ca) +
+                '&chain=' + encodeURIComponent(chain);
+    const r = await fetch(url);
+    if (!r.ok) return;
+    const data = await r.json();
+    if (typeof data.score !== 'number') return;
+    // Skip the override if upstream clearly failed (every check unavailable)
+    var allUnavail = Array.isArray(data.checks) && data.checks.every(function(c) {
+      return /data unavailable/i.test(c.label || '');
+    });
+    if (allUnavail) return;
+    // Animate to the new number
+    var scoreEl = document.getElementById('scoreNum');
+    var circle = document.getElementById('scoreCircle');
+    var badge = document.getElementById('tierBadge');
+    if (!scoreEl || !circle || !badge) return;
+    var verdict = (data.verdict || '').toUpperCase();
+    var color = verdict === 'APE' ? '#22C55E' : verdict === 'CAUTION' ? '#F3BA2F' : '#EF4444';
+    var tierClass = verdict === 'APE' ? 'tier-ape' : verdict === 'CAUTION' ? 'tier-caution' : 'tier-run';
+    var tierLabel = verdict === 'APE' ? 'APE' : verdict === 'CAUTION' ? 'CAUTION' : 'RUN';
+    var current = parseInt(scoreEl.textContent, 10) || 0;
+    var target = data.score;
+    var step = current < target ? 1 : -1;
+    var iv = setInterval(function() {
+      current += step;
+      scoreEl.textContent = current;
+      scoreEl.style.color = color;
+      circle.style.stroke = color;
+      var off = 364 - (current / 100) * 364;
+      circle.style.strokeDashoffset = off;
+      if ((step > 0 && current >= target) || (step < 0 && current <= target)) {
+        clearInterval(iv);
+      }
+    }, 22);
+    badge.textContent = tierLabel;
+    badge.className = 'tier-badge ' + tierClass;
+  } catch (e) { /* silent — leave the homegrown score in place */ }
+}
 
 async function runContractSafety(ca, chainId) {
   const panel = document.getElementById('contractSafetyPanel');
