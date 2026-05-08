@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 
 <title>Trusty AI — Meme Coin Scanner & Education</title>
-<link rel="icon" type="image/png" href="assets/mascot-hero.png"><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+<link rel="icon" type="image/png" href="assets/mascot-hero.png">
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -10765,19 +10765,98 @@ function switchTab(tab) {
       var nr = document.getElementById('inline-narratives');
       if (nr && !nr.hasChildNodes()) renderInlineNarratives();
     }
-    if (tab === 'watchlist') { renderWatchlist(); }
+    if (tab === 'watchlist') {
+      renderWatchlist(); // immediate paint with whatever's local
+      refreshWatchlistFromCloud(function () { renderWatchlist(); }); // refresh after cloud responds
+    }
     if (tab === 'meme') { renderMemeArticles(); }
   } catch(e) { console.error('switchTab error:', e); }
 }
 
-// ══ WATCHLIST (localStorage-based, no accounts) ══
+// ══ WATCHLIST (localStorage + cloud-synced via extension subId) ══
+// Returns a merged watchlist from local + extension mirror, deduped by
+// chain:ca. The extension's bridge content script copies the user's
+// subId + watchlist mirror into our localStorage on every page load,
+// so the website's "Watchlist" tab and the extension's pill stars are
+// reading the same source of truth.
 function getWatchlist() {
-  try { return JSON.parse(localStorage.getItem('trusty_watchlist') || '[]'); }
-  catch(e) { return []; }
+  var local = [];
+  try { local = JSON.parse(localStorage.getItem('trusty_watchlist') || '[]'); } catch(e) {}
+  var extMirror = [];
+  try { extMirror = JSON.parse(localStorage.getItem('trusty_watchlist_extension_mirror') || '[]'); } catch(e) {}
+  var seen = new Set();
+  var merged = [];
+  function push(item) {
+    if (!item || !item.ca) return;
+    var key = (String(item.chain || 'evm').toLowerCase()) + ':' + String(item.ca).toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(item);
+  }
+  // Local first — richer fields (logoUrl, marketCap, score, tier).
+  local.forEach(push);
+  extMirror.forEach(push);
+  return merged;
 }
 
 function saveWatchlist(list) {
   try { localStorage.setItem('trusty_watchlist', JSON.stringify(list)); } catch(e) {}
+}
+
+// ── Cloud sync helpers ──
+function getTrustySubId() {
+  try { return localStorage.getItem('trusty_subid_v1') || ''; } catch(e) { return ''; }
+}
+
+function refreshWatchlistFromCloud(cb) {
+  var subId = getTrustySubId();
+  if (!subId) { if (cb) cb(); return; }
+  fetch('https://api.trustyai.tech/api/watchlist?subId=' + encodeURIComponent(subId), {
+    headers: { 'Accept': 'application/json' }
+  })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (data && Array.isArray(data.items)) {
+        try { localStorage.setItem('trusty_watchlist_extension_mirror', JSON.stringify(data.items)); } catch(e) {}
+      }
+      if (cb) cb();
+    })
+    .catch(function() { if (cb) cb(); });
+}
+
+function syncWatchlistAddCloud(item) {
+  var subId = getTrustySubId();
+  if (!subId || !item || !item.ca) return;
+  try {
+    fetch('https://api.trustyai.tech/api/watchlist?subId=' + encodeURIComponent(subId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'add',
+        item: {
+          ca: item.ca,
+          chain: item.chain || 'evm',
+          symbol: item.symbol || '',
+          name: item.name || ''
+        }
+      })
+    });
+  } catch(e) { /* fire-and-forget */ }
+}
+
+function syncWatchlistRemoveCloud(ca, chain) {
+  var subId = getTrustySubId();
+  if (!subId || !ca) return;
+  try {
+    fetch('https://api.trustyai.tech/api/watchlist?subId=' + encodeURIComponent(subId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'remove',
+        item: { ca: ca, chain: chain || 'evm' }
+      })
+    });
+  } catch(e) { /* fire-and-forget */ }
 }
 
 function isInWatchlist(ca) {
@@ -10815,12 +10894,30 @@ function addToWatchlist() {
   list = list.slice(0, 50); // cap at 50
   saveWatchlist(list);
   updateWatchlistBtn();
+  // Sync to cloud so the extension and any other device see it too.
+  syncWatchlistAddCloud({
+    ca: tok.address,
+    chain: pair.chainId,
+    symbol: tok.symbol,
+    name: tok.name
+  });
   if (typeof trackEvent === 'function') trackEvent('watchlist_add');
 }
 
-function removeFromWatchlist(ca) {
-  var list = getWatchlist().filter(function(t) { return (t.ca || '').toLowerCase() !== ca.toLowerCase(); });
-  saveWatchlist(list);
+function removeFromWatchlist(ca, chain) {
+  // Remove from local + extension mirror + cloud
+  var local = [];
+  try { local = JSON.parse(localStorage.getItem('trusty_watchlist') || '[]'); } catch(e) {}
+  var key = String(ca || '').toLowerCase();
+  var newLocal = local.filter(function(t) { return (t.ca || '').toLowerCase() !== key; });
+  saveWatchlist(newLocal);
+  // Strip from the extension mirror too so re-render doesn't bring it back
+  try {
+    var mirror = JSON.parse(localStorage.getItem('trusty_watchlist_extension_mirror') || '[]');
+    mirror = mirror.filter(function(t) { return (t.ca || '').toLowerCase() !== key; });
+    localStorage.setItem('trusty_watchlist_extension_mirror', JSON.stringify(mirror));
+  } catch(e) {}
+  syncWatchlistRemoveCloud(ca, chain);
   renderWatchlist();
 }
 
@@ -10856,7 +10953,7 @@ function renderWatchlist() {
       '<div class="portfolio-token-icon">' + icon + '</div>' +
       '<div class="portfolio-token-info"><div class="portfolio-token-name">' + (t.name || 'Unknown') + '</div><div class="portfolio-token-symbol">$' + (t.symbol || '???') + '</div></div>' +
       '<div class="portfolio-token-balance"><div class="portfolio-token-value" style="color:' + tierColor + ';">' + (t.tier || ('Score ' + t.score)) + '</div><div class="portfolio-token-amount">MC: ' + mcDisplay + '</div></div>' +
-      '<button onclick="event.stopPropagation();removeFromWatchlist(\'' + t.ca + '\')" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:6px 10px;cursor:pointer;font-size:11px;font-family:var(--mono);">✕</button>' +
+      '<button onclick="event.stopPropagation();removeFromWatchlist(\'' + t.ca + '\', \'' + (t.chain || 'evm') + '\')" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:6px 10px;cursor:pointer;font-size:11px;font-family:var(--mono);">✕</button>' +
     '</div>';
   }).join('');
 }

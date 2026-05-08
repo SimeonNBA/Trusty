@@ -80,6 +80,14 @@
         "content/dexscreener-content.css"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://trustyai.tech/*",
+        "https://www.trustyai.tech/*"
+      ],
+      "js": ["content/trustyai-bridge.js"],
+      "run_at": "document_start"
     }
   ],
 
