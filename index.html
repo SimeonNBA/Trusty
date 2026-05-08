@@ -10108,6 +10108,34 @@ document.addEventListener('DOMContentLoaded', () => {
 // Also update immediately in case DOM already loaded
 updateHistoryCount();
 
+// ── Auto-scan from ?ca= URL param ──────────────────────────────
+// Users coming from the extension (watchlist click, paid panel
+// "open full report", share-tweet links) land here with the CA
+// already in the URL — paste it into the scanner and run the scan
+// so they don't have to copy-paste it themselves.
+function autoscanFromUrlParam() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const ca = (params.get('ca') || '').trim();
+    if (!ca) return;
+    // Lightweight shape check — accept EVM 0x... or Solana base58.
+    const looksLikeCa = /^(0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(ca);
+    if (!looksLikeCa) return;
+    const input = document.getElementById('caInput');
+    if (!input) return;
+    input.value = ca;
+    const section = document.getElementById('ca-section');
+    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Slight delay so the scroll lands and any async init has a chance
+    // to bind the scan handlers before we fire.
+    setTimeout(() => {
+      if (typeof triggerCaScan === 'function') triggerCaScan(ca);
+      else if (typeof scanCA === 'function') scanCA();
+    }, 350);
+  } catch (e) { /* never block render on a query-param hiccup */ }
+}
+document.addEventListener('DOMContentLoaded', autoscanFromUrlParam);
+
 
 // ════════════════════════════════════════════
 //  ONBOARDING — shows once to new users
