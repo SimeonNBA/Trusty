@@ -10,7 +10,7 @@
         cloud fetch is in flight.
 
    No pill injection here — the website is our own surface; that
-   logic stays scoped to x.com / reddit / dexscreener.
+   logic stays scoped to x.com / twitter.com.
    ================================================================ */
 (function () {
   "use strict";

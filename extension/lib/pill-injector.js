@@ -1,8 +1,8 @@
 /* ================================================================
    Trusty AI — shared pill & tooltip module
 
-   Used by every content script (x-content.js, reddit-content.js,
-   dexscreener-content.js, …). Each platform handles its own DOM
+   Used by the X content script (x-content.js). Each platform
+   that adds support handles its own DOM
    detection and just calls TrustyPill.create(ca, chain) to get a
    fully-wired pill element it can inject anywhere.
 

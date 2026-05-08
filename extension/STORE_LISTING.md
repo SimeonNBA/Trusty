@@ -19,10 +19,10 @@ Trusty AI — Token Safety Scanner
 ## Short description (132 characters max)
 
 ```
-AI-powered safety verdict for any contract address you see on X or Reddit. Don't ape blind — across all chains.
+AI-powered safety verdict for any contract address you see on X. Don't ape blind — across all chains.
 ```
 
-*(112 characters)*
+*(98 characters)*
 
 ---
 
@@ -31,22 +31,21 @@ AI-powered safety verdict for any contract address you see on X or Reddit. Don't
 ```
 🛡️ Trusty AI is the safety layer for crypto traders.
 
-Every time you see a contract address on Crypto Twitter or Reddit, Trusty shows you a one-click safety verdict before you ape — APE, CAUTION, or RUN — sourced from the AI scanner at trustyai.tech.
+Every time you see a contract address on Crypto Twitter, Trusty shows you a one-click safety verdict before you ape — APE, CAUTION, or RUN — sourced from the AI scanner at trustyai.tech.
 
 No more tab-hopping between DexScreener, GoPlus, and Honeypot.is. No more aping into a 99% sell-tax honeypot you could've caught in 5 seconds. The verdict comes to you, in the feed, in plain English, before you click buy.
 
 ✦ HOW IT WORKS
 
-→ Scrolling X or Reddit and you spot a contract address? A small Trusty pill appears right next to it.
+→ Scrolling X and you spot a contract address? A small Trusty pill appears right next to it.
 → Hover the pill and you see a quick verdict + 5 plain-English safety checks: honeypot, sell tax, LP lock, mint authority, contract renounced.
 → Click the pill and you get the full report — either inline (paid) or on trustyai.tech (free).
 
 ✦ SUPPORTED SITES (TODAY)
 
 • x.com / twitter.com — pills on every CA in tweets, replies, quoted posts
-• reddit.com — old, new, and sh.reddit — pills on post bodies and comments
 
-More platforms coming: Telegram Web, Discord, Farcaster.
+More platforms coming: Reddit, Telegram Web, Discord, Farcaster.
 
 ✦ SUPPORTED CHAINS
 
@@ -74,7 +73,7 @@ To unlock: paste your wallet address into the extension popup → click Verify. 
 
 ✦ PRIVACY
 
-We do not read your tweets, your DMs, your Reddit posts, your comments, or any text on a page other than the contract addresses themselves. We do not collect your X/Reddit account, your IP address, your wallet's seed phrase or signatures. We do not use cookies, analytics, or third-party trackers. The contract address you scan is public on-chain information — that's all we ever send anywhere.
+We do not read your tweets, your DMs, or any text on a page other than the contract addresses themselves. We do not collect your X account, your IP address, your wallet's seed phrase or signatures. We do not use cookies, analytics, or third-party trackers. The contract address you scan is public on-chain information — that's all we ever send anywhere.
 
 Full privacy policy: trustyai.tech/privacy
 
@@ -149,7 +148,7 @@ host_permissions (trustyai.tech, api.trustyai.tech, bsc-dataseed.binance.org, bs
   balance for the paid tier. Multiple endpoints are listed for fallback
   redundancy. No write transactions, no signatures, no private keys.
 
-content_scripts (x.com, twitter.com, reddit.com):
+content_scripts (x.com, twitter.com):
   Required to detect contract addresses on the pages where users
   encounter them. The script reads page text only to find contract
   addresses; it does not read or transmit any other text content.

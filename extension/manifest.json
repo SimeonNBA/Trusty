@@ -3,7 +3,7 @@
   "name": "Trusty AI",
   "short_name": "Trusty AI",
   "version": "0.3.0",
-  "description": "AI-powered safety verdict for crypto contract addresses on X and Reddit. Don't ape blind.",
+  "description": "AI-powered safety verdict for crypto contract addresses on X. Don't ape blind.",
 
   "icons": {
     "16": "assets/icon-16.png",
@@ -45,26 +45,6 @@
     },
     {
       "matches": [
-        "https://www.reddit.com/*",
-        "https://reddit.com/*",
-        "https://old.reddit.com/*",
-        "https://new.reddit.com/*",
-        "https://sh.reddit.com/*"
-      ],
-      "js": [
-        "lib/ca-detector.js",
-        "lib/api.js",
-        "lib/tier.js",
-        "lib/pill-injector.js",
-        "content/reddit-content.js"
-      ],
-      "css": [
-        "content/shared.css"
-      ],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
         "https://trustyai.tech/*",
         "https://www.trustyai.tech/*"
       ],
@@ -82,12 +62,7 @@
       "resources": ["assets/icon-16.png", "assets/icon-48.png", "assets/icon-128.png"],
       "matches": [
         "https://x.com/*",
-        "https://twitter.com/*",
-        "https://www.reddit.com/*",
-        "https://reddit.com/*",
-        "https://old.reddit.com/*",
-        "https://new.reddit.com/*",
-        "https://sh.reddit.com/*"
+        "https://twitter.com/*"
       ]
     }
   ],

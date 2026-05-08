@@ -20,7 +20,6 @@ trustyai.tech for the full report (free users).
 Supported sites today:
 
 - `x.com` and `twitter.com`
-- `reddit.com`, `old.reddit.com`, `new.reddit.com`, `sh.reddit.com`
 
 ## What we collect
 
@@ -44,7 +43,7 @@ Supported sites today:
   call, sent to a public RPC endpoint (Binance, defibit, publicnode,
   ninicoin)
 
-**That's it.** We do not send the page URL, tweet content, your X/Reddit
+**That's it.** We do not send the page URL, tweet content, your X
 account, your IP-derived identity, or any other identifying data. The
 contract address you scan is public on-chain information.
 
@@ -52,7 +51,6 @@ contract address you scan is public on-chain information.
 
 - We do not collect your X/Twitter account, posts, follows, DMs, or
   profile data.
-- We do not collect your Reddit account, posts, comments, or karma.
 - We do not read or transmit any text other than the contract address
   you scanned.
 - We do not track which sites you visit or how long you spend on them.
@@ -92,7 +90,7 @@ check whether the address still holds the required $TRUSTY balance.
   `https://bsc-dataseed1.defibit.io/*`, `https://bsc.publicnode.com/*`,
   `https://bsc-dataseed1.ninicoin.io/*` — to verify your $TRUSTY
   balance via public RPC nodes.
-- `content_scripts: x.com, twitter.com, reddit.com` —
+- `content_scripts: x.com, twitter.com` —
   to detect contract addresses on the pages you visit.
 
 The extension does not have access to the rest of the web. It cannot
