@@ -172,30 +172,35 @@ Audit pass needed at common breakpoints (375 / 414 / 768):
 
 ### Extension on mobile — what's possible
 
-Chrome on Android **does NOT support extensions**, full stop. Three
-real options for mobile users:
+Chrome on Android **does NOT support extensions**, full stop. Two
+realistic paths to ship a mobile-native Trusty experience:
 
-1. **Kiwi Browser (Android)** — based on Chromium, supports the full
-   Chrome Web Store catalog. Trusty would Just Work for users on
-   Kiwi today. Recommend it in the install docs as the mobile path.
-2. **Firefox for Android** — supports a curated subset of extensions
-   via AMO (addons.mozilla.org). Would need a separate AMO submission;
-   manifest is mostly compatible (V3 supported in newer Firefox), and
-   Mozilla's review process is similar to Chrome Web Store. ~1-2 days
-   of work to submit a Firefox-compatible build.
-3. **Native iOS Safari extension** — Apple's process is heavier:
+1. **Firefox for Android via AMO** — supports a curated subset of
+   extensions via addons.mozilla.org. Would need a separate AMO
+   submission; manifest is mostly compatible (V3 supported in newer
+   Firefox), and Mozilla's review process is similar to Chrome Web
+   Store. ~1-2 days of work to submit a Firefox-compatible build.
+   This is the cleanest first step — official store, real audience,
+   we control the listing.
+2. **Native iOS Safari extension** — Apple's process is heavier:
    requires an Xcode project wrapper, Apple Developer account ($99/yr),
    App Store review. Possible but a real lift. Defer until we have
-   meaningful demand.
+   meaningful demand from iOS users — once we see them in
+   /api/event traffic via the website, that's the signal.
+
+Explicitly NOT recommending: Kiwi Browser. Looks like asking users
+to install an "alternative browser" to access our product, which is
+a friction tax + a trust ask we shouldn't be making. We'd rather
+stay on official channels (Firefox AMO, Apple App Store) even if
+they take longer.
 
 Pragmatic plan:
-- Ship a "Use Trusty on mobile" page on trustyai.tech pointing to
-  Kiwi as the primary recommendation, with Firefox AMO submission
-  noted as coming soon.
-- Submit to AMO when capacity allows (the manifest needs minor tweaks
-  for browser-specific keys).
-- Track demand via website surveys / Telegram before committing to
-  iOS native work.
+- Submit to Firefox AMO as the primary mobile-native channel.
+- Track iOS demand for ~1-2 months before committing to the Safari
+  wrapper — real signal beats premature optimization.
+- For now, the mobile *web* experience on trustyai.tech is the
+  catch-all: scan-via-paste, trending feed, watchlist sync. Make
+  that pass-the-eye-test on mobile before any extension work.
 
 ## Cross-platform extension UX
 
