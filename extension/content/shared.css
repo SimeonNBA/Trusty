@@ -52,6 +52,49 @@
   text-align: center;
 }
 
+/* Watchlist star — small button at the right of the pill */
+.trusty-pill-star {
+  margin-left: 2px;
+  padding: 0 2px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  font-family: inherit;
+}
+.trusty-pill-star:hover { opacity: 1; transform: scale(1.15); }
+.trusty-pill-star-active { color: #F3BA2F !important; opacity: 1; }
+
+/* Star toast — ephemeral feedback after a click */
+.trusty-pill-toast {
+  position: fixed;
+  z-index: 2147483647;
+  background: #0a0f1c;
+  color: #f5f5f7;
+  border: 1px solid #233247;
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+  max-width: 220px;
+  text-align: center;
+}
+.trusty-pill-toast.show { opacity: 1; transform: translateY(0); }
+.trusty-pill-toast-upgrade {
+  border-color: rgba(243, 186, 47, 0.5);
+  color: #F3BA2F;
+}
+
 /* Loading dot */
 .trusty-pill-loading .trusty-pill-score {
   letter-spacing: 1.5px;
@@ -334,6 +377,27 @@
 }
 .trusty-pp-close:hover { color: #f5f5f7; border-color: #3B82F6; }
 
+/* Star button on paid panel header */
+.trusty-pp-star {
+  position: absolute;
+  top: 10px;
+  right: 46px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #233247;
+  background: rgba(255,255,255,0.04);
+  color: #8b95a8;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s, border-color 0.12s, transform 0.12s;
+}
+.trusty-pp-star:hover { color: #F3BA2F; border-color: rgba(243,186,47,0.5); transform: scale(1.05); }
+.trusty-pp-star-active { color: #F3BA2F; border-color: rgba(243,186,47,0.5); }
+
 .trusty-pp-header {
   display: flex;
   align-items: center;
@@ -379,7 +443,13 @@
 .trusty-pp-kol-link:hover .trusty-pp-kol-handle { color: #93C5FD; }
 .trusty-pp-kol-link:hover .trusty-pp-kol-arrow { color: #93C5FD; transform: translate(1px, -1px); }
 .trusty-pp-kol-handle { color: #f5f5f7; font-weight: 600; }
-.trusty-pp-kol-followers { color: #8b95a8; font-family: ui-monospace, monospace; font-size: 11px; }
+.trusty-pp-kol-engagement {
+  color: #8b95a8;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.trusty-pp-kol-faded { opacity: 0.4; }
 .trusty-pp-kol-time { color: #8b95a8; font-size: 11px; }
 .trusty-pp-kol-arrow {
   color: #6B85B0;
@@ -479,6 +549,57 @@
   letter-spacing: 1px;
   text-transform: uppercase;
   margin-top: 2px;
+}
+
+/* Tweet-preview popover shown on KOL row hover */
+.trusty-kol-preview {
+  position: fixed;
+  z-index: 2147483647;
+  width: 280px;
+  padding: 12px 14px;
+  background: #0a0f1c;
+  color: #f5f5f7;
+  border: 1px solid #233247;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif !important;
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.trusty-kol-preview.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.trusty-kol-preview-head {
+  font-size: 12px;
+  font-weight: 700;
+  color: #93C5FD;
+  margin-bottom: 6px;
+}
+.trusty-kol-preview-text {
+  color: #f5f5f7;
+  font-size: 12px;
+  line-height: 1.55;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.trusty-kol-preview-stats {
+  display: flex;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #233247;
+  font-size: 10px;
+  color: #8b95a8;
+  letter-spacing: 0.3px;
+}
+.trusty-kol-preview-stats span {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 .trusty-pp-footer {

@@ -187,6 +187,71 @@
     const backdrop = document.getElementById(PANEL_BACKDROP_ID);
     if (backdrop) backdrop.remove();
     document.documentElement.style.overflow = "";
+    if (kolPreviewEl) { kolPreviewEl.remove(); kolPreviewEl = null; }
+  }
+
+  /* ── Tweet-preview hover popover (on KOL rows in the paid panel) ── */
+  let kolPreviewEl = null;
+
+  function ensureKolPreview() {
+    if (kolPreviewEl && document.body.contains(kolPreviewEl)) return kolPreviewEl;
+    kolPreviewEl = document.createElement("div");
+    kolPreviewEl.className = "trusty-kol-preview";
+    document.body.appendChild(kolPreviewEl);
+    return kolPreviewEl;
+  }
+
+  function onKolRowEnter(e) {
+    const row = e.target.closest && e.target.closest(".trusty-pp-kol-row");
+    if (!row) return;
+    const text = row.getAttribute("data-trusty-text");
+    if (!text) return;
+    const handle = row.querySelector(".trusty-pp-kol-handle")?.textContent || "";
+    const likes = parseInt(row.getAttribute("data-trusty-likes") || "0", 10);
+    const rts = parseInt(row.getAttribute("data-trusty-rts") || "0", 10);
+    const reps = parseInt(row.getAttribute("data-trusty-replies") || "0", 10);
+
+    const pop = ensureKolPreview();
+    pop.innerHTML =
+      '<div class="trusty-kol-preview-head">' + escapeHtml(handle) + '</div>' +
+      '<div class="trusty-kol-preview-text">' + escapeHtml(text) + '</div>' +
+      '<div class="trusty-kol-preview-stats">' +
+        '<span>' + likes.toLocaleString() + ' likes</span>' +
+        '<span>' + rts.toLocaleString() + ' RTs</span>' +
+        '<span>' + reps.toLocaleString() + ' replies</span>' +
+      '</div>';
+
+    // Position to the LEFT of the panel by default; flip if no room.
+    const panel = document.getElementById(PANEL_ID);
+    const panelRect = panel ? panel.getBoundingClientRect() : { left: 0, right: 0, top: 0 };
+    const rowRect = row.getBoundingClientRect();
+    pop.style.visibility = "hidden";
+    pop.classList.add("show");
+    const popRect = pop.getBoundingClientRect();
+
+    let left = panelRect.left - popRect.width - 12;
+    if (left < 12) left = panelRect.right + 12; // not enough room on left → flip right
+    if (left + popRect.width > window.innerWidth - 12) {
+      // Still no room — overlay at row level
+      left = Math.max(12, window.innerWidth - popRect.width - 12);
+    }
+    let top = rowRect.top;
+    if (top + popRect.height > window.innerHeight - 12) {
+      top = window.innerHeight - popRect.height - 12;
+    }
+    if (top < 12) top = 12;
+
+    pop.style.left = left + "px";
+    pop.style.top = top + "px";
+    pop.style.visibility = "";
+  }
+
+  function onKolRowLeave(e) {
+    // Only hide when truly leaving — moving inside the row's children fires mouseout too
+    const row = e.target.closest && e.target.closest(".trusty-pp-kol-row");
+    if (!row) return;
+    if (e.relatedTarget && row.contains(e.relatedTarget)) return;
+    if (kolPreviewEl) kolPreviewEl.classList.remove("show");
   }
 
   /* ── Body renderers for the lazy-loaded KOL + activity sections ── */
@@ -246,25 +311,50 @@
     if (!kols.length) {
       return '<div class="trusty-pp-empty">No KOL mentions in the last 24h.</div>';
     }
-    return kols.map(function (k) {
+    return kols.map(function (k, idx) {
       const ago = k.mins < 60 ? (k.mins + "m ago") :
                   k.mins < 1440 ? (Math.floor(k.mins / 60) + "h ago") :
                   (Math.floor(k.mins / 1440) + "d ago");
+      const eng = fmtEngagement(k);
       const inner =
         '<span class="trusty-pp-kol-handle">' + escapeHtml(k.handle) + '</span>' +
-        '<span class="trusty-pp-kol-followers">' + escapeHtml(k.followers) + '</span>' +
+        '<span class="trusty-pp-kol-engagement">' + eng + '</span>' +
         '<span class="trusty-pp-kol-time">' + ago + '</span>';
+      // Stash the tweet text on the row via data-attr so the hover
+      // popover can read it without extra wiring.
+      const dataAttrs =
+        ' data-trusty-text="' + escapeHtml(k.text || "") + '"' +
+        ' data-trusty-likes="' + (k.likes || 0) + '"' +
+        ' data-trusty-rts="' + (k.retweets || 0) + '"' +
+        ' data-trusty-replies="' + (k.replies || 0) + '"';
       if (k.tweetUrl) {
         return '<a class="trusty-pp-kol-row trusty-pp-kol-link"' +
                   ' href="' + escapeHtml(k.tweetUrl) + '"' +
                   ' target="_blank" rel="noopener noreferrer"' +
-                  ' title="View tweet on X">' +
+                  ' title="View tweet on X"' + dataAttrs + '>' +
                   inner +
                   '<span class="trusty-pp-kol-arrow" aria-hidden="true">↗</span>' +
                 '</a>';
       }
-      return '<div class="trusty-pp-kol-row">' + inner + '</div>';
+      return '<div class="trusty-pp-kol-row"' + dataAttrs + '>' + inner + '</div>';
     }).join("");
+  }
+
+  function fmtEngagement(k) {
+    const likes = k.likes || 0;
+    const rts = k.retweets || 0;
+    const reps = k.replies || 0;
+    if (!likes && !rts && !reps) return "<span class=\"trusty-pp-kol-faded\">—</span>";
+    const parts = [];
+    if (likes) parts.push(fmtCount(likes) + "❤");
+    if (rts) parts.push(fmtCount(rts) + "🔁");
+    if (reps) parts.push(fmtCount(reps) + "💬");
+    return parts.join(" ");
+  }
+
+  function fmtCount(n) {
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+    return String(n);
   }
 
   function escapeHtml(s) {
@@ -335,6 +425,7 @@
 
     panel.innerHTML =
       '<button class="trusty-pp-close" aria-label="Close">✕</button>' +
+      '<button class="trusty-pp-star" type="button" aria-label="Save to watchlist" title="Save to watchlist">☆</button>' +
 
       '<div class="trusty-pp-header ' + verdictClass + '">' +
         '<div class="trusty-pp-verdict">' + verdictEmoji + " " + result.verdict + '</div>' +
@@ -378,6 +469,49 @@
     panel.querySelector(".trusty-pp-close").addEventListener("click", closePaidPanel);
     document.documentElement.style.overflow = "hidden";
 
+    // Wire the star button on the panel header — same flow as the
+    // pill star, but on a token the user is actively examining.
+    const panelStar = panel.querySelector(".trusty-pp-star");
+    if (panelStar && window.TrustyTier) {
+      window.TrustyTier.watchlistContains(ca, chain).then(function (saved) {
+        if (saved) {
+          panelStar.textContent = "★";
+          panelStar.classList.add("trusty-pp-star-active");
+          panelStar.setAttribute("aria-pressed", "true");
+        }
+      });
+      panelStar.addEventListener("click", async function () {
+        const saved = panelStar.classList.contains("trusty-pp-star-active");
+        if (saved) {
+          await window.TrustyTier.watchlistRemove(ca, chain);
+          panelStar.textContent = "☆";
+          panelStar.classList.remove("trusty-pp-star-active");
+          panelStar.setAttribute("aria-pressed", "false");
+          flashStarFeedback(panelStar, "Removed from watchlist");
+        } else {
+          const res = await window.TrustyTier.watchlistAdd({
+            ca: ca,
+            chain: chain,
+            symbol: (result.symbol || "").replace(/^\$/, ""),
+            name: result.name || ""
+          });
+          if (!res.ok && res.error === "cap_reached") {
+            flashStarFeedback(panelStar,
+              "Free tier holds " + res.cap + " — upgrade for unlimited", true);
+            return;
+          }
+          if (!res.ok) {
+            flashStarFeedback(panelStar, "Couldn't save. Try again.");
+            return;
+          }
+          panelStar.textContent = "★";
+          panelStar.classList.add("trusty-pp-star-active");
+          panelStar.setAttribute("aria-pressed", "true");
+          flashStarFeedback(panelStar, "Saved to watchlist");
+        }
+      });
+    }
+
     // Click-to-reveal: paid users opt in to KOLs + activity by clicking
     // the CTA. Saves Sorsa quota when the user just wants to glance at
     // safety + market data, and frames the data as a VIP action.
@@ -388,6 +522,11 @@
         revealKols(ca, chain, symbol);
       });
     }
+
+    // Tweet-preview popover on KOL row hover. Delegated so it works
+    // both on initial render (none yet) and after the lazy KOL fetch.
+    panel.addEventListener("mouseover", onKolRowEnter, true);
+    panel.addEventListener("mouseout", onKolRowLeave, true);
 
     // ESC to close
     document.addEventListener("keydown", function escHandler(e) {
@@ -406,6 +545,10 @@
     pill.setAttribute("role", "button");
     pill.setAttribute("aria-label", "Trusty safety score for " + ca);
 
+    // Inline emoji shield — inherits the verdict color via CSS, which
+    // is what we want on the colored pill backgrounds. The PNG mascot
+    // lives in the toolbar/popup/Web Store; the emoji belongs here
+    // because it renders sharp at 11px and adapts to context color.
     const icon = document.createElement("span");
     icon.className = PILL_CLASS + "-icon";
     icon.textContent = "🛡️";
@@ -414,8 +557,27 @@
     score.className = PILL_CLASS + "-score";
     score.textContent = "…";
 
+    // Star button — toggles watchlist membership without leaving the
+    // page. We start with empty-star, flip filled when the watchlist
+    // mirror reports the CA is in the list.
+    const star = document.createElement("button");
+    star.className = PILL_CLASS + "-star";
+    star.type = "button";
+    star.setAttribute("aria-label", "Save to watchlist");
+    star.setAttribute("title", "Save to watchlist");
+    star.textContent = "☆";
+    star.addEventListener("click", onStarClick);
+
     pill.appendChild(icon);
     pill.appendChild(score);
+    pill.appendChild(star);
+
+    // Reflect existing watchlist state
+    if (window.TrustyTier && window.TrustyTier.watchlistContains) {
+      window.TrustyTier.watchlistContains(ca, chain || "evm").then(function (saved) {
+        if (saved) markStarSaved(star, true);
+      });
+    }
 
     if (window.TrustyAPI && window.TrustyAPI.scan) {
       window.TrustyAPI.scan(ca, chain)
@@ -433,6 +595,69 @@
     pill.addEventListener("click", onPillClick);
 
     return pill;
+  }
+
+  function markStarSaved(starEl, saved) {
+    if (!starEl) return;
+    starEl.textContent = saved ? "★" : "☆";
+    starEl.classList.toggle(PILL_CLASS + "-star-active", !!saved);
+    starEl.setAttribute("aria-pressed", saved ? "true" : "false");
+  }
+
+  async function onStarClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const star = e.currentTarget;
+    const pill = star.closest("." + PILL_CLASS);
+    if (!pill || !window.TrustyTier) return;
+
+    const ca = pill.dataset.trustyCa;
+    const chain = pill.dataset.trustyChain || "evm";
+    const result = pill._trustyResult || {};
+    const isSaved = star.classList.contains(PILL_CLASS + "-star-active");
+
+    if (isSaved) {
+      await window.TrustyTier.watchlistRemove(ca, chain);
+      markStarSaved(star, false);
+      flashStarFeedback(star, "Removed from watchlist");
+      return;
+    }
+
+    const res = await window.TrustyTier.watchlistAdd({
+      ca: ca,
+      chain: chain,
+      symbol: (result.symbol || "").replace(/^\$/, ""),
+      name: result.name || ""
+    });
+    if (!res.ok && res.error === "cap_reached") {
+      flashStarFeedback(
+        star,
+        "Free tier holds " + res.cap + " — upgrade for unlimited",
+        true
+      );
+      return;
+    }
+    if (!res.ok) {
+      flashStarFeedback(star, "Couldn't save. Try again.");
+      return;
+    }
+    markStarSaved(star, true);
+    flashStarFeedback(star, res.alreadyWatched ? "Already in watchlist" : "Saved to watchlist");
+  }
+
+  // Tiny ephemeral toast next to the star — non-blocking feedback.
+  function flashStarFeedback(starEl, msg, isUpgrade) {
+    const old = document.querySelector("." + PILL_CLASS + "-toast");
+    if (old) old.remove();
+    const toast = document.createElement("span");
+    toast.className = PILL_CLASS + "-toast" + (isUpgrade ? " " + PILL_CLASS + "-toast-upgrade" : "");
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    const r = starEl.getBoundingClientRect();
+    toast.style.top = (r.bottom + 6) + "px";
+    toast.style.left = Math.max(8, Math.min(window.innerWidth - 220, r.left - 100)) + "px";
+    setTimeout(function () { toast.classList.add("show"); }, 0);
+    setTimeout(function () { toast.classList.remove("show"); setTimeout(function () { toast.remove(); }, 200); }, 2400);
   }
 
   /* ── "Already processed" helpers (so platforms don't re-scan) ── */

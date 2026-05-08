@@ -87,6 +87,23 @@
     "storage"
   ],
 
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/icon-16.png", "assets/icon-48.png", "assets/icon-128.png"],
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "https://www.reddit.com/*",
+        "https://reddit.com/*",
+        "https://old.reddit.com/*",
+        "https://new.reddit.com/*",
+        "https://sh.reddit.com/*",
+        "https://dexscreener.com/*",
+        "https://www.dexscreener.com/*"
+      ]
+    }
+  ],
+
   "host_permissions": [
     "https://trustyai.tech/*",
     "https://api.trustyai.tech/*",

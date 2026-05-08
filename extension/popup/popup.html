@@ -43,10 +43,10 @@
 
       <div class="tier-verified" id="tierVerified" style="display:none;">
         <div class="tier-verified-row">
-          <span class="tier-verified-label">Wallet</span>
+          <span class="tier-verified-label" id="tierVerifiedLabel">Wallet</span>
           <span class="tier-verified-val mono" id="tierAddr">—</span>
         </div>
-        <div class="tier-verified-row">
+        <div class="tier-verified-row" id="tierBalanceRow">
           <span class="tier-verified-label">$TRUSTY balance</span>
           <span class="tier-verified-val" id="tierBalance">—</span>
         </div>
@@ -56,6 +56,45 @@
         </div>
         <button class="verify-btn ghost" id="recheckBtn">Re-verify</button>
       </div>
+
+      <!-- ── Crypto-pay subscription path ── -->
+      <div class="sub-section" id="subSection">
+        <div class="sub-divider"><span>or</span></div>
+        <div class="sub-title">Subscribe with crypto</div>
+        <div class="sub-plans">
+          <button class="sub-plan" data-plan="monthly" id="subMonthly">
+            <span class="sub-plan-price">$5</span>
+            <span class="sub-plan-period">/ month</span>
+          </button>
+          <button class="sub-plan" data-plan="yearly" id="subYearly">
+            <span class="sub-plan-badge">Save 17%</span>
+            <span class="sub-plan-price">$50</span>
+            <span class="sub-plan-period">/ year</span>
+          </button>
+        </div>
+        <div class="sub-hint">
+          Pay with BTC, ETH, USDT, BNB, SOL or 200+ other coins.<br>
+          Powered by NOWPayments — no account needed.
+        </div>
+        <div class="sub-pending" id="subPending" style="display:none;">
+          <div class="sub-pending-spinner"></div>
+          <div class="sub-pending-text">
+            Waiting for payment confirmation…<br>
+            <span class="sub-pending-hint">This page auto-updates when paid.</span>
+          </div>
+          <button class="verify-btn ghost" id="subCancelBtn">Cancel pending</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Watchlist (top 3 visible, link to full page) ── -->
+    <section class="wl-section" id="wlSection">
+      <div class="wl-header">
+        <span class="wl-title">⭐ Watchlist</span>
+        <span class="wl-count" id="wlCount">0</span>
+      </div>
+      <div class="wl-list" id="wlList"></div>
+      <a class="wl-seeall" id="wlSeeAll" href="https://trustyai.tech/watchlist/" target="_blank" rel="noopener" style="display:none;">See all on trustyai.tech →</a>
     </section>
 
     <div class="cta-wrap">

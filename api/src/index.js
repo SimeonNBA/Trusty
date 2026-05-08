@@ -5,10 +5,22 @@
      Token-security (GoPlus) + market data (Dexscreener), scored 0-100.
      Cached 5 min. Public, no quota concerns.
 
-   GET /api/kols?ca=0x...&chain=bsc
+   GET /api/kols?ca=0x...&chain=bsc&symbol=…
      KOL mentions + X activity from Sorsa (formerly TweetScout).
      Lazy-loaded only by the paid panel — free-tier hovers never hit.
      Cached 6 hr per CA to stretch the 10K-req/mo Sorsa tier.
+
+   POST /api/subscribe?plan=monthly|yearly&subId=…
+     Creates a NOWPayments invoice for the chosen plan. Returns the
+     hosted-checkout URL the extension opens in a new tab.
+
+   POST /api/nowpayments-webhook
+     IPN callback from NOWPayments. Verifies HMAC-SHA512 signature,
+     marks the subscription paid in KV with an expiry timestamp.
+
+   GET /api/subscription?subId=…
+     Returns the current subscription state for a given subId.
+     Polled by the popup after a checkout to detect payment.
    ================================================================ */
 
 const CORS = {
@@ -31,32 +43,52 @@ export default {
     if (url.pathname === "/" || url.pathname === "/health") {
       return json({ ok: true, service: "trusty-api" });
     }
-    if (request.method !== "GET") {
-      return json({ error: "method not allowed" }, 405);
-    }
 
-    const rawCa = url.searchParams.get("ca") || "";
-    const chain = (url.searchParams.get("chain") || "bsc").toLowerCase();
-
-    // CAs are case-sensitive on Solana, case-insensitive on EVM. We
-    // lowercase EVM for cache stability; preserve case for Solana.
-    const isSolanaChain = chain === "solana" || chain === "sol";
-    const ca = isSolanaChain ? rawCa : rawCa.toLowerCase();
-
-    if (!isValidCa(ca, chain)) {
-      return json({ error: "invalid ca" }, 400);
-    }
-
-    if (url.pathname === "/api/scan") {
-      return handleScan(ca, chain, env);
-    }
-    if (url.pathname === "/api/kols") {
+    // CA-based endpoints
+    if (url.pathname === "/api/scan" || url.pathname === "/api/kols") {
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      const { ca, chain, error } = parseCaAndChain(url);
+      if (error) return json({ error }, 400);
+      if (url.pathname === "/api/scan") return handleScan(ca, chain, env);
       const symbol = (url.searchParams.get("symbol") || "").replace(/^\$/, "").trim();
       return handleKols(ca, chain, env, symbol);
     }
+
+    // Subscription endpoints (no CA)
+    if (url.pathname === "/api/subscribe") {
+      if (request.method !== "POST" && request.method !== "GET") {
+        return json({ error: "method not allowed" }, 405);
+      }
+      return handleSubscribe(url, env);
+    }
+    if (url.pathname === "/api/nowpayments-webhook") {
+      if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
+      return handleWebhook(request, env);
+    }
+    if (url.pathname === "/api/subscription") {
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      return handleSubscriptionStatus(url, env);
+    }
+    if (url.pathname === "/api/watchlist") {
+      if (request.method === "GET") return handleWatchlistGet(url, env);
+      if (request.method === "POST") return handleWatchlistPost(request, url, env);
+      return json({ error: "method not allowed" }, 405);
+    }
+
     return json({ error: "not found" }, 404);
   },
 };
+
+function parseCaAndChain(url) {
+  const rawCa = url.searchParams.get("ca") || "";
+  const chain = (url.searchParams.get("chain") || "bsc").toLowerCase();
+  const isSolanaChain = chain === "solana" || chain === "sol";
+  // CAs are case-sensitive on Solana, case-insensitive on EVM. We
+  // lowercase EVM for cache stability; preserve case for Solana.
+  const ca = isSolanaChain ? rawCa : rawCa.toLowerCase();
+  if (!isValidCa(ca, chain)) return { error: "invalid ca" };
+  return { ca, chain };
+}
 
 /* ── /api/scan ── token security + market data, 5min cache ── */
 async function handleScan(ca, chain, env) {
@@ -68,7 +100,16 @@ async function handleScan(ca, chain, env) {
 
   const result = await scanToken(ca, chain);
 
-  if (env.SCAN_KV) {
+  // Only cache when we got real upstream data. A score of 0 with a
+  // failing first check means GoPlus didn't respond — caching that
+  // for 5 min would punish a legit token across every scan in the
+  // window. Better to retry on the next request.
+  const upstreamOk =
+    result.score > 0 ||
+    (result.checks && result.checks.some((c) => c.ok)) ||
+    (result.marketData && result.marketData.mcap !== "—");
+
+  if (env.SCAN_KV && upstreamOk) {
     const ttl = parseInt(env.SCAN_TTL_SECONDS || "300", 10);
     try {
       await env.SCAN_KV.put(cacheKey, JSON.stringify(result), {
@@ -612,8 +653,8 @@ async function fetchKols(ca, chain, env, symbol) {
 
   // 1) Search recent tweets mentioning the token. If we have a symbol,
   //    use it (most tweets say "$TRUSTY" not the 42-char hex). Combine
-  //    multiple search forms with Twitter's OR operator so we catch
-  //    cashtags, hashtags, and the raw CA in one call.
+  //    cashtag, hashtag, and the raw CA with Twitter's OR operator
+  //    to catch all the ways people reference the token in one call.
   const query = buildSearchQuery(ca, symbol);
   const searchResult = await sorsaSearchTweets(query, env.SORSA_API_KEY);
   const tweets = searchResult.tweets;
@@ -621,54 +662,59 @@ async function fetchKols(ca, chain, env, symbol) {
 
   if (!tweets.length) return EMPTY_KOLS;
 
-  // 2) Collect unique authors from the most recent 30 mentions.
-  const authors = uniqueAuthorsFromTweets(tweets, 30);
-  if (!authors.length) {
-    return {
-      kols: [],
-      activity: {
-        tweets24h,
-        deltaPct: 0,
-        sentiment: scoreSentiment(tweets),
-        coordShill: detectCoordShill(tweets),
-      },
-    };
+  // 2) Rank tweets by engagement (likes + 3×retweets + 5×replies). Real
+  //    engagement is a much stronger signal of influence than follower
+  //    count — follower counts are heavily botted on crypto Twitter,
+  //    while a tweet that earned actual replies took someone's attention.
+  //    This also lets us drop the second /info-batch call entirely,
+  //    halving our Sorsa quota usage per scan.
+  const ranked = tweets
+    .map((t) => ({ ...t, engagement: engagementScore(t) }))
+    .filter((t) => t.engagement > 0) // zero-engagement = bot/dead tweet
+    .sort((a, b) => b.engagement - a.engagement);
+
+  // 3) Top 5 *unique authors* — same author may have multiple tweets;
+  //    keep only their highest-engagement one.
+  const seenAuthors = new Set();
+  const top = [];
+  for (const t of ranked) {
+    const h = t.author?.handle?.toLowerCase();
+    if (!h || seenAuthors.has(h)) continue;
+    seenAuthors.add(h);
+    top.push(t);
+    if (top.length >= 5) break;
   }
 
-  // 3) Pull follower count for those handles in one batch.
-  const enriched = await sorsaInfoBatch(authors, env.SORSA_API_KEY);
-
-  // 4) Rank by follower count, take top 5, look up each one's most-recent
-  //    mention from the search results. Filter out tiny accounts
-  //    (<500 followers) — they're almost certainly bots/eggs.
-  const tweetByAuthor = indexLatestByAuthor(tweets);
-  const ranked = enriched
-    .filter((u) => u && u.handle && u.followers >= 500)
-    .sort((a, b) => b.followers - a.followers)
-    .slice(0, 5)
-    .map((u) => {
-      const tw = tweetByAuthor[u.handle.toLowerCase()];
-      const minsAgo = tw ? Math.max(1, Math.floor((Date.now() - tw.ts) / 60000)) : 0;
-      const tweetUrl = tw && tw.id
-        ? "https://x.com/" + encodeURIComponent(u.handle) + "/status/" + encodeURIComponent(tw.id)
-        : null;
-      return {
-        handle: "@" + u.handle,
-        followers: fmtCompact(u.followers),
-        mins: minsAgo,
-        tweetUrl,
-      };
-    });
+  const kols = top.map((t) => {
+    const minsAgo = t.ts ? Math.max(1, Math.floor((Date.now() - t.ts) / 60000)) : 0;
+    const tweetUrl = t.id
+      ? "https://x.com/" + encodeURIComponent(t.author.handle) + "/status/" + encodeURIComponent(t.id)
+      : null;
+    return {
+      handle: "@" + t.author.handle,
+      likes: t.likes || 0,
+      retweets: t.retweets || 0,
+      replies: t.replies || 0,
+      mins: minsAgo,
+      tweetUrl,
+      // Truncated text for hover-preview. Cap at 280 chars (X limit).
+      text: (t.text || "").slice(0, 280),
+    };
+  });
 
   return {
-    kols: ranked,
+    kols,
     activity: {
       tweets24h,
-      deltaPct: 0, // requires a 2nd window-search; defer to save quota
+      deltaPct: 0, // 2nd window-search would double quota; defer
       sentiment: scoreSentiment(tweets),
       coordShill: detectCoordShill(tweets),
     },
   };
+}
+
+function engagementScore(t) {
+  return (t.likes || 0) + 3 * (t.retweets || 0) + 5 * (t.replies || 0);
 }
 
 /* ── Sorsa search: build query, broadening with symbol/hashtag if known ── */
@@ -726,6 +772,9 @@ async function sorsaSearchTweets(query, apiKey) {
         text: t.full_text || t.text || "",
         ts: parseTs(t.created_at),
         author: pickAuthor(t),
+        likes: numOr0(t.likes_count),
+        retweets: numOr0(t.retweet_count ?? t.retweets_count),
+        replies: numOr0(t.reply_count ?? t.replies_count),
       }))
       .filter((t) => t.author);
     return { tweets };
@@ -735,34 +784,9 @@ async function sorsaSearchTweets(query, apiKey) {
   }
 }
 
-async function sorsaInfoBatch(handles, apiKey) {
-  if (!handles.length) return [];
-  try {
-    // Sorsa expects REPEATED query keys: ?usernames=a&usernames=b&usernames=c
-    // (Not comma-separated.) Field name is `usernames`, not `handles`.
-    const params = handles
-      .map((h) => "usernames=" + encodeURIComponent(h))
-      .join("&");
-    const url = "https://api.sorsa.io/v3/info-batch?" + params;
-    const r = await fetch(url, {
-      headers: { ApiKey: apiKey, Accept: "application/json" },
-    });
-    if (!r.ok) {
-      console.warn("sorsa info-batch", r.status);
-      return [];
-    }
-    const data = await r.json();
-    const list = Array.isArray(data?.users) ? data.users : [];
-    return list.map((u) => ({
-      handle: u.username || "",
-      followers: u.followers_count || 0,
-      // Sorsa Score isn't in /info-batch; would need a /score call per
-      // handle. We rank by follower count for v1 to stay quota-friendly.
-    }));
-  } catch (e) {
-    console.warn("sorsa info-batch error", e?.message);
-    return [];
-  }
+function numOr0(v) {
+  const n = parseInt(v, 10);
+  return isFinite(n) && n >= 0 ? n : 0;
 }
 
 /* ── Sorsa helpers ── */
@@ -839,4 +863,334 @@ function fmtCompact(n) {
   if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
   if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
   return String(Math.round(n));
+}
+
+/* ================================================================
+   NOWPayments — crypto-pay subscriptions ($5/mo, $50/yr)
+
+   Plans:
+     monthly: $5  →  30 days
+     yearly:  $50 → 365 days
+
+   Flow:
+     1. Extension calls /api/subscribe with subId + plan.
+     2. Worker creates NOWPayments invoice, stores `sub:<subId>` in KV
+        with status="pending".
+     3. User pays via NOWPayments hosted checkout in a new tab.
+     4. NOWPayments fires IPN to /api/nowpayments-webhook.
+     5. Worker verifies HMAC-SHA512 signature, marks paid in KV with
+        an expiry timestamp.
+     6. Extension polls /api/subscription and flips its tier locally.
+   ================================================================ */
+
+const PLAN_MONTHLY = { id: "monthly", price: 5, days: 30 };
+const PLAN_YEARLY = { id: "yearly", price: 50, days: 365 };
+
+function planFor(id) {
+  if (id === "monthly") return PLAN_MONTHLY;
+  if (id === "yearly") return PLAN_YEARLY;
+  return null;
+}
+
+async function handleSubscribe(url, env) {
+  if (!env.NOWPAYMENTS_API_KEY) {
+    return json({ error: "subscriptions not configured" }, 503);
+  }
+  const subId = (url.searchParams.get("subId") || "").trim();
+  const planId = (url.searchParams.get("plan") || "").trim().toLowerCase();
+  if (!/^[a-zA-Z0-9_-]{8,64}$/.test(subId)) {
+    return json({ error: "invalid subId" }, 400);
+  }
+  const plan = planFor(planId);
+  if (!plan) return json({ error: "invalid plan" }, 400);
+
+  const orderId = `trusty-${plan.id}-${subId}-${Date.now()}`;
+  const body = {
+    price_amount: plan.price,
+    price_currency: "usd",
+    order_id: orderId,
+    order_description: `Trusty AI ${plan.id} subscription`,
+    ipn_callback_url: "https://api.trustyai.tech/api/nowpayments-webhook",
+    success_url: "https://trustyai.tech/?upgrade=success",
+    cancel_url: "https://trustyai.tech/?upgrade=cancel",
+  };
+
+  let invoice;
+  try {
+    const r = await fetch("https://api.nowpayments.io/v1/invoice", {
+      method: "POST",
+      headers: {
+        "x-api-key": env.NOWPAYMENTS_API_KEY,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const txt = await r.text().catch(() => "");
+      console.warn("nowpayments invoice", r.status, txt.slice(0, 200));
+      return json({ error: "invoice creation failed", status: r.status }, 502);
+    }
+    invoice = await r.json();
+  } catch (e) {
+    console.warn("nowpayments invoice error", e?.message);
+    return json({ error: "invoice creation failed" }, 502);
+  }
+
+  if (!invoice?.id || !invoice?.invoice_url) {
+    return json({ error: "invoice creation failed" }, 502);
+  }
+
+  // Store pending state — 24h TTL gives the user a day to complete payment
+  // before the pending entry self-cleans. Webhook will overwrite with
+  // longer TTL on successful payment.
+  if (env.SCAN_KV) {
+    try {
+      await env.SCAN_KV.put(
+        `sub:${subId}`,
+        JSON.stringify({
+          plan: plan.id,
+          status: "pending",
+          invoiceId: String(invoice.id),
+          orderId,
+          createdAt: Date.now(),
+        }),
+        { expirationTtl: 86400 }
+      );
+    } catch (_) {}
+  }
+
+  return json({
+    invoiceUrl: invoice.invoice_url,
+    invoiceId: String(invoice.id),
+    orderId,
+    plan: plan.id,
+    priceUsd: plan.price,
+  });
+}
+
+async function handleWebhook(request, env) {
+  const signature = request.headers.get("x-nowpayments-sig");
+  if (!signature) return json({ error: "no signature" }, 401);
+  if (!env.NOWPAYMENTS_IPN_SECRET) return json({ error: "ipn not configured" }, 503);
+
+  const rawBody = await request.text();
+  const valid = await verifyIpnSignature(rawBody, signature, env.NOWPAYMENTS_IPN_SECRET);
+  if (!valid) {
+    console.warn("nowpayments webhook: invalid signature");
+    return json({ error: "invalid signature" }, 401);
+  }
+
+  let data;
+  try { data = JSON.parse(rawBody); } catch (_) { return json({ error: "bad body" }, 400); }
+
+  // order_id format: trusty-<plan>-<subId>-<timestamp>
+  const m = String(data.order_id || "").match(
+    /^trusty-(monthly|yearly)-([a-zA-Z0-9_-]+)-(\d+)$/
+  );
+  if (!m) {
+    console.warn("nowpayments webhook: unrecognized order_id", data.order_id);
+    return json({ ok: true, ignored: "unrecognized order_id" });
+  }
+  const planId = m[1];
+  const subId = m[2];
+  const plan = planFor(planId);
+  if (!plan) return json({ ok: true, ignored: "unknown plan" });
+
+  const status = String(data.payment_status || data.status || "").toLowerCase();
+
+  if (env.SCAN_KV) {
+    if (status === "finished" || status === "confirmed" || status === "sending") {
+      const durationMs = plan.days * 86400000;
+      const now = Date.now();
+      // Renewal: if there's an existing paid sub still active, extend
+      // from the current expiry instead of resetting to now+duration.
+      let baseTime = now;
+      try {
+        const existing = await env.SCAN_KV.get(`sub:${subId}`, "json");
+        if (existing && existing.status === "paid" && existing.expiresAt > now) {
+          baseTime = existing.expiresAt;
+        }
+      } catch (_) {}
+      const expiresAt = baseTime + durationMs;
+      try {
+        await env.SCAN_KV.put(
+          `sub:${subId}`,
+          JSON.stringify({
+            plan: plan.id,
+            status: "paid",
+            invoiceId: String(data.invoice_id || data.id || ""),
+            orderId: data.order_id,
+            paidAt: now,
+            expiresAt,
+            paidAmount: data.actually_paid || data.pay_amount,
+            payCurrency: data.pay_currency,
+          }),
+          // Grace period of 1 day past expiry so an early-renewal flow
+          // can read the previous plan even after expiry.
+          { expirationTtl: Math.floor(durationMs / 1000) + 86400 }
+        );
+      } catch (_) {}
+    } else if (status === "expired" || status === "failed" || status === "refunded") {
+      try { await env.SCAN_KV.delete(`sub:${subId}`); } catch (_) {}
+    }
+    // For other statuses (waiting, confirming, partially_paid) keep the
+    // existing pending row.
+  }
+
+  return json({ ok: true });
+}
+
+async function handleSubscriptionStatus(url, env) {
+  const subId = (url.searchParams.get("subId") || "").trim();
+  if (!/^[a-zA-Z0-9_-]{8,64}$/.test(subId)) {
+    return json({ error: "invalid subId" }, 400);
+  }
+  if (!env.SCAN_KV) return json({ status: "none" });
+  const sub = await env.SCAN_KV.get(`sub:${subId}`, "json");
+  if (!sub) return json({ status: "none" });
+
+  // Surface expiry as a derived field
+  if (sub.status === "paid" && sub.expiresAt && sub.expiresAt < Date.now()) {
+    sub.status = "expired";
+  }
+  return json(sub);
+}
+
+/* ================================================================
+   Watchlist — cloud-synced per subId, soft cap at 100 items.
+
+   The client (extension) enforces the *tier-aware* cap (5 for free,
+   unlimited for paid) since it knows the user's local tier across
+   both wallet and subscription paths. The server keeps a 100-item
+   anti-abuse ceiling and trusts whatever the client sends within
+   that. Watchlist is small data — full-list replace on every change
+   is fine and avoids merge complexity.
+   ================================================================ */
+
+const WATCHLIST_HARD_CAP = 100;
+
+async function handleWatchlistGet(url, env) {
+  const subId = (url.searchParams.get("subId") || "").trim();
+  if (!/^[a-zA-Z0-9_-]{8,64}$/.test(subId)) {
+    return json({ error: "invalid subId" }, 400);
+  }
+  if (!env.SCAN_KV) return json({ items: [] });
+  const stored = await env.SCAN_KV.get(`wl:${subId}`, "json");
+  return json({ items: Array.isArray(stored?.items) ? stored.items : [] });
+}
+
+async function handleWatchlistPost(request, url, env) {
+  const subId = (url.searchParams.get("subId") || "").trim();
+  if (!/^[a-zA-Z0-9_-]{8,64}$/.test(subId)) {
+    return json({ error: "invalid subId" }, 400);
+  }
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "bad json" }, 400); }
+
+  const action = body?.action;
+  if (action !== "replace" && action !== "add" && action !== "remove") {
+    return json({ error: "invalid action" }, 400);
+  }
+
+  // Load current
+  let current = { items: [] };
+  if (env.SCAN_KV) {
+    const stored = await env.SCAN_KV.get(`wl:${subId}`, "json");
+    if (stored && Array.isArray(stored.items)) current = stored;
+  }
+
+  let next;
+  if (action === "replace") {
+    if (!Array.isArray(body.items)) return json({ error: "items array required" }, 400);
+    next = body.items.map(normalizeWatchlistItem).filter(Boolean);
+  } else {
+    if (!body.item || typeof body.item !== "object") return json({ error: "item required" }, 400);
+    const item = normalizeWatchlistItem(body.item);
+    if (!item) return json({ error: "invalid item" }, 400);
+    const key = item.chain + ":" + item.ca.toLowerCase();
+    if (action === "add") {
+      const without = current.items.filter((x) => (x.chain + ":" + x.ca.toLowerCase()) !== key);
+      next = [item, ...without];
+    } else { // remove
+      next = current.items.filter((x) => (x.chain + ":" + x.ca.toLowerCase()) !== key);
+    }
+  }
+
+  // Anti-abuse hard cap
+  if (next.length > WATCHLIST_HARD_CAP) next = next.slice(0, WATCHLIST_HARD_CAP);
+
+  if (env.SCAN_KV) {
+    try {
+      await env.SCAN_KV.put(
+        `wl:${subId}`,
+        JSON.stringify({ items: next, updatedAt: Date.now() }),
+        // No TTL — watchlist is durable. Eviction only on user-side
+        // delete or explicit purge.
+      );
+    } catch (_) {}
+  }
+
+  return json({ items: next });
+}
+
+function normalizeWatchlistItem(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const ca = String(raw.ca || "").trim();
+  const chain = String(raw.chain || "bsc").toLowerCase();
+  if (!ca) return null;
+  // Light shape — enough to render a row + re-fetch a fresh scan.
+  return {
+    ca,
+    chain,
+    symbol: typeof raw.symbol === "string" ? raw.symbol.slice(0, 16) : "",
+    name: typeof raw.name === "string" ? raw.name.slice(0, 64) : "",
+    addedAt: Number.isFinite(raw.addedAt) ? raw.addedAt : Date.now(),
+  };
+}
+
+/* ── NOWPayments IPN signature verification ──
+   They HMAC-SHA512 the request body's *sorted* JSON keys (recursively)
+   with your IPN secret. Compare hex digest to the x-nowpayments-sig
+   header in constant time. */
+async function verifyIpnSignature(rawBody, signature, secret) {
+  if (!secret || !signature) return false;
+  let parsed;
+  try { parsed = JSON.parse(rawBody); } catch (_) { return false; }
+  const sortedJson = JSON.stringify(sortObjectKeys(parsed));
+
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-512" },
+    false,
+    ["sign"]
+  );
+  const sigBuf = await crypto.subtle.sign("HMAC", key, enc.encode(sortedJson));
+  const expected = bufToHex(sigBuf);
+  return constantTimeEqualHex(expected, signature.toLowerCase());
+}
+
+function sortObjectKeys(v) {
+  if (v === null || typeof v !== "object" || Array.isArray(v)) return v;
+  const out = {};
+  for (const k of Object.keys(v).sort()) out[k] = sortObjectKeys(v[k]);
+  return out;
+}
+
+function bufToHex(buf) {
+  const arr = new Uint8Array(buf);
+  let s = "";
+  for (let i = 0; i < arr.length; i++) {
+    s += arr[i].toString(16).padStart(2, "0");
+  }
+  return s;
+}
+
+function constantTimeEqualHex(a, b) {
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
 }
