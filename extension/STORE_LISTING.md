@@ -19,10 +19,10 @@ Trusty AI — Token Safety Scanner
 ## Short description (132 characters max)
 
 ```
-AI-powered safety verdict for any contract address you see on X, Reddit, or DexScreener. Don't ape blind — across all chains.
+AI-powered safety verdict for any contract address you see on X or Reddit. Don't ape blind — across all chains.
 ```
 
-*(126 characters)*
+*(112 characters)*
 
 ---
 
@@ -31,7 +31,7 @@ AI-powered safety verdict for any contract address you see on X, Reddit, or DexS
 ```
 🛡️ Trusty AI is the safety layer for crypto traders.
 
-Every time you see a contract address on Crypto Twitter, Reddit, or DexScreener, Trusty shows you a one-click safety verdict before you ape — APE, CAUTION, or RUN — sourced from the AI scanner at trustyai.tech.
+Every time you see a contract address on Crypto Twitter or Reddit, Trusty shows you a one-click safety verdict before you ape — APE, CAUTION, or RUN — sourced from the AI scanner at trustyai.tech.
 
 No more tab-hopping between DexScreener, GoPlus, and Honeypot.is. No more aping into a 99% sell-tax honeypot you could've caught in 5 seconds. The verdict comes to you, in the feed, in plain English, before you click buy.
 
@@ -45,7 +45,6 @@ No more tab-hopping between DexScreener, GoPlus, and Honeypot.is. No more aping 
 
 • x.com / twitter.com — pills on every CA in tweets, replies, quoted posts
 • reddit.com — old, new, and sh.reddit — pills on post bodies and comments
-• dexscreener.com — pills next to every token name in trending lists, watchlists, search results, and on token pages
 
 More platforms coming: Telegram Web, Discord, Farcaster.
 
@@ -150,7 +149,7 @@ host_permissions (trustyai.tech, api.trustyai.tech, bsc-dataseed.binance.org, bs
   balance for the paid tier. Multiple endpoints are listed for fallback
   redundancy. No write transactions, no signatures, no private keys.
 
-content_scripts (x.com, twitter.com, reddit.com, dexscreener.com):
+content_scripts (x.com, twitter.com, reddit.com):
   Required to detect contract addresses on the pages where users
   encounter them. The script reads page text only to find contract
   addresses; it does not read or transmit any other text content.

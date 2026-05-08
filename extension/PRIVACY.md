@@ -21,7 +21,6 @@ Supported sites today:
 
 - `x.com` and `twitter.com`
 - `reddit.com`, `old.reddit.com`, `new.reddit.com`, `sh.reddit.com`
-- `dexscreener.com`
 
 ## What we collect
 
@@ -93,7 +92,7 @@ check whether the address still holds the required $TRUSTY balance.
   `https://bsc-dataseed1.defibit.io/*`, `https://bsc.publicnode.com/*`,
   `https://bsc-dataseed1.ninicoin.io/*` — to verify your $TRUSTY
   balance via public RPC nodes.
-- `content_scripts: x.com, twitter.com, reddit.com, dexscreener.com` —
+- `content_scripts: x.com, twitter.com, reddit.com` —
   to detect contract addresses on the pages you visit.
 
 The extension does not have access to the rest of the web. It cannot

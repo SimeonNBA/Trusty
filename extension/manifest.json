@@ -3,7 +3,7 @@
   "name": "Trusty AI",
   "short_name": "Trusty AI",
   "version": "0.3.0",
-  "description": "AI-powered safety verdict for crypto contract addresses on X, Reddit, and DexScreener. Don't ape blind.",
+  "description": "AI-powered safety verdict for crypto contract addresses on X and Reddit. Don't ape blind.",
 
   "icons": {
     "16": "assets/icon-16.png",
@@ -65,24 +65,6 @@
     },
     {
       "matches": [
-        "https://dexscreener.com/*",
-        "https://www.dexscreener.com/*"
-      ],
-      "js": [
-        "lib/ca-detector.js",
-        "lib/api.js",
-        "lib/tier.js",
-        "lib/pill-injector.js",
-        "content/dexscreener-content.js"
-      ],
-      "css": [
-        "content/shared.css",
-        "content/dexscreener-content.css"
-      ],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
         "https://trustyai.tech/*",
         "https://www.trustyai.tech/*"
       ],
@@ -105,9 +87,7 @@
         "https://reddit.com/*",
         "https://old.reddit.com/*",
         "https://new.reddit.com/*",
-        "https://sh.reddit.com/*",
-        "https://dexscreener.com/*",
-        "https://www.dexscreener.com/*"
+        "https://sh.reddit.com/*"
       ]
     }
   ],

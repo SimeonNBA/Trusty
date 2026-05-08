@@ -208,20 +208,13 @@ The pill experience varies a lot by host site. Audit each:
 - **x.com / twitter.com** — works well today.
 - **reddit.com** — works but UI is denser; verify pill placement on
   comment threads and the new and old layouts both.
-- **dexscreener.com** — *concern:* one Dexscreener page can list 100+
-  CAs (trending, watchlists, search results). Auto-injecting a pill
-  on every CA means hundreds of `/api/scan` calls per page load
-  (mostly cached, but still bandwidth + KV reads). And users could
-  spam-scan a screen of tokens if pills are inviting.
-
-  Options to consider:
-  - Disable the extension on Dexscreener entirely (simplest)
-  - Only inject pills on Dexscreener token *detail* pages, not lists
-  - Lazy-inject via IntersectionObserver — only scan CAs that scroll
-    into view
-  - Hard cap of N pills per Dexscreener page
-
-  My pick: lazy-inject + cap. Test the UX before deciding to disable.
+- **dexscreener.com** — pill injection has been REMOVED from the
+  extension (manifest no longer registers a content script there).
+  Reasons: a single Dexscreener page can list 100+ CAs, which would
+  burst /api/scan and isn't useful for users already in a pro-tools
+  context. DexScreener remains a backend data source (price, mcap,
+  pairs) — we just don't inject pills onto their UI. Re-add later if
+  we ship a proper rate-limited / lazy-injected version.
 
 ## Go-to-market
 
