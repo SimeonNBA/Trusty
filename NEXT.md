@@ -65,7 +65,9 @@ page that:
   rel="icon">` tags to point at it.
 - **Transparent mascot for the website hero.** User has a transparent
   PNG of the new mascot — replace the current SVG mascot in the
-  homepage hero/sticky-side panel.
+  homepage hero/sticky-side panel. *Saved at `assets/mascot-hero.png`
+  but it's 1.2 MB — should be optimized to ~200 KB via squoosh.app
+  (PNG quantizer or WebP) for faster page load.*
 - **Sentiment heuristic tuning.** Current bullish/bearish word lists
   are reasonable but could be tuned with real-world false positives
   from the first weeks of usage.
@@ -134,6 +136,87 @@ The pill experience varies a lot by host site. Audit each:
     Trusty caught it in 1 second" with real examples
   - How-to-find-a-rug tutorial (the educational angle that makes
     Trusty look like the obvious answer)
+
+## Long-term: TWAK / tw-agent-skills integration
+
+**Repo:** [trustwallet/tw-agent-skills](https://github.com/trustwallet/tw-agent-skills)
+
+TWAK is a markdown-driven skill registry for AI coding agents (Claude
+Code, Cursor, GitHub Copilot, etc.). Skills live in
+`/skills/{name}/SKILL.md` + `/skills/{name}/references/*.md`. Three
+official skills today:
+- `api` — Trust Wallet's data API (token info, prices, swap quotes,
+  market data, basic security validation)
+- `wallet` — `twak` CLI (balances, swaps, transfers, alerts, ERC-20)
+- `sdk` — open-source libs (Wallet Core, Web3 Provider, Barz)
+
+The `api` skill already has a thin `security.md` reference, but it
+maps to Trust Wallet's own risk scoring — which is conservative and
+narrow. Trusty's safety stack is wider: GoPlus + RugCheck + Sorsa
+social signal + Dexscreener market depth, fused into a 0-100 score
+with plain-English reasons.
+
+### Is trading risky?
+
+**Yes — and that's the niche.** Most TWAK examples will be aggressive
+(snipe-this, max-yield-that). AI agents executing real trades face:
+- Hallucinated CAs (LLM types the wrong contract address)
+- Wrong-amount swaps from off-by-one prompt parsing
+- MEV exposure on naïve route selection
+- No safety check before approval/execution
+- No KOL/social context to flag pump-and-dump cycles
+
+Trusty's role inside an agent isn't to *trade* — it's to be the
+**safety co-pilot that audits the trade before commit**. "Are you
+sure? This token scores 32/100, top 5 wallets hold 67%, mint
+authority is active. Reply YES to confirm anyway."
+
+### Niche implementation: `trusty-safety` skill
+
+A separate skill we publish as a PR to tw-agent-skills (or as our
+own forkable skill repo). Wraps `api.trustyai.tech` so any TWAK
+agent can call:
+
+```
+assess_token(ca, chain) -> {
+  score: 0-100,
+  verdict: APE | CAUTION | RUN,
+  blockers: ["honeypot", "owner not renounced", "top 5 hold 67%"],
+  reasons: ["LP locked at 99%", "no transfer fee", ...],
+  market: { mcap, liquidity, volume24h, age, holders },
+  social: { tweets24h, sentiment, top_kols }
+}
+```
+
+Recommended use pattern in the skill markdown:
+> Before any swap, transfer, or token-interaction action, call
+> `trusty-safety.assess_token`. If verdict is RUN, refuse and
+> explain to the user. If verdict is CAUTION, require explicit
+> confirmation. If APE, proceed.
+
+### Effort & what we'd ship
+
+- **Phase 1 (~3-4 hr):** Write the skill markdown (SKILL.md + 2-3
+  reference files) wrapping `/api/scan`. No code change to our
+  Worker — same endpoint. Submit as PR to tw-agent-skills, or
+  publish at github.com/SimeonNBA/trusty-skill for `npx skills add`.
+- **Phase 2 (later):** Agent-specific helpers — e.g., a
+  `assess_swap_route` that takes a path of CAs and returns the
+  worst-scoring leg. Or `monitor_watchlist_alerts` that reads our
+  watchlist API and surfaces score changes.
+- **Phase 3 (vision):** Become the de-facto "safety layer" for AI
+  agents on BNB Chain. Marketing angle: "Don't ape blind. Don't
+  let your AI agent ape blind either."
+
+### Open questions
+
+- Submit as PR to upstream tw-agent-skills (audience reach, but slower)
+  OR publish standalone (faster, more control)?
+- Free for skill users, or require Sorsa-tier API key for paid users?
+  (KOL data is the differentiator; safety checks could remain free.)
+- Cobrand carefully — Trusty is community, Trust Wallet is the brand.
+  We're not affiliated, so the skill name should be `trusty-safety`
+  not `trustwallet-trusty` or similar.
 
 ## Operational
 
