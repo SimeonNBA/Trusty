@@ -108,14 +108,13 @@ async function handleScan(ca, chain, env) {
 
   const result = await scanToken(ca, chain);
 
-  // Only cache when we got real upstream data. A score of 0 with a
-  // failing first check means GoPlus didn't respond — caching that
-  // for 5 min would punish a legit token across every scan in the
-  // window. Better to retry on the next request.
-  const upstreamOk =
-    result.score > 0 ||
-    (result.checks && result.checks.some((c) => c.ok)) ||
-    (result.marketData && result.marketData.mcap !== "—");
+  // Only cache when GoPlus actually responded. The "Tax data
+  // unavailable" / "Transfer fee data unavailable" labels only appear
+  // when the GoPlus fetch failed. Caching those would mean every
+  // scan for the next 5 min returns score 0 / RUN for legit tokens,
+  // which is exactly what trending was just doing. Detect by label
+  // rather than by score (a real rug correctly scores 0).
+  const upstreamOk = isUpstreamOk(result);
 
   if (env.SCAN_KV && upstreamOk) {
     const ttl = parseInt(env.SCAN_TTL_SECONDS || "300", 10);
@@ -645,6 +644,27 @@ function fmtUsd(n) {
 
 function shortAddr(ca) {
   return ca.slice(0, 6) + "..." + ca.slice(-4);
+}
+
+/* ── Did GoPlus actually respond? ──
+   When the upstream fetchGoPlus / fetchGoPlusSolana call returns
+   null, buildChecks emits placeholder labels containing the word
+   "data unavailable". A real rug-scoring scan never produces those
+   strings — even an all-failing scan returns "Tax 0% / 0%" or
+   "Transfer fee 5%". So labels are the cleanest tell. */
+function isUpstreamOk(scan) {
+  if (!scan || !Array.isArray(scan.checks)) return false;
+  for (const c of scan.checks) {
+    if (typeof c.label === "string" && /data unavailable/i.test(c.label)) {
+      return false;
+    }
+  }
+  for (const c of scan.paidChecks || []) {
+    if (typeof c.label === "string" && /data unavailable/i.test(c.label)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /* ================================================================
@@ -1252,22 +1272,13 @@ async function handleTrending(url, env) {
         if (env.SCAN_KV) {
           scan = await env.SCAN_KV.get(cacheKey, "json");
         }
-        if (!scan) {
-          scan = await scanToken(it.ca, it.chain);
-          // Cache the fresh scan if it has real data
-          const upstreamOk =
-            scan.score > 0 ||
-            (scan.checks && scan.checks.some((c) => c.ok)) ||
-            (scan.marketData && scan.marketData.mcap !== "—");
-          if (env.SCAN_KV && upstreamOk) {
-            try {
-              await env.SCAN_KV.put(cacheKey, JSON.stringify(scan), {
-                expirationTtl: parseInt(env.SCAN_TTL_SECONDS || "300", 10),
-              });
-            } catch (_) {}
-          }
-        }
-        return { ...it, scan };
+        // Trending hydration uses ONLY cached scans. Triggering 10
+        // fresh scanToken calls per trending request hammers GoPlus
+        // and gets us throttled — every check comes back empty. If a
+        // CA isn't cached yet, it'll get cached the next time someone
+        // legitimately scans it; until then the row just renders
+        // without a score.
+        return { ...it, scan: scan && isUpstreamOk(scan) ? scan : null };
       } catch (_) {
         return { ...it, scan: null };
       }
