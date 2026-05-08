@@ -175,10 +175,25 @@
     return promise;
   }
 
+  // ── Event reporting ─────────────────────────────────────────
+  // Anonymous CA-only events feed the /api/trending leaderboard.
+  // Fire-and-forget, never blocks the UI.
+  function reportEvent(type, ca, chain) {
+    if (!type || !ca) return;
+    try {
+      fetch(API_BASE + "/api/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, ca, chain: chain || "evm" }),
+      }).catch(function () { /* swallow */ });
+    } catch (e) { /* never block */ }
+  }
+
   // Expose globally for content scripts
   window.TrustyAPI = {
     scan,
     scanKols,
+    reportEvent,
     shortAddr,
     verdictFromScore
   };

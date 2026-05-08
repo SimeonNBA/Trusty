@@ -74,6 +74,14 @@ export default {
       if (request.method === "POST") return handleWatchlistPost(request, url, env);
       return json({ error: "method not allowed" }, 405);
     }
+    if (url.pathname === "/api/event") {
+      if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
+      return handleEvent(request, env);
+    }
+    if (url.pathname === "/api/trending") {
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      return handleTrending(url, env);
+    }
 
     return json({ error: "not found" }, 404);
   },
@@ -1147,6 +1155,188 @@ function normalizeWatchlistItem(raw) {
     name: typeof raw.name === "string" ? raw.name.slice(0, 64) : "",
     addedAt: Number.isFinite(raw.addedAt) ? raw.addedAt : Date.now(),
   };
+}
+
+/* ================================================================
+   Trending feed — anonymous activity-based ranking.
+
+   The extension and website POST to /api/event whenever a CA gets
+   real attention (a scan, a watchlist add). We bucket counts in KV
+   under hourly keys per CA. /api/trending reads the rolling 24h
+   window, aggregates, and returns the top-ranked CAs with their
+   live scan data inline.
+
+   Privacy: events are CA-only. No subId, no IP, no user agent. We
+   capture *what tokens* the network is paying attention to — never
+   *who* is paying attention.
+   ================================================================ */
+
+const TRENDING_HARD_LIMIT = 30; // we expose at most this many trending CAs
+const EVENT_TYPES = new Set(["scan", "watchlist_add"]);
+
+async function handleEvent(request, env) {
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "bad json" }, 400); }
+
+  const type = String(body?.type || "").toLowerCase();
+  if (!EVENT_TYPES.has(type)) return json({ error: "invalid type" }, 400);
+
+  const rawCa = String(body?.ca || "").trim();
+  const chain = String(body?.chain || "bsc").toLowerCase();
+  const isSol = isSolana(chain);
+  const ca = isSol ? rawCa : rawCa.toLowerCase();
+  if (!isValidCa(ca, chain)) return json({ error: "invalid ca" }, 400);
+
+  if (!env.SCAN_KV) return json({ ok: true, recorded: false });
+
+  // Bucket by UTC hour. Keys roll off naturally via 25h TTL, so the
+  // 24h window is always populated with at most 25 hour-buckets.
+  const hour = Math.floor(Date.now() / 3600000); // hours since epoch
+  const bucketKey = `evt:${type}:${chain}:${ca}:${hour}`;
+
+  // Increment: KV doesn't support atomic counters, so we read-modify-
+  // write. Race conditions cause occasional under-counting — fine for
+  // a "trending" leaderboard, no money at stake.
+  let current = 0;
+  try {
+    const existing = await env.SCAN_KV.get(bucketKey);
+    current = parseInt(existing || "0", 10) || 0;
+  } catch (_) {}
+  try {
+    await env.SCAN_KV.put(bucketKey, String(current + 1), {
+      expirationTtl: 25 * 3600, // 25h, slightly longer than the read window
+    });
+  } catch (_) {}
+
+  // Also maintain a registry of recently-active CAs so the trending
+  // aggregator can find them without a full KV list scan (which would
+  // be expensive). One key per (chain,ca), refreshed on each event.
+  const indexKey = `evtidx:${chain}:${ca}`;
+  try {
+    await env.SCAN_KV.put(
+      indexKey,
+      JSON.stringify({ chain, ca, lastSeen: Date.now() }),
+      { expirationTtl: 25 * 3600 }
+    );
+  } catch (_) {}
+
+  return json({ ok: true });
+}
+
+async function handleTrending(url, env) {
+  const window = parseInt(url.searchParams.get("window") || "24", 10) || 24;
+  const limit = Math.min(
+    parseInt(url.searchParams.get("limit") || "10", 10) || 10,
+    TRENDING_HARD_LIMIT
+  );
+  const cacheKey = `trending:w${window}:l${limit}`;
+
+  if (env.SCAN_KV) {
+    const cached = await env.SCAN_KV.get(cacheKey, "json");
+    if (cached) return json(cached);
+  }
+
+  const items = await computeTrending(env, window);
+  const top = items.slice(0, limit);
+
+  // Hydrate top entries with live scan data so the website can render
+  // a real card per row in one round-trip. Call the scan logic
+  // directly — Workers can't reliably fetch their own custom domain.
+  // We reuse the same KV cache too, so this is just a cache lookup
+  // for any token already scanned in the last 5 min.
+  const hydrated = await Promise.all(
+    top.map(async (it) => {
+      try {
+        const cacheKey = `scan:${it.chain}:${it.ca}`;
+        let scan = null;
+        if (env.SCAN_KV) {
+          scan = await env.SCAN_KV.get(cacheKey, "json");
+        }
+        if (!scan) {
+          scan = await scanToken(it.ca, it.chain);
+          // Cache the fresh scan if it has real data
+          const upstreamOk =
+            scan.score > 0 ||
+            (scan.checks && scan.checks.some((c) => c.ok)) ||
+            (scan.marketData && scan.marketData.mcap !== "—");
+          if (env.SCAN_KV && upstreamOk) {
+            try {
+              await env.SCAN_KV.put(cacheKey, JSON.stringify(scan), {
+                expirationTtl: parseInt(env.SCAN_TTL_SECONDS || "300", 10),
+              });
+            } catch (_) {}
+          }
+        }
+        return { ...it, scan };
+      } catch (_) {
+        return { ...it, scan: null };
+      }
+    })
+  );
+
+  const result = { window, items: hydrated, generatedAt: Date.now() };
+
+  if (env.SCAN_KV) {
+    try {
+      // 5-min cache so the homepage carousel doesn't re-aggregate per
+      // visitor. Eventually fresh after evictions.
+      await env.SCAN_KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 300 });
+    } catch (_) {}
+  }
+
+  return json(result);
+}
+
+async function computeTrending(env, windowHours) {
+  if (!env.SCAN_KV) return [];
+
+  // 1) Pull the index of recently-active CAs. KV `list` returns up to
+  //    1000 keys per call — fine at our scale; we'd paginate later.
+  let activeKeys = [];
+  try {
+    const listed = await env.SCAN_KV.list({ prefix: "evtidx:", limit: 1000 });
+    activeKeys = listed.keys.map((k) => k.name);
+  } catch (_) {}
+
+  if (!activeKeys.length) return [];
+
+  const nowHour = Math.floor(Date.now() / 3600000);
+  const windowStartHour = nowHour - windowHours;
+
+  // 2) For each active CA, sum its scan + watchlist_add bucket counts
+  //    across the window. Watchlist-add weighs more than a scan
+  //    (intentional save signal > drive-by curiosity).
+  const tallies = await Promise.all(
+    activeKeys.map(async (idxKey) => {
+      try {
+        const meta = await env.SCAN_KV.get(idxKey, "json");
+        if (!meta || !meta.ca || !meta.chain) return null;
+        let scans = 0, saves = 0;
+        // Sample the last `windowHours` hourly buckets in parallel.
+        const promises = [];
+        for (let h = nowHour; h > windowStartHour; h--) {
+          promises.push(
+            env.SCAN_KV.get(`evt:scan:${meta.chain}:${meta.ca}:${h}`)
+              .then((v) => { scans += parseInt(v || "0", 10) || 0; })
+          );
+          promises.push(
+            env.SCAN_KV.get(`evt:watchlist_add:${meta.chain}:${meta.ca}:${h}`)
+              .then((v) => { saves += parseInt(v || "0", 10) || 0; })
+          );
+        }
+        await Promise.all(promises);
+        const score = scans + 5 * saves; // weight saves heavily
+        if (score === 0) return null;
+        return { ca: meta.ca, chain: meta.chain, scans, saves, score };
+      } catch (_) {
+        return null;
+      }
+    })
+  );
+
+  return tallies
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score);
 }
 
 /* ── NOWPayments IPN signature verification ──

@@ -5300,6 +5300,9 @@ body::before {
          ══════════════════════════════ -->
     <div class="tab-panel active" id="tab-scanner">
 
+    <!-- ── TRENDING NOW (live, sourced from Trusty network activity) ── -->
+    <div id="trending-panel" style="margin-bottom:16px;display:none;"></div>
+
     <!-- ── FEATURED TOKENS ── -->
     <div id="featured-panel" style="margin-bottom:16px;"></div>
 
@@ -8129,6 +8132,8 @@ async function scanCA() {
 
     // Log scan for points + streak + stats
     try { if (typeof tscLog === 'function') tscLog(ca); } catch(e) {}
+    // Anonymous trending signal — feeds the homepage trending feed
+    try { reportTrustyEvent('scan', ca, pair.chainId); } catch(e) {}
 
     loadingEl.classList.remove('visible');
     dataCard.classList.add('visible');
@@ -10859,6 +10864,19 @@ function syncWatchlistRemoveCloud(ca, chain) {
   } catch(e) { /* fire-and-forget */ }
 }
 
+// ── Anonymous event reporting (feeds the trending feed) ──
+// CA-only payload, no subId, no IP, no user agent. Fire-and-forget.
+function reportTrustyEvent(type, ca, chain) {
+  if (!type || !ca) return;
+  try {
+    fetch('https://api.trustyai.tech/api/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: type, ca: ca, chain: chain || 'evm' })
+    }).catch(function() {});
+  } catch(e) {}
+}
+
 function isInWatchlist(ca) {
   if (!ca) return false;
   var list = getWatchlist();
@@ -10901,6 +10919,8 @@ function addToWatchlist() {
     symbol: tok.symbol,
     name: tok.name
   });
+  // Anonymous trending signal — saves weigh more than scans.
+  reportTrustyEvent('watchlist_add', tok.address, pair.chainId);
   if (typeof trackEvent === 'function') trackEvent('watchlist_add');
 }
 
@@ -12066,6 +12086,70 @@ async function renderFeatured() {
 
 // Render on page load
 document.addEventListener('DOMContentLoaded', function() { renderFeatured(); trackEvent('page_view'); });
+
+// ══ TRENDING NOW ══
+// Live feed of CAs the Trusty network has been paying attention to —
+// sourced from anonymous scan + watchlist_add events recorded by the
+// extension and the website. Hits /api/trending which returns the
+// hydrated list (live score + market cap inline).
+async function renderTrending() {
+  var panel = document.getElementById('trending-panel');
+  if (!panel) return;
+  try {
+    var res = await fetch('https://api.trustyai.tech/api/trending?window=24&limit=10');
+    if (!res.ok) return;
+    var data = await res.json();
+    var items = (data && Array.isArray(data.items)) ? data.items : [];
+    if (!items.length) return; // hide entirely until we have real activity
+
+    var cards = items.map(function(it) {
+      var scan = it.scan || {};
+      var symbol = scan.symbol || ('$' + (it.ca || '').slice(2, 6).toUpperCase());
+      var name = scan.name || '';
+      var score = (typeof scan.score === 'number') ? scan.score : null;
+      var verdict = scan.verdict || '';
+      var mcap = scan.marketData && scan.marketData.mcap ? scan.marketData.mcap : '';
+      var verdictCls = verdict === 'APE' ? 'ape' : verdict === 'CAUTION' ? 'caution' : verdict === 'RUN' ? 'run' : '';
+      return '<div class="featured-card trending-card ' + verdictCls + '" onclick="evalTrendingCoin(\'' + it.ca + '\')">' +
+        '<div class="featured-badge">🔥 TRENDING</div>' +
+        '<div class="featured-name">' + symbol + '</div>' +
+        '<div class="featured-reason">' +
+          (score != null ? '<strong>' + score + '/100</strong> · ' : '') +
+          (mcap ? mcap + ' MC' : (name || 'Active in Trusty')) +
+        '</div>' +
+        '<div class="trending-meta">' +
+          '<span>' + (it.scans || 0) + ' scans</span>' +
+          '<span>· ' + (it.saves || 0) + ' saves</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    var doubled = cards + cards;
+    panel.innerHTML = '<div class="featured-header">' +
+      '<div class="featured-title">🔥 TRENDING NOW · LAST 24H</div>' +
+      '<div class="featured-ad" style="color:var(--muted);">Sourced from anonymous scan activity</div>' +
+    '</div>' +
+    '<div class="featured-strip"><div class="featured-track">' + doubled + '</div></div>';
+    panel.style.display = 'block';
+  } catch(e) { /* silent fail — section just stays hidden */ }
+}
+
+// A handful of small style tweaks for the trending cards. Inline
+// because they're scoped + we don't want to polish the main CSS file
+// for a tiny visual differentiation.
+(function injectTrendingCss() {
+  var css = '\n.trending-card { border-color: rgba(243, 186, 47, 0.4) !important; }\n' +
+            '.trending-card.ape .featured-name { color: #86EFAC; }\n' +
+            '.trending-card.caution .featured-name { color: #FDE68A; }\n' +
+            '.trending-card.run .featured-name { color: #FCA5A5; }\n' +
+            '.trending-card .featured-reason strong { color: var(--yellow); font-family: var(--mono); }\n' +
+            '.trending-meta { display:flex; gap:8px; margin-top:6px; font-size:9px; color:var(--muted); font-family:var(--mono); letter-spacing:1px; text-transform:uppercase; }\n';
+  var s = document.createElement('style');
+  s.textContent = css;
+  document.head.appendChild(s);
+})();
+
+document.addEventListener('DOMContentLoaded', renderTrending);
 
 // ══ BASIC ANALYTICS ══
 var _trustyStats = JSON.parse(localStorage.getItem('trusty_stats') || '{"views":0,"scans":0,"swaps":0,"connects":0}');

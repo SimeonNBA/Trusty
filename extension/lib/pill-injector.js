@@ -167,6 +167,12 @@
     const chain = pill.dataset.trustyChain;
     const result = pill._trustyResult;
 
+    // Anonymous trending signal — record that someone clicked through
+    // on this CA. Click is a stronger intent signal than hover.
+    if (window.TrustyAPI && window.TrustyAPI.reportEvent) {
+      window.TrustyAPI.reportEvent("scan", ca, chain);
+    }
+
     // Paid users: open inline panel. Free: drive traffic to the website.
     if (cachedTier && cachedTier.tier === "paid") {
       openPaidPanel(result, ca, chain);
@@ -508,6 +514,9 @@
           panelStar.classList.add("trusty-pp-star-active");
           panelStar.setAttribute("aria-pressed", "true");
           flashStarFeedback(panelStar, "Saved to watchlist");
+          if (window.TrustyAPI && window.TrustyAPI.reportEvent) {
+            window.TrustyAPI.reportEvent("watchlist_add", ca, chain);
+          }
         }
       });
     }
@@ -643,6 +652,11 @@
     }
     markStarSaved(star, true);
     flashStarFeedback(star, res.alreadyWatched ? "Already in watchlist" : "Saved to watchlist");
+    // Anonymous trending signal — saving is a strong intent signal,
+    // weighed heavier than scans by the trending aggregator.
+    if (!res.alreadyWatched && window.TrustyAPI && window.TrustyAPI.reportEvent) {
+      window.TrustyAPI.reportEvent("watchlist_add", ca, chain);
+    }
   }
 
   // Tiny ephemeral toast next to the star — non-blocking feedback.
