@@ -1778,6 +1778,14 @@ body::before {
   overflow: hidden;
 }
 
+.trusty-launchpad-badge { display: flex; align-items: center; gap: 8px; padding: 9px 12px; margin: 8px 0 0; background: linear-gradient(135deg, rgba(243,186,47,0.10), rgba(168,85,247,0.06)); border: 1px solid rgba(243,186,47,0.35); border-radius: 10px; font-size: 12px; line-height: 1.35; color: var(--text); text-decoration: none; transition: border-color 0.15s ease, transform 0.15s ease; }
+.trusty-launchpad-badge:hover { border-color: rgba(243,186,47,0.6); transform: translateY(-1px); }
+.trusty-launchpad-badge-icon { font-size: 16px; flex-shrink: 0; }
+.trusty-launchpad-badge-text { flex: 1; min-width: 0; }
+.trusty-launchpad-badge-title { font-weight: 700; }
+.trusty-launchpad-badge-sub { font-size: 10px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.4px; margin-top: 1px; }
+.trusty-launchpad-badge-arrow { color: var(--yellow); font-weight: 700; }
+
 .token-icon img {
   width: 100%;
   height: 100%;
@@ -4527,6 +4535,9 @@ body::before {
             </div>
             <div class="token-chain-badge" id="tokenChainBadge">—</div>
           </div>
+
+          <!-- Launchpad origin badge — populated by renderLaunchpadBadge() when /api/scan returns launchedOn -->
+          <div id="trusty-launchpad-badge" style="display:none;"></div>
 
           <div class="token-stats-grid">
             <div class="token-stat">
@@ -7279,6 +7290,7 @@ async function scanCA() {
         ]);
       } catch(e) { window._trustyApiScan = null; }
       evaluate();
+      renderLaunchpadBadge(window._trustyApiScan, _evalCa);
       // Contract-safety data (honeypot, renounced, mint, sell tax) is
       // returned by /api/scan and reflected in the headline score +
       // verdict via window._trustyApiScan. Fallback: if the API hadn't
@@ -7322,6 +7334,30 @@ function trustyTokenLogoUrl(chain, address) {
   if (!twChain) return null;
   return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/' +
          twChain + '/assets/' + address + '/logo.png';
+}
+
+// ── Launchpad origin badge ──
+// When /api/scan returns launchedOn:"fourmeme" we surface a small
+// badge in the scan results that links to the token's four.meme page.
+function renderLaunchpadBadge(apiScan, ca) {
+  var host = document.getElementById('trusty-launchpad-badge');
+  if (!host) return;
+  var origin = apiScan && apiScan.launchedOn;
+  if (!origin || !ca) { host.style.display = 'none'; host.innerHTML = ''; return; }
+  if (origin === 'fourmeme') {
+    host.innerHTML =
+      '<a class="trusty-launchpad-badge" href="https://four.meme/token/' + encodeURIComponent(ca) + '" target="_blank" rel="noopener">' +
+        '<span class="trusty-launchpad-badge-icon">🚀</span>' +
+        '<span class="trusty-launchpad-badge-text">' +
+          '<span class="trusty-launchpad-badge-title">Launched on four.meme</span>' +
+          '<span class="trusty-launchpad-badge-sub">View token page · trade on the bonding curve →</span>' +
+        '</span>' +
+        '<span class="trusty-launchpad-badge-arrow">↗</span>' +
+      '</a>';
+    host.style.display = 'block';
+  } else {
+    host.style.display = 'none';
+  }
 }
 
 // Build an <img> tag for a token logo. TW first, then the existing
@@ -8065,6 +8101,10 @@ function resetAll() {
   var scrollTarget = document.getElementById('ca-section') || document.body;
   if (scrollTarget && scrollTarget.scrollIntoView) scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
   Object.keys(currentScores).forEach(k => delete currentScores[k]);
+  // Clear stale launchpad badge from previous scan
+  var lpBadge = document.getElementById('trusty-launchpad-badge');
+  if (lpBadge) { lpBadge.style.display = 'none'; lpBadge.innerHTML = ''; }
+  window._trustyApiScan = null;
   closeMetricPopup();
   closeGutCheck();
   firstTimerMode = false;
@@ -8457,6 +8497,9 @@ async function syncHeadlineScoreWithApi(ca, chainId) {
     }, 22);
     badge.textContent = tierLabel;
     badge.className = 'tier-badge ' + tierClass;
+    // Surface launchpad origin if the API returned it
+    window._trustyApiScan = data;
+    renderLaunchpadBadge(data, ca);
   } catch (e) { /* silent — leave the homegrown score in place */ }
 }
 

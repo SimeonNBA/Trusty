@@ -106,7 +106,7 @@ async function handleScan(ca, chain, env) {
     if (cached) return json(cached);
   }
 
-  const result = await scanToken(ca, chain);
+  const result = await scanToken(ca, chain, env);
 
   // Only cache when GoPlus actually responded. The "Tax data
   // unavailable" / "Transfer fee data unavailable" labels only appear
@@ -183,18 +183,20 @@ function isValidCa(ca, chain) {
   return EVM_CA.test(ca);
 }
 
-async function scanToken(ca, chain) {
+async function scanToken(ca, chain, env) {
   if (isSolana(chain)) return scanTokenSolana(ca, chain);
-  return scanTokenEvm(ca, chain);
+  return scanTokenEvm(ca, chain, env);
 }
 
-async function scanTokenEvm(ca, chain) {
-  const [gpRes, dxRes] = await Promise.allSettled([
+async function scanTokenEvm(ca, chain, env) {
+  const [gpRes, dxRes, fmRes] = await Promise.allSettled([
     fetchGoPlus(chainId(chain), ca),
     fetchDex(ca, "bsc"),
+    fetchFourMemeOrigin(ca, chain, env),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
   const d = dxRes.status === "fulfilled" ? dxRes.value : null;
+  const fm = fmRes.status === "fulfilled" ? fmRes.value : null;
 
   const checks = buildChecks(g);
   const paidChecks = buildPaidChecks(g);
@@ -205,7 +207,7 @@ async function scanTokenEvm(ca, chain) {
   const symbol = "$" + rawSym.replace(/^\$/, "").toUpperCase();
   const name = d?.name || g?.token_name || "Token " + shortAddr(ca);
 
-  return baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g));
+  return baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g), fm);
 }
 
 async function scanTokenSolana(ca, chain) {
@@ -230,8 +232,8 @@ async function scanTokenSolana(ca, chain) {
   return baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketDataSolana(d, g));
 }
 
-function baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, md) {
-  return {
+function baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, md, origin) {
+  const out = {
     ca, chain, score, verdict, symbol, name,
     checks, paidChecks,
     // KOLs/activity hydrated by /api/kols on demand
@@ -239,6 +241,8 @@ function baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChec
     activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
     marketData: md,
   };
+  if (origin && origin.launchedOn) out.launchedOn = origin.launchedOn;
+  return out;
 }
 
 // ── GoPlus token-security ──
@@ -319,6 +323,69 @@ async function fetchRugCheck(ca) {
     rugScore: data?.score_normalised ?? data?.score ?? null,
     risks: Array.isArray(data?.risks) ? data.risks : [],
   };
+}
+
+// ── four.meme launchpad origin ──
+// If a BSC contract was deployed via the four.meme exchange proxy
+// (0x5c952063c7fc8610ffdb798152d69f0b9550762b), tag it so the UI can
+// surface a "Launched on four.meme" badge with a deep link to the
+// token's four.meme detail page. Origin is immutable per CA, so we
+// cache the result (positive or negative) in KV for 30 days.
+const FOUR_MEME_PROXY = "0x5c952063c7fc8610ffdb798152d69f0b9550762b";
+
+async function fetchFourMemeOrigin(ca, chain, env) {
+  // BSC only
+  if (chain !== "bsc" && chain !== "evm" && chain !== "bnb") return null;
+  if (!/^0x[a-f0-9]{40}$/i.test(ca)) return null;
+
+  const cacheKey = `fourmeme:${ca.toLowerCase()}`;
+  if (env.SCAN_KV) {
+    const cached = await env.SCAN_KV.get(cacheKey, "json");
+    if (cached !== null && cached !== undefined) {
+      return cached.launched ? { launchedOn: "fourmeme" } : null;
+    }
+  }
+
+  const apiKey = env.BSCSCAN_API_KEY ? `&apikey=${env.BSCSCAN_API_KEY}` : "";
+  let launched = false;
+
+  try {
+    // Step 1: get the contract creation tx hash
+    const ccUrl = `https://api.bscscan.com/api?module=contract&action=getcontractcreation&contractaddresses=${ca}${apiKey}`;
+    const cr = await fetch(ccUrl, {
+      headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
+    });
+    if (cr.ok) {
+      const cd = await cr.json();
+      if (cd?.status === "1" && Array.isArray(cd.result) && cd.result.length) {
+        const txHash = cd.result[0].txHash;
+        if (txHash) {
+          // Step 2: read the creation transaction's `to` field. If it was
+          // sent to the four.meme proxy, the contract was deployed via
+          // four.meme.
+          const txUrl = `https://api.bscscan.com/api?module=proxy&action=eth_getTransactionByHash&txhash=${txHash}${apiKey}`;
+          const tr = await fetch(txUrl, {
+            headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
+          });
+          if (tr.ok) {
+            const td = await tr.json();
+            const to = (td?.result?.to || "").toLowerCase();
+            if (to === FOUR_MEME_PROXY) launched = true;
+          }
+        }
+      }
+    }
+  } catch (_) { /* graceful: no badge if lookup fails */ }
+
+  if (env.SCAN_KV) {
+    try {
+      await env.SCAN_KV.put(cacheKey, JSON.stringify({ launched }), {
+        expirationTtl: 30 * 24 * 60 * 60, // 30 days
+      });
+    } catch (_) {}
+  }
+
+  return launched ? { launchedOn: "fourmeme" } : null;
 }
 
 // ── GoPlus Solana token-security ──

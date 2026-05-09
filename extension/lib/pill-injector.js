@@ -458,6 +458,17 @@
       '<div class="trusty-pp-meta">' + result.symbol +
         ' <span class="trusty-pp-chain">on ' + chainLabel + '</span></div>' +
 
+      (result.launchedOn === 'fourmeme'
+        ? '<a class="trusty-pp-fourmeme" href="https://four.meme/token/' + encodeURIComponent(ca) + '" target="_blank" rel="noopener">' +
+            '<span class="trusty-pp-fourmeme-icon">🚀</span>' +
+            '<span class="trusty-pp-fourmeme-text">' +
+              '<span class="trusty-pp-fourmeme-title">Launched on four.meme</span>' +
+              '<span class="trusty-pp-fourmeme-sub">View token page →</span>' +
+            '</span>' +
+            '<span class="trusty-pp-fourmeme-arrow">↗</span>' +
+          '</a>'
+        : '') +
+
       '<div class="trusty-pp-section">' +
         '<div class="trusty-pp-section-title">🛡️ Safety</div>' +
         '<ul class="trusty-tt-checks">' + checksHtml + '</ul>' +
