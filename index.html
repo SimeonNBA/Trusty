@@ -1778,6 +1778,15 @@ body::before {
   overflow: hidden;
 }
 
+.trusty-trade-row { display: flex; gap: 10px; margin: 16px 0 0; flex-wrap: wrap; }
+.trusty-trade-btn { flex: 1 1 180px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; text-decoration: none; letter-spacing: 0.3px; transition: transform 0.15s ease, filter 0.15s ease, border-color 0.15s ease; }
+.trusty-trade-btn.primary { background: linear-gradient(135deg, #2563EB, #3B82F6); color: white; border: 1px solid rgba(59,130,246,0.5); }
+.trusty-trade-btn.primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.trusty-trade-btn.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+.trusty-trade-btn.secondary:hover { border-color: var(--border2); transform: translateY(-1px); }
+.trusty-trade-icon { font-size: 16px; line-height: 1; }
+@media (max-width: 480px) { .trusty-trade-btn { flex-basis: 100%; padding: 12px 14px; font-size: 12px; } }
+
 .trusty-launchpad-badge { display: flex; align-items: center; gap: 8px; padding: 9px 12px; margin: 8px 0 0; background: linear-gradient(135deg, rgba(243,186,47,0.10), rgba(168,85,247,0.06)); border: 1px solid rgba(243,186,47,0.35); border-radius: 10px; font-size: 12px; line-height: 1.35; color: var(--text); text-decoration: none; transition: border-color 0.15s ease, transform 0.15s ease; }
 .trusty-launchpad-badge:hover { border-color: rgba(243,186,47,0.6); transform: translateY(-1px); }
 .trusty-launchpad-badge-icon { font-size: 16px; flex-shrink: 0; }
@@ -4539,6 +4548,9 @@ body::before {
           <!-- Launchpad origin badge — populated by renderLaunchpadBadge() when /api/scan returns launchedOn -->
           <div id="trusty-launchpad-badge" style="display:none;"></div>
 
+          <!-- Trade-in-Trust-Wallet CTAs — populated by renderTradeRow() once token data is fetched -->
+          <div id="trusty-trade-row-host"></div>
+
           <div class="token-stats-grid">
             <div class="token-stat">
               <div class="token-stat-label">Price</div>
@@ -5194,6 +5206,13 @@ body::before {
         <div class="lore-card" style="margin-top:16px;">
           <div class="lore-title">💰 BUY $TRUSTY</div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:10px;">
+            <a href="https://link.trustwallet.com/swap?from=c20000714&amp;to=c20000714_t0x65aea108c21439693468FCD542D81C29E8df4444" target="_blank" rel="noopener" class="trusty-link-card" id="buyTrustyTwLink">
+              <span class="trusty-link-card-icon">🛡️</span>
+              <div>
+                <div class="trusty-link-card-title">Trust Wallet</div>
+                <div class="trusty-link-card-sub" id="buyTrustyTwSub">App · auto-detects mobile / desktop</div>
+              </div>
+            </a>
             <a href="https://pancakeswap.finance/swap?outputCurrency=0x65aea108c21439693468FCD542D81C29E8df4444" target="_blank" rel="noopener" class="trusty-link-card">
               <span class="trusty-link-card-icon">🥞</span>
               <div>
@@ -7336,6 +7355,79 @@ function trustyTokenLogoUrl(chain, address) {
          twChain + '/assets/' + address + '/logo.png';
 }
 
+// ── Trade-in-Trust-Wallet CTAs ──
+// Builds device-aware swap URLs for any scanned token. Mobile uses
+// link.trustwallet.com (universal link → opens TW app's swap screen
+// with from/to UAI pre-filled). Desktop uses swap.trustwallet.com
+// (TW's branded web swap; auto-connects to the TW Chrome extension if
+// installed). Pre-fill on the desktop URL isn't documented; the
+// PancakeSwap secondary link below is the always-works fallback.
+//
+// Trust Wallet UAI format: c<coinId>_t<contract_address>
+//   60       = Ethereum
+//   20000714 = BNB Smart Chain
+//   501      = Solana
+//   966      = Polygon
+function trustyChainCoinId(chain) {
+  var c = (chain || '').toLowerCase();
+  return ({
+    bsc: 20000714, bnb: 20000714, binance: 20000714, evm: 20000714,
+    ethereum: 60, eth: 60,
+    solana: 501, sol: 501,
+    polygon: 966, matic: 966
+  })[c] || null;
+}
+function isMobileDevice() {
+  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || '');
+}
+function trustyTradeUrls(chain, ca) {
+  if (!ca) return { tw: null, pcs: null };
+  var coinId = trustyChainCoinId(chain);
+  var nativeUai = coinId ? ('c' + coinId) : null;
+  var tokenUai = coinId ? ('c' + coinId + '_t' + ca) : null;
+  var twMobile = (nativeUai && tokenUai)
+    ? 'https://link.trustwallet.com/swap?from=' + nativeUai + '&to=' + tokenUai
+    : null;
+  // Desktop: swap.trustwallet.com (no documented pre-fill params; user pastes CA)
+  var twDesktop = 'https://swap.trustwallet.com/';
+  // PancakeSwap fallback (BSC only; pre-fill works)
+  var pcs = (coinId === 20000714)
+    ? 'https://pancakeswap.finance/swap?outputCurrency=' + ca
+    : null;
+  return {
+    tw: isMobileDevice() ? twMobile : twDesktop,
+    twLabel: isMobileDevice() ? 'Trade in Trust Wallet' : 'Trade on Trust Wallet (web)',
+    pcs: pcs
+  };
+}
+// Swap the static $TRUSTY "Buy on Trust Wallet" link to the desktop
+// swap web UI when the user isn't on mobile. The mobile universal
+// link is the default in the HTML so search-engine crawlers / static
+// previews see the canonical link.
+document.addEventListener('DOMContentLoaded', function() {
+  if (isMobileDevice()) return; // Default URL is correct for mobile
+  var tw = document.getElementById('buyTrustyTwLink');
+  if (tw) tw.href = 'https://swap.trustwallet.com/';
+  var sub = document.getElementById('buyTrustyTwSub');
+  if (sub) sub.textContent = 'Web swap · auto-connects TW Chrome ext';
+});
+
+function trustyTradeRowHtml(chain, ca, symbol) {
+  var urls = trustyTradeUrls(chain, ca);
+  if (!urls.tw && !urls.pcs) return '';
+  var safeSym = String(symbol || 'this token').replace(/</g, '&lt;');
+  var parts = [];
+  if (urls.tw) {
+    parts.push('<a class="trusty-trade-btn primary" href="' + urls.tw + '" target="_blank" rel="noopener">' +
+      '<span class="trusty-trade-icon">🛡️</span><span>' + urls.twLabel + '</span></a>');
+  }
+  if (urls.pcs) {
+    parts.push('<a class="trusty-trade-btn secondary" href="' + urls.pcs + '" target="_blank" rel="noopener">' +
+      '<span class="trusty-trade-icon">🥞</span><span>Or PancakeSwap</span></a>');
+  }
+  return '<div class="trusty-trade-row" data-trusty-trade="' + safeSym + '">' + parts.join('') + '</div>';
+}
+
 // ── Launchpad origin badge ──
 // When /api/scan returns launchedOn:"fourmeme" we surface a small
 // badge in the scan results that links to the token's four.meme page.
@@ -7454,6 +7546,10 @@ function renderTokenData(pair, ca) {
   const iconWrap = document.getElementById('tokenIconWrap');
   const fallbackLogo = token.logoURI || pair.info?.imageUrl || '';
   iconWrap.innerHTML = tokenLogoImgHtml(chainId, token.address, fallbackLogo, token.symbol || 'token');
+
+  // Trade-in-Trust-Wallet CTA row
+  const tradeHost = document.getElementById('trusty-trade-row-host');
+  if (tradeHost) tradeHost.innerHTML = trustyTradeRowHtml(chainId, token.address, token.symbol);
 
   document.getElementById('tokenName').textContent = token.name || '—';
   document.getElementById('tokenSymbol').textContent = '$' + (token.symbol || '—');
@@ -8101,9 +8197,11 @@ function resetAll() {
   var scrollTarget = document.getElementById('ca-section') || document.body;
   if (scrollTarget && scrollTarget.scrollIntoView) scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
   Object.keys(currentScores).forEach(k => delete currentScores[k]);
-  // Clear stale launchpad badge from previous scan
+  // Clear stale launchpad badge + trade row from previous scan
   var lpBadge = document.getElementById('trusty-launchpad-badge');
   if (lpBadge) { lpBadge.style.display = 'none'; lpBadge.innerHTML = ''; }
+  var tradeHost = document.getElementById('trusty-trade-row-host');
+  if (tradeHost) tradeHost.innerHTML = '';
   window._trustyApiScan = null;
   closeMetricPopup();
   closeGutCheck();

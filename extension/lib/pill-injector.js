@@ -388,6 +388,53 @@
       .replace(/'/g, "&#39;");
   }
 
+  // ── Trade-in-Trust-Wallet CTA row ──
+  // Mobile users get the link.trustwallet.com universal link → opens
+  // TW app's swap. Desktop users get swap.trustwallet.com (TW's web
+  // swap; auto-connects to TW Chrome extension if installed). PCS as
+  // a secondary fallback. UAI: c<coinId>_t<address>.
+  function tradeChainCoinId(chain) {
+    var c = (chain || "").toLowerCase();
+    return ({
+      bsc: 20000714, bnb: 20000714, binance: 20000714, evm: 20000714,
+      ethereum: 60, eth: 60,
+      solana: 501, sol: 501,
+      polygon: 966, matic: 966
+    })[c] || null;
+  }
+  function isMobileDevice() {
+    return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || "");
+  }
+  function buildTradeRow(chain, ca) {
+    if (!ca) return "";
+    var coinId = tradeChainCoinId(chain);
+    var nativeUai = coinId ? ("c" + coinId) : null;
+    var tokenUai = coinId ? ("c" + coinId + "_t" + ca) : null;
+    var twMobile = (nativeUai && tokenUai)
+      ? "https://link.trustwallet.com/swap?from=" + nativeUai + "&to=" + tokenUai
+      : null;
+    var twDesktop = "https://swap.trustwallet.com/";
+    var pcs = (coinId === 20000714)
+      ? "https://pancakeswap.finance/swap?outputCurrency=" + encodeURIComponent(ca)
+      : null;
+    var twHref = isMobileDevice() ? twMobile : twDesktop;
+    var twLabel = isMobileDevice() ? "Trade in Trust Wallet" : "Trade on Trust Wallet (web)";
+    if (!twHref && !pcs) return "";
+    var parts = [];
+    if (twHref) {
+      parts.push('<a class="trusty-pp-trade-btn primary" href="' + twHref + '" target="_blank" rel="noopener">' +
+        '<span class="trusty-pp-trade-icon">🛡️</span><span>' + twLabel + '</span></a>');
+    }
+    if (pcs) {
+      parts.push('<a class="trusty-pp-trade-btn secondary" href="' + pcs + '" target="_blank" rel="noopener">' +
+        '<span class="trusty-pp-trade-icon">🥞</span><span>Or PancakeSwap</span></a>');
+    }
+    return '<div class="trusty-pp-section trusty-pp-trade-section">' +
+      '<div class="trusty-pp-section-title">💱 Trade</div>' +
+      '<div class="trusty-pp-trade-row">' + parts.join('') + '</div>' +
+    '</div>';
+  }
+
   function renderActivityBody(act) {
     if (act === null) {
       return '<div class="trusty-pp-empty trusty-pp-loading-line">Loading X activity…</div>';
@@ -495,6 +542,8 @@
           '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (md.holders || 0).toLocaleString() + '</div><div class="trusty-pp-stat-lbl">holders</div></div>' +
         '</div>' +
       '</div>' +
+
+      buildTradeRow(chain, ca) +
 
       '<div class="trusty-pp-footer">' +
         'Open the full report on ' +
