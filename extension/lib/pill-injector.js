@@ -405,6 +405,30 @@
   function isMobileDevice() {
     return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || "");
   }
+  // Per-chain DEX with stable pre-fill URL pattern. Used as the
+  // always-works swap target on desktop and as the secondary
+  // fallback alongside the TW mobile deep link on mobile.
+  function tradeChainDex(chain, ca) {
+    var c = (chain || "").toLowerCase();
+    if (!ca) return null;
+    if (c === "bsc" || c === "bnb" || c === "binance" || c === "evm") {
+      return { name: "PancakeSwap", icon: "🥞", url: "https://pancakeswap.finance/swap?outputCurrency=" + encodeURIComponent(ca) };
+    }
+    if (c === "ethereum" || c === "eth") {
+      return { name: "Uniswap", icon: "🦄", url: "https://app.uniswap.org/swap?outputCurrency=" + encodeURIComponent(ca) };
+    }
+    if (c === "solana" || c === "sol") {
+      return { name: "Jupiter", icon: "🪐", url: "https://jup.ag/swap/SOL-" + encodeURIComponent(ca) };
+    }
+    if (c === "polygon" || c === "matic") {
+      return { name: "Uniswap", icon: "🦄", url: "https://app.uniswap.org/swap?outputCurrency=" + encodeURIComponent(ca) + "&chain=polygon" };
+    }
+    if (c === "base") {
+      return { name: "Uniswap", icon: "🦄", url: "https://app.uniswap.org/swap?outputCurrency=" + encodeURIComponent(ca) + "&chain=base" };
+    }
+    return null;
+  }
+
   function buildTradeRow(chain, ca) {
     if (!ca) return "";
     var coinId = tradeChainCoinId(chain);
@@ -413,25 +437,23 @@
     var twMobile = (nativeUai && tokenUai)
       ? "https://link.trustwallet.com/swap?from=" + nativeUai + "&to=" + tokenUai
       : null;
-    var pcs = (coinId === 20000714)
-      ? "https://pancakeswap.finance/swap?outputCurrency=" + encodeURIComponent(ca)
-      : null;
+    var dex = tradeChainDex(chain, ca);
     var parts = [];
     if (isMobileDevice() && twMobile) {
-      // Mobile: TW deep link primary, PCS secondary
+      // Mobile: TW deep link primary, chain DEX secondary
       parts.push('<a class="trusty-pp-trade-btn primary" href="' + twMobile + '" target="_blank" rel="noopener">' +
         '<span class="trusty-pp-trade-icon">🛡️</span><span>Trade in Trust Wallet</span></a>');
-      if (pcs) {
-        parts.push('<a class="trusty-pp-trade-btn secondary" href="' + pcs + '" target="_blank" rel="noopener">' +
-          '<span class="trusty-pp-trade-icon">🥞</span><span>Or PancakeSwap</span></a>');
+      if (dex) {
+        parts.push('<a class="trusty-pp-trade-btn secondary" href="' + dex.url + '" target="_blank" rel="noopener">' +
+          '<span class="trusty-pp-trade-icon">' + dex.icon + '</span><span>Or ' + dex.name + '</span></a>');
       }
-    } else if (pcs) {
-      // Desktop (or non-mobile non-BSC): PCS as the primary path. TW
-      // Chrome extension auto-connects to PancakeSwap, so a TW user
-      // is still trading via their TW wallet — there's no separate
-      // TW web swap UI to deep-link into.
-      parts.push('<a class="trusty-pp-trade-btn primary" href="' + pcs + '" target="_blank" rel="noopener">' +
-        '<span class="trusty-pp-trade-icon">🥞</span><span>Trade on PancakeSwap</span></a>');
+    } else if (dex) {
+      // Desktop (or non-mobile non-EVM): chain-appropriate DEX as the
+      // primary path. On EVM the TW Chrome extension auto-connects to
+      // any dApp; on Solana TW's desktop support is limited but the
+      // user can still use Phantom or another wallet via the DEX.
+      parts.push('<a class="trusty-pp-trade-btn primary" href="' + dex.url + '" target="_blank" rel="noopener">' +
+        '<span class="trusty-pp-trade-icon">' + dex.icon + '</span><span>Trade on ' + dex.name + '</span></a>');
     }
     if (!parts.length) return "";
     return '<div class="trusty-pp-section trusty-pp-trade-section">' +
