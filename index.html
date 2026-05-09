@@ -4468,8 +4468,7 @@ body::before {
     <!-- ── TRENDING NOW (live, sourced from Trusty network activity) ── -->
     <div id="trending-panel" style="margin-bottom:16px;display:none;"></div>
 
-    <!-- ── FEATURED TOKENS ── -->
-    <div id="featured-panel" style="margin-bottom:16px;"></div>
+    <!-- (Featured Tokens panel removed — see renderTrending below for live network activity) -->
 
     <!-- ── TRUSTY HERO ── -->
     <div class="trusty-hero" id="trustyHeroSection">
@@ -8188,6 +8187,11 @@ function showResults(scores, total, tier, tierClass, scoreColor, pros, cons, ape
     setBar('age', scores.age, scoreColor);
     setBar('soc', scores.soc, scoreColor);
     setBar('sup', scores.sup, scoreColor);
+    // Override the heuristic-based sub-bars with API's authoritative
+    // checks (LP locked / Mint disabled / Contract renounced) when
+    // the API scan is already in window._trustyApiScan. Fixes
+    // website-vs-extension parity for Supply / Ownership / Chain.
+    if (window._trustyApiScan) applyApiChecksToBars(window._trustyApiScan);
   }, 400);
 
   const prosList = document.getElementById('pros-list');
@@ -8634,6 +8638,59 @@ function handleCaHelpClick(e) {
 // confusing — so we overwrite the headline circle + tier badge with
 // the API's score, keeping the supplemental sub-bars + ape-size
 // guidance intact for context.
+// Override the homegrown sub-bars with the API's authoritative
+// safety checks. The website's evaluate() guesses Supply/Ownership
+// from heuristics (liquidity ranges) — but the API has GoPlus +
+// RugCheck data telling us exactly whether LP is locked, mint
+// disabled, contract renounced, etc. When those are present we
+// should reflect them instead of the heuristic guess.
+function applyApiChecksToBars(apiScan) {
+  if (!apiScan || !Array.isArray(apiScan.checks)) return;
+  const checks = apiScan.checks;
+  const find = (matcher) => checks.find(c => matcher(c.label || ""));
+
+  const lpLocked = find(l => /^LP locked/i.test(l));
+  const mintDisabled = find(l => /^Mint disabled/i.test(l));
+  const renounced = find(l => /^(Contract renounced|Authorities renounced)/i.test(l));
+  const honeypot = find(l => /honeypot/i.test(l));
+  const fee = find(l => /^Tax|^Transfer fee|^No transfer fee/i.test(l));
+
+  // Supply Safety sub-bar — driven by LP-locked + top-wallets check.
+  // If the API says LP locked, the website should reflect that.
+  if (lpLocked) {
+    const supScore = lpLocked.ok ? 85 : 25;
+    const supColor = supScore >= 65 ? '#22C55E' : supScore >= 40 ? '#F3BA2F' : '#EF4444';
+    if (typeof setBar === 'function') setBar('sup', supScore, supColor);
+    if (typeof currentScores !== 'undefined') currentScores.sup = supScore;
+  }
+
+  // Ownership sub-bar — strong signal when both renounced AND mint disabled.
+  if (mintDisabled || renounced) {
+    let ownScore = 50;
+    if (mintDisabled?.ok) ownScore += 20;
+    if (renounced?.ok) ownScore += 20;
+    if (mintDisabled && !mintDisabled.ok) ownScore -= 25;
+    if (renounced && !renounced.ok) ownScore -= 15;
+    ownScore = Math.max(0, Math.min(100, ownScore));
+    const ownColor = ownScore >= 65 ? '#22C55E' : ownScore >= 40 ? '#F3BA2F' : '#EF4444';
+    if (typeof setBar === 'function') setBar('own', ownScore, ownColor);
+    if (typeof currentScores !== 'undefined') currentScores.own = ownScore;
+  }
+
+  // Chain Safety sub-bar — honeypot + fee status.
+  if (honeypot || fee) {
+    let chainScore = 50;
+    if (honeypot?.ok) chainScore += 25;
+    if (honeypot && !honeypot.ok) chainScore -= 40;
+    if (fee?.ok) chainScore += 15;
+    if (fee && !fee.ok) chainScore -= 10;
+    chainScore = Math.max(0, Math.min(100, chainScore));
+    const chainColor = chainScore >= 65 ? '#22C55E' : chainScore >= 40 ? '#F3BA2F' : '#EF4444';
+    if (typeof setBar === 'function') setBar('chain', chainScore, chainColor);
+    if (typeof currentScores !== 'undefined') currentScores.chain = chainScore;
+  }
+}
+
 async function syncHeadlineScoreWithApi(ca, chainId) {
   try {
     const chain = (chainId || 'bsc').toLowerCase();
@@ -8676,6 +8733,8 @@ async function syncHeadlineScoreWithApi(ca, chainId) {
     // Surface launchpad origin if the API returned it
     window._trustyApiScan = data;
     renderLaunchpadBadge(data, ca);
+    // Override sub-bars with the API's authoritative safety checks
+    applyApiChecksToBars(data);
   } catch (e) { /* silent — leave the homegrown score in place */ }
 }
 
@@ -10536,46 +10595,11 @@ function toggleInlineNarrative(i) {
   document.getElementById('in-' + i).classList.toggle('open');
 }
 
-// ══ FEATURED TOKENS ══
-// EASY EDIT: To add/remove featured tokens, edit data/featured.json on GitHub
-// The site loads fresh from JSON on page load (fallback to hardcoded list below)
-var featuredTokens = [
-  { name: '$TRUSTY', symbol: 'TRUSTY', ca: '0x65aea108c21439693468FCD542D81C29E8df4444', reason: 'Trust Wallet OG mascot since 2019', emoji: '🛡️' },
-  { name: '$TEARY', symbol: 'TEARY', ca: 'DbVhWYxBv9jyQdARFbjw7Vktbps9L6f9813JQC8xmoon', reason: 'Community-driven Solana meme', emoji: '💧' },
-];
-
-async function renderFeatured() {
-  var panel = document.getElementById('featured-panel');
-  if (!panel) return;
-  // Try to fetch latest from JSON file
-  try {
-    var res = await fetch('data/featured.json?t=' + Date.now());
-    if (res.ok) {
-      var data = await res.json();
-      if (data.tokens && data.tokens.length > 0) featuredTokens = data.tokens;
-    }
-  } catch(e) { console.warn('Using fallback featured list'); }
-  if (featuredTokens.length === 0) return;
-  var cards = featuredTokens.map(function(t) {
-    return '<div class="featured-card" onclick="evalTrendingCoin(\'' + t.ca + '\')">' +
-      '<div class="featured-badge">⭐ FEATURED</div>' +
-      '<div class="featured-name">' + t.emoji + ' ' + t.name + '</div>' +
-      '<div class="featured-reason">' + t.reason + '</div>' +
-    '</div>';
-  }).join('');
-
-  // Duplicate cards for seamless marquee loop
-  var duplicatedCards = cards + cards;
-
-  panel.innerHTML = '<div class="featured-header">' +
-    '<div class="featured-title">⭐ FEATURED TOKENS</div>' +
-    '<a href="https://x.com/Trusty_BSC" target="_blank" class="featured-ad">Want to be featured? DM @Trusty_BSC →</a>' +
-  '</div>' +
-  '<div class="featured-strip"><div class="featured-track">' + duplicatedCards + '</div></div>';
-}
-
-// Render on page load
-document.addEventListener('DOMContentLoaded', function() { renderFeatured(); trackEvent('page_view'); });
+// ══ FEATURED TOKENS — REMOVED ══
+// The Featured Tokens carousel was removed per product direction.
+// Real network activity lives in /api/trending below. Leaving a
+// page-load tracker call so analytics still fires.
+document.addEventListener('DOMContentLoaded', function() { trackEvent('page_view'); });
 
 // ══ TRENDING NOW ══
 // Live feed of CAs the Trusty network has been paying attention to —

@@ -120,7 +120,11 @@ function parseCaAndChain(url) {
 
 /* ── /api/scan ── token security + market data, 5min cache ── */
 async function handleScan(ca, chain, env) {
-  const cacheKey = `scan:${chain}:${ca}`;
+  // v2: invalidates pre-2026-05-09 cached scans so the new
+  // liveness-penalty scoring (volume/liquidity/holders/age) takes
+  // effect on every token immediately. Old cached entries had
+  // dead tokens at 85/100; the v2 prefix flushes those.
+  const cacheKey = `scan:v2:${chain}:${ca}`;
   if (env.SCAN_KV) {
     const cached = await env.SCAN_KV.get(cacheKey, "json");
     if (cached) return json(cached);
@@ -288,7 +292,7 @@ async function scanTokenEvm(ca, chain, env) {
 
   const checks = buildChecks(g);
   const paidChecks = buildPaidChecks(g);
-  const score = computeScore(g, checks, paidChecks);
+  const score = computeScore(g, checks, paidChecks, d);
   const verdict = score >= 70 ? "APE" : score >= 40 ? "CAUTION" : "RUN";
 
   // Track whether we have a REAL symbol from upstream sources or whether
@@ -322,7 +326,7 @@ async function scanTokenSolana(ca, chain) {
 
   const checks = buildChecksSolana(g, rc);
   const paidChecks = buildPaidChecksSolana(g);
-  const score = computeScore(g, checks, paidChecks);
+  const score = computeScore(g, checks, paidChecks, d);
   const verdict = score >= 70 ? "APE" : score >= 40 ? "CAUTION" : "RUN";
 
   // Same symbolFallback flag as the EVM path — see scanTokenEvm comment.
@@ -759,7 +763,7 @@ function buildPaidChecks(g) {
 }
 
 // ── score: weights sum to 100 ──
-function computeScore(g, checks, paidChecks) {
+function computeScore(g, checks, paidChecks, d) {
   if (!g) return 0;
   const w = {
     "Not a honeypot": 25,
@@ -784,7 +788,53 @@ function computeScore(g, checks, paidChecks) {
     if (/^Top \d+ wallets/i.test(c.label)) s += w.topWallets;
     else if (/^Dev wallet/i.test(c.label)) s += w.dev;
   }
+
+  // Liveness penalty — a token can pass every safety check and
+  // still be totally dead (no volume, no liquidity, abandoned).
+  // Without this penalty, $2-volume tokens score APE 85/100, which
+  // is misleading. We apply a graduated penalty based on real
+  // market activity from Dexscreener + holder count from GoPlus.
+  s -= livenessPenalty(d, g);
+
   return Math.max(0, Math.min(100, s));
+}
+
+// Returns 0 (lively token) up to ~60 (clearly abandoned). Tuned so
+// a token with $2/24h volume drops out of APE territory even with
+// pristine safety checks.
+function livenessPenalty(d, g) {
+  // No Dexscreener data at all means no tradeable pair — the token
+  // either isn't listed yet or has been delisted. High dead signal.
+  if (!d) return 35;
+
+  let penalty = 0;
+  const vol = d.volume24h || 0;
+  const liq = d.liquidityUsd || 0;
+  const holders = g?.holder_count ? parseInt(g.holder_count, 10) : 0;
+  const pairAgeMs = d.pairCreatedAt ? (Date.now() - d.pairCreatedAt) : 0;
+  const ageDays = Math.floor(pairAgeMs / 86400000);
+
+  // Volume signals (dominant deadness indicator)
+  if (vol < 100) penalty += 35;
+  else if (vol < 1000) penalty += 18;
+  else if (vol < 10000) penalty += 6;
+
+  // Liquidity signals (thin pool = exit risk)
+  if (liq < 5000) penalty += 15;
+  else if (liq < 20000) penalty += 6;
+
+  // Holders (only EVM exposes holder_count via GoPlus)
+  if (holders > 0 && holders < 50) penalty += 10;
+  else if (holders > 0 && holders < 200) penalty += 4;
+
+  // Abandoned signal: old pair with no current activity. Strong
+  // because "high score on a 2-year-old token nobody trades" is
+  // exactly the misleading case the user flagged.
+  if (ageDays > 180 && vol < 1000) penalty += 15;
+
+  // Cap so a fully-loaded penalty can't fully erase a perfectly
+  // legitimate token's safety credit.
+  return Math.min(60, penalty);
 }
 
 // ── market data formatting (matches mock shape) ──
@@ -1884,7 +1934,7 @@ async function handleTrending(url, env) {
   const hydrated = await Promise.all(
     top.map(async (it) => {
       try {
-        const cacheKey = `scan:${it.chain}:${it.ca}`;
+        const cacheKey = `scan:v2:${it.chain}:${it.ca}`;
         let scan = null;
         if (env.SCAN_KV) {
           scan = await env.SCAN_KV.get(cacheKey, "json");
@@ -1904,12 +1954,17 @@ async function handleTrending(url, env) {
 
   // Filter out tokens we don't have a real symbol for. The
   // hex-derived fallback ($LFDM, $0A43) looks like a fake ticker
-  // and makes the homepage look broken. If the scan flagged
-  // symbolFallback OR there's no scan at all, drop the row — it
-  // shouldn't be on a public discovery surface yet.
+  // and makes the homepage look broken. We catch these two ways:
+  //   1. The new symbolFallback:true flag (fresh scans)
+  //   2. Pattern detection — symbol matches "$" + first-4-hex(ca)
+  //      (catches OLD cached entries from before the flag existed)
   const filtered = hydrated.filter((it) => {
     if (!it.scan) return false;
     if (it.scan.symbolFallback) return false;
+    const sym = it.scan.symbol || "";
+    const evmFallback = "$" + (it.ca || "").slice(2, 6).toUpperCase();
+    const solFallback = "$" + (it.ca || "").slice(0, 4).toUpperCase();
+    if (sym === evmFallback || sym === solFallback) return false;
     return true;
   });
 
