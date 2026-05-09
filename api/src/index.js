@@ -291,13 +291,23 @@ async function scanTokenEvm(ca, chain, env) {
   const score = computeScore(g, checks, paidChecks);
   const verdict = score >= 70 ? "APE" : score >= 40 ? "CAUTION" : "RUN";
 
-  const rawSym = (d?.symbol || g?.token_symbol || ca.slice(2, 6)).toString();
+  // Track whether we have a REAL symbol from upstream sources or whether
+  // we fell back to deriving one from the contract address. The hex
+  // fallback ("$LFDM" from 0xLFDM…) looks like a real ticker but isn't —
+  // exposing it in trending/discovery surfaces is embarrassing. The
+  // `symbolFallback: true` flag lets consumers (e.g. the trending feed)
+  // filter these out.
+  const realSym = d?.symbol || g?.token_symbol;
+  const rawSym = (realSym || ca.slice(2, 6)).toString();
   const symbol = "$" + rawSym.replace(/^\$/, "").toUpperCase();
   const name = d?.name || g?.token_name || "Token " + shortAddr(ca);
+  const symbolFallback = !realSym;
 
   // Return the resolved chain so the frontend uses the right chain
   // for trade-row UAI / launchpad-badge link / future logic.
-  return baseScanShape(ca, resolvedChain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g), fm);
+  const shape = baseScanShape(ca, resolvedChain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g), fm);
+  if (symbolFallback) shape.symbolFallback = true;
+  return shape;
 }
 
 async function scanTokenSolana(ca, chain) {
@@ -315,11 +325,16 @@ async function scanTokenSolana(ca, chain) {
   const score = computeScore(g, checks, paidChecks);
   const verdict = score >= 70 ? "APE" : score >= 40 ? "CAUTION" : "RUN";
 
-  const rawSym = (d?.symbol || g?.metadata?.symbol || ca.slice(0, 4)).toString();
+  // Same symbolFallback flag as the EVM path — see scanTokenEvm comment.
+  const realSym = d?.symbol || g?.metadata?.symbol;
+  const rawSym = (realSym || ca.slice(0, 4)).toString();
   const symbol = "$" + rawSym.replace(/^\$/, "").toUpperCase();
   const name = d?.name || g?.metadata?.name || "Token " + shortAddrSol(ca);
+  const symbolFallback = !realSym;
 
-  return baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketDataSolana(d, g));
+  const shape = baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketDataSolana(d, g));
+  if (symbolFallback) shape.symbolFallback = true;
+  return shape;
 }
 
 function baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, md, origin) {
@@ -1849,7 +1864,9 @@ async function handleTrending(url, env) {
     parseInt(url.searchParams.get("limit") || "10", 10) || 10,
     TRENDING_HARD_LIMIT
   );
-  const cacheKey = `trending:w${window}:l${limit}`;
+  // v2: invalidates pre-2026-05-09 cache so the new symbolFallback
+  // filter flushes hex-named ($LFDM/$0A43-style) tokens immediately.
+  const cacheKey = `trending:v2:w${window}:l${limit}`;
 
   if (env.SCAN_KV) {
     const cached = await env.SCAN_KV.get(cacheKey, "json");
@@ -1885,7 +1902,18 @@ async function handleTrending(url, env) {
     })
   );
 
-  const result = { window, items: hydrated, generatedAt: Date.now() };
+  // Filter out tokens we don't have a real symbol for. The
+  // hex-derived fallback ($LFDM, $0A43) looks like a fake ticker
+  // and makes the homepage look broken. If the scan flagged
+  // symbolFallback OR there's no scan at all, drop the row — it
+  // shouldn't be on a public discovery surface yet.
+  const filtered = hydrated.filter((it) => {
+    if (!it.scan) return false;
+    if (it.scan.symbolFallback) return false;
+    return true;
+  });
+
+  const result = { window, items: filtered, generatedAt: Date.now() };
 
   if (env.SCAN_KV) {
     try {
