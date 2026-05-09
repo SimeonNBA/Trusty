@@ -429,6 +429,14 @@
     return null;
   }
 
+  // Detect Trust Wallet Chrome extension on the current page.
+  function hasTwExtension() {
+    try {
+      return !!(window.trustwallet ||
+                (window.ethereum && (window.ethereum.isTrust || window.ethereum.isTrustWallet)));
+    } catch (e) { return false; }
+  }
+
   function buildTradeRow(chain, ca) {
     if (!ca) return "";
     var coinId = tradeChainCoinId(chain);
@@ -438,6 +446,7 @@
       ? "https://link.trustwallet.com/swap?from=" + nativeUai + "&to=" + tokenUai
       : null;
     var dex = tradeChainDex(chain, ca);
+    var hasTw = hasTwExtension();
     var parts = [];
     if (isMobileDevice() && twMobile) {
       // Mobile: TW deep link primary, chain DEX secondary
@@ -448,17 +457,27 @@
           '<span class="trusty-pp-trade-icon">' + dex.icon + '</span><span>Or ' + dex.name + '</span></a>');
       }
     } else if (dex) {
-      // Desktop (or non-mobile non-EVM): chain-appropriate DEX as the
-      // primary path. On EVM the TW Chrome extension auto-connects to
-      // any dApp; on Solana TW's desktop support is limited but the
-      // user can still use Phantom or another wallet via the DEX.
+      // Desktop: chain DEX primary. If TW Chrome extension is detected
+      // surface it in the label; otherwise add a "Get Trust Wallet"
+      // secondary CTA to drive non-TW users into the TW install funnel.
+      var primaryLabel = hasTw
+        ? 'Trade with Trust Wallet → ' + dex.name
+        : 'Trade on ' + dex.name;
       parts.push('<a class="trusty-pp-trade-btn primary" href="' + dex.url + '" target="_blank" rel="noopener">' +
-        '<span class="trusty-pp-trade-icon">' + dex.icon + '</span><span>Trade on ' + dex.name + '</span></a>');
+        '<span class="trusty-pp-trade-icon">' + (hasTw ? '🛡️' : dex.icon) + '</span><span>' + primaryLabel + '</span></a>');
+      if (!hasTw) {
+        parts.push('<a class="trusty-pp-trade-btn secondary" href="https://trustwallet.com/browser-extension" target="_blank" rel="noopener">' +
+          '<span class="trusty-pp-trade-icon">⬇️</span><span>Get Trust Wallet</span></a>');
+      }
     }
     if (!parts.length) return "";
+    var detected = (hasTw && !(isMobileDevice() && twMobile))
+      ? '<div class="trusty-pp-trade-detected">✓ Trust Wallet detected · will auto-sign</div>'
+      : '';
     return '<div class="trusty-pp-section trusty-pp-trade-section">' +
       '<div class="trusty-pp-section-title">💱 Trade</div>' +
       '<div class="trusty-pp-trade-row">' + parts.join('') + '</div>' +
+      detected +
     '</div>';
   }
 

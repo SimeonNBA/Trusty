@@ -1778,7 +1778,9 @@ body::before {
   overflow: hidden;
 }
 
-.trusty-trade-row { display: flex; gap: 10px; margin: 16px 0 0; flex-wrap: wrap; }
+.trusty-trade-row-wrap { margin: 16px 0 0; }
+.trusty-trade-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.trusty-trade-detected { margin-top: 8px; font-size: 11px; color: #86EFAC; font-family: var(--mono); letter-spacing: 0.4px; text-align: center; }
 .trusty-trade-btn { flex: 1 1 180px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; text-decoration: none; letter-spacing: 0.3px; transition: transform 0.15s ease, filter 0.15s ease, border-color 0.15s ease; }
 .trusty-trade-btn.primary { background: linear-gradient(135deg, #2563EB, #3B82F6); color: white; border: 1px solid rgba(59,130,246,0.5); }
 .trusty-trade-btn.primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
@@ -7436,10 +7438,21 @@ document.addEventListener('DOMContentLoaded', function() {
   if (sub) sub.textContent = 'Mobile app + Chrome extension';
 });
 
+// Detect if the Trust Wallet Chrome extension is installed on this
+// page. Set when the page loads its provider (it injects window.trustwallet
+// in addition to window.ethereum).
+function trustyHasTwExtension() {
+  try {
+    return !!(window.trustwallet ||
+              (window.ethereum && (window.ethereum.isTrust || window.ethereum.isTrustWallet)));
+  } catch (e) { return false; }
+}
+
 function trustyTradeRowHtml(chain, ca, symbol) {
   var urls = trustyTradeUrls(chain, ca);
   if (!urls.tw && !urls.dex) return '';
   var safeSym = String(symbol || 'this token').replace(/</g, '&lt;');
+  var hasTw = trustyHasTwExtension();
   var parts = [];
   if (urls.tw) {
     // Mobile: TW deep link primary, chain DEX secondary
@@ -7450,11 +7463,27 @@ function trustyTradeRowHtml(chain, ca, symbol) {
         '<span class="trusty-trade-icon">' + urls.dex.icon + '</span><span>Or ' + urls.dex.name + '</span></a>');
     }
   } else if (urls.dex) {
-    // Desktop: chain-appropriate DEX primary
+    // Desktop: chain DEX primary. If TW Chrome extension is detected
+    // we surface that the swap will auto-sign through TW; if not, we
+    // offer "Get Trust Wallet" as the secondary CTA so non-TW users
+    // are sent into the TW funnel.
+    var primaryLabel = hasTw
+      ? 'Trade with Trust Wallet → ' + urls.dex.name
+      : 'Trade on ' + urls.dex.name;
     parts.push('<a class="trusty-trade-btn primary" href="' + urls.dex.url + '" target="_blank" rel="noopener">' +
-      '<span class="trusty-trade-icon">' + urls.dex.icon + '</span><span>Trade on ' + urls.dex.name + '</span></a>');
+      '<span class="trusty-trade-icon">' + (hasTw ? '🛡️' : urls.dex.icon) + '</span><span>' + primaryLabel + '</span></a>');
+    if (!hasTw) {
+      parts.push('<a class="trusty-trade-btn secondary" href="https://trustwallet.com/browser-extension" target="_blank" rel="noopener">' +
+        '<span class="trusty-trade-icon">⬇️</span><span>Get Trust Wallet</span></a>');
+    }
   }
-  return '<div class="trusty-trade-row" data-trusty-trade="' + safeSym + '">' + parts.join('') + '</div>';
+  var detected = hasTw && !urls.tw
+    ? '<div class="trusty-trade-detected">✓ Trust Wallet detected · will auto-sign</div>'
+    : '';
+  return '<div class="trusty-trade-row-wrap">' +
+           '<div class="trusty-trade-row" data-trusty-trade="' + safeSym + '">' + parts.join('') + '</div>' +
+           detected +
+         '</div>';
 }
 
 // ── Launchpad origin badge ──
