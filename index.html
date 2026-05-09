@@ -3926,49 +3926,6 @@ body::before {
 .academy-subpanel { display: none; }
 .academy-subpanel.active { display: block; }
 
-/* ── LEARN & EARN switcher (top-level inside tab-academy) ── */
-.le-switcher {
-  display: flex;
-  gap: 8px;
-  margin: 0 0 20px 0;
-  padding: 6px;
-  background: var(--bg3);
-  border-radius: 14px;
-  border: 1px solid var(--border);
-}
-.le-switcher-btn {
-  flex: 1;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-family: var(--font);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.le-switcher-btn:hover { color: var(--text); }
-.le-switcher-btn.active {
-  background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(96,165,250,0.2));
-  color: var(--text);
-  box-shadow: 0 0 0 1px rgba(168,85,247,0.4);
-}
-.le-badge {
-  background: rgba(243,186,47,0.18);
-  color: #F3BA2F;
-  font-size: 9px;
-  font-family: var(--mono);
-  padding: 2px 6px;
-  border-radius: 10px;
-  letter-spacing: 1px;
-  font-weight: 700;
-}
 .le-panel { display: none; }
 .le-panel.active { display: block; }
 
@@ -4714,7 +4671,6 @@ body::before {
   .lb-row { grid-template-columns: 28px 1fr auto; gap: 8px; }
   .lb-name { font-size: 12px; }
   .lb-points { font-size: 11px; }
-  .le-switcher-btn { font-size: 12px; padding: 10px 8px; }
 }
 
 /* inline glossary */
@@ -10909,18 +10865,8 @@ function showAcademySub(parent, subId, btn) {
 }
 
 // ══════════════════════════════════════════════════════
-//  LEARN & EARN — panel switcher + points/streak/course
+//  LEARN — points + streak + course
 // ══════════════════════════════════════════════════════
-function showLEPanel(which) {
-  ['learn','earn'].forEach(id => {
-    var p = document.getElementById('le-' + id);
-    var b = document.getElementById('le-btn-' + id);
-    if (!p || !b) return;
-    if (id === which) { p.classList.add('active'); b.classList.add('active'); }
-    else { p.classList.remove('active'); b.classList.remove('active'); }
-  });
-  if (which === 'earn') renderEarnHome();
-}
 
 // ── Points store ──
 var TP_KEY = 'trusty_points_v1';
