@@ -3317,6 +3317,25 @@ body::before {
 .ob-skip:hover { color: var(--text); }
 
 /* ── TRUSTY HERO SECTION ── */
+
+/* ── Free vs Paid value cards ── */
+.value-cards { margin: 32px 0 24px; padding: 24px 20px; background: linear-gradient(135deg, rgba(168,85,247,0.04), rgba(243,186,47,0.04)); border: 1px solid var(--border); border-radius: 16px; }
+.value-card-header { text-align: center; margin-bottom: 18px; }
+.value-card-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 2px; color: var(--yellow); margin-bottom: 6px; font-weight: 700; }
+.value-card-headline { font-family: var(--display); font-size: 22px; letter-spacing: 1px; color: var(--text); }
+.value-card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+.value-card { padding: 16px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; transition: border-color 0.15s ease, transform 0.15s ease; }
+.value-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.value-card-icon { font-size: 22px; margin-bottom: 8px; }
+.value-card-title { font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 10px; line-height: 1.3; }
+.value-card-row { display: flex; align-items: baseline; gap: 8px; padding: 5px 0; font-size: 12px; line-height: 1.45; }
+.value-card-row + .value-card-row { border-top: 1px solid var(--border); }
+.value-card-label { font-family: var(--mono); font-size: 9px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); flex-shrink: 0; min-width: 32px; }
+.value-card-no { color: var(--muted); font-size: 14px; opacity: 0.5; }
+.value-card-yes { color: var(--text); font-weight: 500; }
+.value-card-cta { text-align: center; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text); font-weight: 600; display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; }
+.value-card-cta-or { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 1.5px; }
+@media (max-width: 700px) { .value-card-grid { grid-template-columns: 1fr; } .value-card-headline { font-size: 18px; } }
 .trusty-hero {
   display: flex;
   align-items: center;
@@ -5352,6 +5371,39 @@ body::before {
           <span class="hero-badge blue">✓ No signup</span>
           <span class="hero-badge yellow">✓ Any chain</span>
         </div>
+      </div>
+    </div>
+
+    <!-- ── FREE vs PAID value cards ── -->
+    <div class="value-cards">
+      <div class="value-card-header">
+        <div class="value-card-eyebrow">FREE CATCHES RUGS · PAID CATCHES WINNERS</div>
+        <div class="value-card-headline">What you get with each tier</div>
+      </div>
+      <div class="value-card-grid">
+        <div class="value-card">
+          <div class="value-card-icon">🐦</div>
+          <div class="value-card-title">KOLs talking about a token</div>
+          <div class="value-card-row"><span class="value-card-label">Free</span><span class="value-card-no">—</span></div>
+          <div class="value-card-row"><span class="value-card-label">Paid</span><span class="value-card-yes">Top 5 by engagement · tweet links · hover preview</span></div>
+        </div>
+        <div class="value-card">
+          <div class="value-card-icon">📈</div>
+          <div class="value-card-title">X activity &amp; sentiment</div>
+          <div class="value-card-row"><span class="value-card-label">Free</span><span class="value-card-no">—</span></div>
+          <div class="value-card-row"><span class="value-card-label">Paid</span><span class="value-card-yes">Tweets/24h · % bullish · coord-shill detection</span></div>
+        </div>
+        <div class="value-card">
+          <div class="value-card-icon">⭐</div>
+          <div class="value-card-title">Watchlist</div>
+          <div class="value-card-row"><span class="value-card-label">Free</span><span class="value-card-yes">5 saved tokens</span></div>
+          <div class="value-card-row"><span class="value-card-label">Paid</span><span class="value-card-yes">Unlimited · cloud-synced</span></div>
+        </div>
+      </div>
+      <div class="value-card-cta">
+        <span>Hold ≥ 325K $TRUSTY</span>
+        <span class="value-card-cta-or">or</span>
+        <span>Subscribe in the extension popup · $5/mo</span>
       </div>
     </div>
 
