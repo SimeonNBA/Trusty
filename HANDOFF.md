@@ -48,10 +48,39 @@ cleanup done, all changes pushed.
 
 KV namespace: `SCAN_KV` (id in wrangler.toml).
 
-## Bounded scope for tomorrow's session
+## ✅ All 6 items from the previous plan are SHIPPED
 
-These are pre-approved by the user. Ship them in order. Each is
+Items 1-5 + 3a/3b/3c all landed across two sessions on 2026-05-08
+and 2026-05-09. The bounded-scope below is preserved as historical
+context — but **start here for the next session, not below**:
+
+- Hard-refresh `trustyai.tech` and click a real CA pill on X to
+  sanity-check that the live state matches what the commits claim.
+- Then check the open questions section + NEXT.md for what's next.
+- Items in NEXT.md the user has approved-in-principle:
+  - Bilingual EN/中文 toggle (Phase 1: ~6 string swaps + flag toggle)
+    — needs native speaker review of Chinese before shipping.
+  - Sentiment + coord-shill heuristic tuning (after real-world data).
+  - TWAK `trusty-safety` skill (read-only, no trading).
+  - Watchlist alerts (score-change notifications).
+  - Cleanup of orphan code: runContractSafety function definition,
+    the homegrown sub-bars (chain/narr/own/age/soc/sup) that no
+    longer drive anything, and the showLEPanel function.
+- Items pending the user's strategic decisions:
+  - Web Store v0.4.0 zip + re-upload (after v0.3.0 review lands).
+  - NOWPayments payout addresses (USDT-TRC20, BNB, SOL).
+  - Four.meme + Trust Wallet partnership outreach.
+  - Launch trailer recording.
+  - Real partner logos for the Trusty tab.
+
+---
+
+## Historical: bounded scope for the previous session
+
+These were pre-approved by the user. Ship them in order. Each is
 expected to be one independent commit + push.
+
+**ALL DONE — kept here for reference only.**
 
 ### Item 0 — Sanity check on the latest live state
 Before doing anything: visit `trustyai.tech` and confirm a real scan

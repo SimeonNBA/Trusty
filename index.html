@@ -8232,14 +8232,11 @@ async function scanCA() {
         ]);
       } catch(e) { window._trustyApiScan = null; }
       evaluate();
-      if (_evalCa) {
-        setTimeout(() => {
-          // Contract safety panel still useful for the supply chart
-          // + honeypot.is double-check, but the duplicate score logic
-          // is now handled by evaluate() via window._trustyApiScan.
-          runContractSafety(_evalCa, _evalChain);
-        }, 400);
-      }
+      // Contract Safety panel removed — its data (honeypot, renounced,
+      // mint, sell tax) is already returned by /api/scan and reflected
+      // in the headline score + verdict via window._trustyApiScan.
+      // runContractSafety() definition stays as orphan code; it just
+      // never fires. Will be fully cleaned up in a follow-up pass.
       // Fallback: if API hadn't landed by evaluate time, sync once it does.
       if (_evalCa && !window._trustyApiScan) {
         setTimeout(() => syncHeadlineScoreWithApi(_evalCa, _evalChain), 600);
