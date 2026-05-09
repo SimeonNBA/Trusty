@@ -7388,28 +7388,37 @@ function trustyTradeUrls(chain, ca) {
   var twMobile = (nativeUai && tokenUai)
     ? 'https://link.trustwallet.com/swap?from=' + nativeUai + '&to=' + tokenUai
     : null;
-  // Desktop: swap.trustwallet.com (no documented pre-fill params; user pastes CA)
-  var twDesktop = 'https://swap.trustwallet.com/';
-  // PancakeSwap fallback (BSC only; pre-fill works)
+  // PancakeSwap fallback (BSC only; pre-fill works). On desktop, this
+  // is the primary TW-compatible path — the TW Chrome extension
+  // auto-connects to PancakeSwap as the wallet provider, so the user
+  // is still trading "via Trust Wallet". TW does not have a public
+  // desktop swap web UI to deep-link into.
   var pcs = (coinId === 20000714)
     ? 'https://pancakeswap.finance/swap?outputCurrency=' + ca
     : null;
-  return {
-    tw: isMobileDevice() ? twMobile : twDesktop,
-    twLabel: isMobileDevice() ? 'Trade in Trust Wallet' : 'Trade on Trust Wallet (web)',
-    pcs: pcs
-  };
+  if (isMobileDevice()) {
+    return {
+      tw: twMobile,
+      twLabel: 'Trade in Trust Wallet',
+      pcs: pcs
+    };
+  }
+  // Desktop: no TW link (no working pre-fill swap web UI); PancakeSwap
+  // is the primary path, which auto-connects to the TW Chrome ext.
+  return { tw: null, twLabel: null, pcs: pcs };
 }
-// Swap the static $TRUSTY "Buy on Trust Wallet" link to the desktop
-// swap web UI when the user isn't on mobile. The mobile universal
-// link is the default in the HTML so search-engine crawlers / static
-// previews see the canonical link.
+// Swap the static $TRUSTY "Buy on Trust Wallet" card to the
+// trustwallet.com/swap info page when on desktop. (TW does not host
+// a public desktop swap web UI to deep-link into; the marketing page
+// shows the user how to use the mobile app or Chrome extension.)
+// Mobile keeps the universal link default in the HTML so the
+// canonical link works for crawlers.
 document.addEventListener('DOMContentLoaded', function() {
-  if (isMobileDevice()) return; // Default URL is correct for mobile
+  if (isMobileDevice()) return;
   var tw = document.getElementById('buyTrustyTwLink');
-  if (tw) tw.href = 'https://swap.trustwallet.com/';
+  if (tw) tw.href = 'https://trustwallet.com/swap';
   var sub = document.getElementById('buyTrustyTwSub');
-  if (sub) sub.textContent = 'Web swap · auto-connects TW Chrome ext';
+  if (sub) sub.textContent = 'Mobile app + Chrome extension';
 });
 
 function trustyTradeRowHtml(chain, ca, symbol) {
@@ -7418,12 +7427,17 @@ function trustyTradeRowHtml(chain, ca, symbol) {
   var safeSym = String(symbol || 'this token').replace(/</g, '&lt;');
   var parts = [];
   if (urls.tw) {
+    // Mobile path: TW deep link is primary, PCS is "Or" secondary
     parts.push('<a class="trusty-trade-btn primary" href="' + urls.tw + '" target="_blank" rel="noopener">' +
       '<span class="trusty-trade-icon">🛡️</span><span>' + urls.twLabel + '</span></a>');
-  }
-  if (urls.pcs) {
-    parts.push('<a class="trusty-trade-btn secondary" href="' + urls.pcs + '" target="_blank" rel="noopener">' +
-      '<span class="trusty-trade-icon">🥞</span><span>Or PancakeSwap</span></a>');
+    if (urls.pcs) {
+      parts.push('<a class="trusty-trade-btn secondary" href="' + urls.pcs + '" target="_blank" rel="noopener">' +
+        '<span class="trusty-trade-icon">🥞</span><span>Or PancakeSwap</span></a>');
+    }
+  } else if (urls.pcs) {
+    // Desktop path: PCS is primary (TW Chrome ext auto-connects)
+    parts.push('<a class="trusty-trade-btn primary" href="' + urls.pcs + '" target="_blank" rel="noopener">' +
+      '<span class="trusty-trade-icon">🥞</span><span>Trade on PancakeSwap</span></a>');
   }
   return '<div class="trusty-trade-row" data-trusty-trade="' + safeSym + '">' + parts.join('') + '</div>';
 }

@@ -413,22 +413,27 @@
     var twMobile = (nativeUai && tokenUai)
       ? "https://link.trustwallet.com/swap?from=" + nativeUai + "&to=" + tokenUai
       : null;
-    var twDesktop = "https://swap.trustwallet.com/";
     var pcs = (coinId === 20000714)
       ? "https://pancakeswap.finance/swap?outputCurrency=" + encodeURIComponent(ca)
       : null;
-    var twHref = isMobileDevice() ? twMobile : twDesktop;
-    var twLabel = isMobileDevice() ? "Trade in Trust Wallet" : "Trade on Trust Wallet (web)";
-    if (!twHref && !pcs) return "";
     var parts = [];
-    if (twHref) {
-      parts.push('<a class="trusty-pp-trade-btn primary" href="' + twHref + '" target="_blank" rel="noopener">' +
-        '<span class="trusty-pp-trade-icon">🛡️</span><span>' + twLabel + '</span></a>');
+    if (isMobileDevice() && twMobile) {
+      // Mobile: TW deep link primary, PCS secondary
+      parts.push('<a class="trusty-pp-trade-btn primary" href="' + twMobile + '" target="_blank" rel="noopener">' +
+        '<span class="trusty-pp-trade-icon">🛡️</span><span>Trade in Trust Wallet</span></a>');
+      if (pcs) {
+        parts.push('<a class="trusty-pp-trade-btn secondary" href="' + pcs + '" target="_blank" rel="noopener">' +
+          '<span class="trusty-pp-trade-icon">🥞</span><span>Or PancakeSwap</span></a>');
+      }
+    } else if (pcs) {
+      // Desktop (or non-mobile non-BSC): PCS as the primary path. TW
+      // Chrome extension auto-connects to PancakeSwap, so a TW user
+      // is still trading via their TW wallet — there's no separate
+      // TW web swap UI to deep-link into.
+      parts.push('<a class="trusty-pp-trade-btn primary" href="' + pcs + '" target="_blank" rel="noopener">' +
+        '<span class="trusty-pp-trade-icon">🥞</span><span>Trade on PancakeSwap</span></a>');
     }
-    if (pcs) {
-      parts.push('<a class="trusty-pp-trade-btn secondary" href="' + pcs + '" target="_blank" rel="noopener">' +
-        '<span class="trusty-pp-trade-icon">🥞</span><span>Or PancakeSwap</span></a>');
-    }
+    if (!parts.length) return "";
     return '<div class="trusty-pp-section trusty-pp-trade-section">' +
       '<div class="trusty-pp-section-title">💱 Trade</div>' +
       '<div class="trusty-pp-trade-row">' + parts.join('') + '</div>' +
