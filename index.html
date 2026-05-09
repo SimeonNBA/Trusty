@@ -1479,9 +1479,8 @@ body::before {
   margin: 0 auto;
 }
 
-/* ── MOBILE ── */
-@media (max-width: 600px) {
-  .app-wrapper { padding: 16px 14px 0; }
+/* ── TABLET + MOBILE: sidebar moves to bottom bar ── */
+@media (max-width: 900px) {
   .app { padding: 0 0 64px; padding-right: 0; }
   .trusty-sidebar {
     position: fixed;
@@ -1517,6 +1516,11 @@ body::before {
   .trusty-sidebar #sidebarConnected > div { margin: 0 !important; }
   .trusty-sidebar #sidebarWallet { display: flex !important; flex-direction: row; flex-wrap: nowrap; justify-content: center; gap: 4px; padding: 0 !important; }
   .trusty-sidebar #sidebarTradeBtns { display: flex !important; flex-direction: row; gap: 4px; }
+}
+
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  .app-wrapper { padding: 16px 14px 0; }
   .speech-bubble { border-radius: 4px 14px 14px 14px; }
   .age-grid { grid-template-columns: repeat(2, 1fr); }
   .result-grid { grid-template-columns: 1fr; }
@@ -3489,6 +3493,7 @@ body::before {
 .main-nav-btn {
   flex: 1;
   padding: 11px 16px;
+  min-height: 44px;
   border-radius: 10px;
   border: none;
   background: transparent;
