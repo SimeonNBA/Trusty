@@ -117,82 +117,6 @@ html, body {
   flex: 1;
 }
 
-/* Tier — unverified state */
-.wallet-input {
-  width: 100%;
-  padding: 9px 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-family: ui-monospace, "SF Mono", monospace;
-  font-size: 11px;
-  outline: none;
-  transition: border-color 0.15s;
-}
-
-.wallet-input:focus {
-  border-color: var(--blue);
-}
-
-.wallet-input::placeholder {
-  color: var(--muted);
-  opacity: 0.6;
-}
-
-.verify-btn {
-  width: 100%;
-  margin-top: 8px;
-  padding: 9px;
-  background: linear-gradient(135deg, var(--blue), var(--blue-deep));
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  cursor: pointer;
-  transition: filter 0.15s, transform 0.1s;
-}
-
-.verify-btn:hover { filter: brightness(1.1); }
-.verify-btn:active { transform: translateY(1px); }
-.verify-btn:disabled { opacity: 0.4; cursor: wait; filter: none; transform: none; }
-
-.verify-btn.ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  margin-top: 10px;
-}
-
-.verify-btn.ghost:hover {
-  border-color: var(--blue);
-  color: var(--text);
-}
-
-.tier-hint {
-  margin-top: 8px;
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.tier-hint strong {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.tier-error {
-  margin-top: 8px;
-  font-size: 11px;
-  color: #FCA5A5;
-  background: rgba(239,68,68,0.1);
-  border: 1px solid rgba(239,68,68,0.3);
-  border-radius: 6px;
-  padding: 6px 8px;
-}
-
 /* Tier — verified state */
 .tier-verified-row {
   display: flex;
@@ -257,25 +181,7 @@ html, body {
 
 /* ── Subscription (crypto-pay) ── */
 .sub-section {
-  margin-top: 14px;
-}
-
-.sub-divider {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 4px 0 12px;
-  color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-.sub-divider::before,
-.sub-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border);
+  margin-top: 4px;
 }
 
 .sub-title {
@@ -401,6 +307,22 @@ html, body {
   border: 1px solid rgba(239,68,68,0.3);
   border-radius: 6px;
 }
+
+.sub-cancel-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 7px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.sub-cancel-btn:hover { color: var(--text); border-color: var(--blue); }
 
 /* ── Watchlist (popup section) ── */
 .wl-section {

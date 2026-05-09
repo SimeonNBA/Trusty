@@ -1,5 +1,5 @@
 /* ================================================================
-   Trusty AI popup — wallet verification + tier display
+   Trusty AI popup — subscription + tier display
    ================================================================ */
 
 (function () {
@@ -17,62 +17,32 @@
     return a ? a.slice(0, 6) + "…" + a.slice(-4) : "—";
   }
 
-  function fmtBalance(n) {
-    if (typeof n !== "number") return "—";
-    if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
-    if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
-    return String(n);
-  }
-
   function fmtDate(ms) {
     if (!ms) return "—";
     const d = new Date(ms);
     return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
   }
 
-  function showError(msg) {
-    let el = $("tierError");
-    if (!el) {
-      el = document.createElement("div");
-      el.id = "tierError";
-      el.className = "tier-error";
-      $("tierBody").appendChild(el);
-    }
-    el.textContent = msg;
-  }
-
-  function clearError() {
-    const el = $("tierError");
-    if (el) el.remove();
-  }
-
   function renderTier(rec) {
     const pill = $("tierPill");
     const label = $("tierLabel");
-    const body = $("tierBody");
     const verified = $("tierVerified");
     const subSection = $("subSection");
     const subPending = $("subPending");
 
     const tier = rec && rec.tier;
     const sub = rec && rec.subscription;
-    const wallet = rec && rec.wallet;
 
     if (tier !== "paid") {
       pill.textContent = "FREE";
       pill.classList.remove("paid");
 
-      if (wallet && typeof wallet.balance === "number" && wallet.address) {
-        label.textContent = "Found " + fmtBalance(wallet.balance) + " — need 325K $TRUSTY";
-      } else if (rec && rec.expired) {
-        label.textContent = "Tier expired — renew below";
+      if (rec && rec.expired) {
+        label.textContent = "Subscription expired — renew below";
       } else {
-        label.textContent = "Hold $TRUSTY or subscribe to unlock paid";
+        label.textContent = "Subscribe to unlock paid features";
       }
-      body.style.display = "block";
       verified.style.display = "none";
-
-      if (wallet && wallet.address) $("walletInput").value = wallet.address;
 
       // Subscription section: visible when free, with pending overlay if waiting
       subSection.style.display = "block";
@@ -89,27 +59,17 @@
       return;
     }
 
-    // Paid state — could be via wallet, subscription, or both
+    // Paid state via subscription
     pill.textContent = "PAID";
     pill.classList.add("paid");
     label.textContent = "Unlimited scans · KOLs · X activity unlocked";
-    body.style.display = "none";
     verified.style.display = "block";
     subSection.style.display = "none";
 
-    if (rec.via === "subscription" && sub) {
-      $("tierVerifiedLabel").textContent = "Plan";
-      $("tierAddr").textContent = sub.plan === "yearly" ? "Yearly · $50" : "Monthly · $5";
-      $("tierAddr").title = "Subscription via NOWPayments";
-      $("tierBalanceRow").style.display = "none";
+    if (sub) {
+      $("tierPlan").textContent = sub.plan === "yearly" ? "Yearly · $50" : "Monthly · $5";
+      $("tierPlan").title = "Subscription via NOWPayments";
       $("tierExpires").textContent = fmtDate(sub.expiresAt);
-    } else if (wallet) {
-      $("tierVerifiedLabel").textContent = "Wallet";
-      $("tierAddr").textContent = shortAddr(wallet.address);
-      $("tierAddr").title = wallet.address;
-      $("tierBalanceRow").style.display = "";
-      $("tierBalance").textContent = fmtBalance(wallet.balance) + " $TRUSTY";
-      $("tierExpires").textContent = fmtDate(wallet.expiresAt);
     }
   }
 
@@ -282,41 +242,7 @@
     });
   }
 
-  async function onVerify() {
-    clearError();
-    const btn = $("verifyBtn");
-    const input = $("walletInput");
-    const addr = (input.value || "").trim();
-    if (!addr) {
-      showError("Paste a wallet address first.");
-      return;
-    }
-    btn.disabled = true;
-    btn.textContent = "Checking…";
-    const result = await window.TrustyTier.verifyWallet(addr);
-    btn.disabled = false;
-    btn.textContent = "Verify wallet";
-    if (!result.ok) {
-      showError(result.error || "Could not verify wallet.");
-      return;
-    }
-    renderTier(result.record);
-  }
-
-  async function onRecheck() {
-    const rec = await window.TrustyTier.getTier();
-    if (!rec || !rec.address) return init();
-    const result = await window.TrustyTier.verifyWallet(rec.address);
-    if (result.ok) renderTier(result.record);
-  }
-
   document.addEventListener("DOMContentLoaded", function () {
-    $("verifyBtn").addEventListener("click", onVerify);
-    $("recheckBtn").addEventListener("click", onRecheck);
-    $("walletInput").addEventListener("keydown", function (e) {
-      if (e.key === "Enter") onVerify();
-    });
-
     // Subscription buttons
     document.querySelectorAll(".sub-plan").forEach(function (btn) {
       btn.addEventListener("click", onSubscribeClick);

@@ -1,6 +1,6 @@
 # Trusty AI — Privacy Policy
 
-_Last updated: 2026-05-03_
+_Last updated: 2026-05-09_
 
 The Trusty AI Chrome extension is a browser-based tool that helps users
 identify risky contract addresses on the websites they already visit.
@@ -28,24 +28,23 @@ Supported sites today:
 - The text content of pages you visit (used purely to detect contract
   addresses; nothing is stored or transmitted)
 - A local in-memory cache of recent scan results
-- Your tier preferences (paid wallet address, expiry timestamp), in
+- A persistent random identifier and your subscription status, in
   Chrome's local extension storage (`chrome.storage.local`)
+- Your local watchlist (saved contract addresses)
 
 **Sent to trustyai.tech servers:**
 
 - The contract address you scanned (e.g. `0xabc…123`)
 - A best-guess chain identifier (`bsc`, `ethereum`, `solana`, etc.)
+- The persistent random identifier described above (used to associate
+  the optional paid subscription with your install and to sync your
+  watchlist across the extension and trustyai.tech)
 - Standard HTTP headers your browser automatically sends to any website
 
-**Sent to public BNB Smart Chain RPC nodes (when verifying a paid wallet):**
-
-- Your BSC wallet address, embedded in a standard ERC-20 `balanceOf`
-  call, sent to a public RPC endpoint (Binance, defibit, publicnode,
-  ninicoin)
-
 **That's it.** We do not send the page URL, tweet content, your X
-account, your IP-derived identity, or any other identifying data. The
-contract address you scan is public on-chain information.
+account, your IP-derived identity, your wallet address, or any other
+identifying data. The contract address you scan is public on-chain
+information.
 
 ## What we do not collect
 
@@ -65,31 +64,32 @@ reduce load on the data sources we use (DexScreener, GoPlus,
 Honeypot.is, and others). This cache is keyed only by the contract
 address — it contains no information about who requested the scan.
 
-## Paid tier and wallet addresses
+## Paid tier and payments
 
-If you choose to unlock the paid tier by linking a $TRUSTY wallet
-address, that address is stored in `chrome.storage.local` on your
-device. We make periodic read-only calls (every 30 days, or whenever
-you click "Re-verify") to a public BNB Smart Chain RPC endpoint to
-check whether the address still holds the required $TRUSTY balance.
+If you choose to unlock the paid tier, the extension creates a
+NOWPayments invoice via our backend and opens NOWPayments' hosted
+checkout page in a new tab. NOWPayments is a third-party payment
+processor; their privacy policy applies to anything you do on their
+checkout page (we never see the payment details). Our backend stores
+only the persistent random identifier described above, the plan you
+chose (monthly or yearly), and the resulting subscription expiry — it
+does not store wallet addresses, transaction hashes, or any other
+identifying information.
 
 - We never request signatures, transactions, approvals, seed phrases,
-  or private keys from your wallet.
+  or private keys from any wallet.
 - We never broadcast anything on your behalf.
-- The wallet address is not sent to our servers — only to public BSC
-  RPC nodes, which already see this kind of public on-chain query.
-- The address is removed from local storage when you click "Re-verify"
-  and replace it, or when you uninstall the extension.
+- The persistent random identifier can be reset at any time by
+  reinstalling the extension; this generates a new identifier and
+  removes the link between your install and the previous subscription.
 
 ## Permissions explained
 
-- `storage` — to remember your tier and recent scans on your device.
-- `host_permissions: https://trustyai.tech/*` — to call the Trusty
-  scanning API.
-- `host_permissions: https://bsc-dataseed.binance.org/*`,
-  `https://bsc-dataseed1.defibit.io/*`, `https://bsc.publicnode.com/*`,
-  `https://bsc-dataseed1.ninicoin.io/*` — to verify your $TRUSTY
-  balance via public RPC nodes.
+- `storage` — to remember your subscription status, persistent
+  identifier, watchlist, and recent scans on your device.
+- `host_permissions: https://trustyai.tech/*`,
+  `https://api.trustyai.tech/*` — to call the Trusty scanning API
+  and the subscription endpoint.
 - `content_scripts: x.com, twitter.com` —
   to detect contract addresses on the pages you visit.
 

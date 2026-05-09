@@ -116,7 +116,7 @@
         '<span class="trusty-tt-tease-lock">🔒</span>' +
       '</div>' +
       '<div class="trusty-tt-footer">' +
-        "<strong>Hold $TRUSTY or upgrade for $5/mo</strong>" +
+        "<strong>Upgrade for $5/mo or $50/yr</strong>" +
       '</div>'
     );
   }
@@ -506,7 +506,7 @@
             'KOL handles · X velocity · sentiment · coord-shill detection · unlimited watchlist' +
           '</div>' +
           '<button class="trusty-pp-upgrade-btn" type="button" data-action="open-popup">' +
-            '🛡️ Unlock — $5/mo or hold $TRUSTY' +
+            '🛡️ Unlock — $5/mo or $50/yr' +
           '</button>' +
           '<a class="trusty-pp-upgrade-secondary" href="https://trustyai.tech/?ca=' +
             encodeURIComponent(ca) + '&chain=' + encodeURIComponent(chain) +

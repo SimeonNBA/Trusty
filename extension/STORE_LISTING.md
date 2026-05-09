@@ -58,9 +58,9 @@ BNB Smart Chain · Ethereum · Base · Solana · Polygon · Arbitrum · Avalanch
 • Up to 20 scans per day, then a generous cap
 • Click to open the full report on trustyai.tech
 
-✦ PAID TIER (UNLOCKED BY HOLDING $TRUSTY)
+✦ PAID TIER ($5/month or $50/year)
 
-Hold ≥ 325,000 $TRUSTY (≈ $50 worth) in your BSC wallet to unlock:
+Subscribe with crypto in the extension popup to unlock:
 
 • Unlimited scans, no daily limit
 • Inline paid panel — full safety breakdown without leaving the page
@@ -69,7 +69,7 @@ Hold ≥ 325,000 $TRUSTY (≈ $50 worth) in your BSC wallet to unlock:
 • Market data inline — market cap, liquidity, age, holders
 • Save tokens to a personal Watchlist
 
-To unlock: paste your wallet address into the extension popup → click Verify. We check your $TRUSTY balance via public BNB Smart Chain RPC nodes (no API key required, no transactions, no signatures, read-only). If the balance is enough, the paid tier activates for 30 days. Re-verify any time. Sell your $TRUSTY and the tier reverts to free at the next check.
+To unlock: open the extension popup → choose Monthly ($5) or Yearly ($50) → pay with BTC, ETH, USDT, BNB, SOL or 200+ other coins via NOWPayments hosted checkout. No account, no signup. The paid tier activates as soon as the payment confirms on-chain.
 
 ✦ PRIVACY
 
@@ -136,17 +136,17 @@ https://trustyai.tech/privacy/
 
 ```
 storage:
-  Required to remember the user's verified wallet address, tier
-  expiry, and local scan cache. All data stays in chrome.storage.local
-  on the user's device — nothing is uploaded to our servers.
+  Required to remember the user's subscription status, persistent
+  identifier, local watchlist, and recent scan cache. All data stays
+  in chrome.storage.local on the user's device — only the persistent
+  identifier and watchlist are sent to our server (for cloud sync of
+  the watchlist and to map the subscription invoice to the user).
 
-host_permissions (trustyai.tech, api.trustyai.tech, bsc-dataseed.binance.org, bsc-dataseed1.defibit.io, bsc.publicnode.com, bsc-dataseed1.ninicoin.io):
+host_permissions (trustyai.tech, api.trustyai.tech):
   trustyai.tech is the website the extension links to. api.trustyai.tech
   is our scanning API endpoint, where the extension fetches safety
-  verdicts (CA + chain only — no PII, no page content). The four BSC
-  RPC endpoints are used in read-only mode to verify a user's $TRUSTY
-  balance for the paid tier. Multiple endpoints are listed for fallback
-  redundancy. No write transactions, no signatures, no private keys.
+  verdicts (CA + chain only — no PII, no page content) and creates
+  the NOWPayments invoice for the optional paid tier.
 
 content_scripts (x.com, twitter.com):
   Required to detect contract addresses on the pages where users

@@ -1,17 +1,9 @@
 /* ================================================================
    Trusty AI — Tier verification
 
-   Two paths to paid tier (whichever resolves first wins):
-     1) Hold path  — paste wallet address, we check $TRUSTY balance
-     2) Crypto-pay — NOWPayments subscription ($5/mo or $50/yr)
+   Paid tier is unlocked via NOWPayments subscription ($5/mo or $50/yr).
 
    Storage shape (chrome.storage.local):
-     trusty_tier_v1 = {
-       tier: "free" | "paid",
-       address: "0x...",
-       balance: 325000,
-       verifiedAt, expiresAt
-     }
      trusty_subid_v1 = "uuid-string"             // persistent identifier
      trusty_sub_v1 = {                            // local copy of server state
        plan: "monthly" | "yearly",
@@ -23,14 +15,10 @@
 (function () {
   "use strict";
 
-  const KEY = "trusty_tier_v1";
   const SUBID_KEY = "trusty_subid_v1";
   const SUB_KEY = "trusty_sub_v1";
   const WL_KEY = "trusty_watchlist_v1";
   const WL_FREE_CAP = 5;
-  const TTL_MS = 30 * 24 * 60 * 60 * 1000;   // 30 days
-  const PAID_THRESHOLD = 325000;              // ~$50 of $TRUSTY at current price
-  const TRUSTY_CONTRACT = "0x65aea108c21439693468FCD542D81C29E8df4444";
   const API_BASE = "https://api.trustyai.tech";
 
   /* ── Storage helpers ─────────────────────────────────────── */
@@ -55,8 +43,6 @@
     });
   }
 
-  function load() { return loadKey(KEY); }
-  function save(rec) { return saveKey(KEY, rec); }
   function loadSub() { return loadKey(SUB_KEY); }
   function saveSub(rec) { return saveKey(SUB_KEY, rec); }
 
@@ -79,67 +65,6 @@
     let bin = "";
     for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
     return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  }
-
-  /* ── Public BSC RPC balance check ────────────────────────────
-     We call the BEP-20 contract directly via JSON-RPC eth_call to
-     balanceOf(address). No API key required, multiple endpoint
-     fallbacks for reliability.
-     ────────────────────────────────────────────────────────────── */
-  const RPC_ENDPOINTS = [
-    "https://bsc-dataseed.binance.org/",
-    "https://bsc-dataseed1.defibit.io/",
-    "https://bsc.publicnode.com/",
-    "https://bsc-dataseed1.ninicoin.io/"
-  ];
-
-  // ERC-20 balanceOf(address) — first 4 bytes of keccak256("balanceOf(address)")
-  const BALANCE_OF_SELECTOR = "0x70a08231";
-
-  async function checkBalance(address) {
-    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
-      return { ok: false, error: "Not a valid BNB Smart Chain address" };
-    }
-
-    // Build the eth_call data: selector + 32-byte-padded address
-    const paddedAddr = address.slice(2).toLowerCase().padStart(64, "0");
-    const callData = BALANCE_OF_SELECTOR + paddedAddr;
-
-    const payload = {
-      jsonrpc: "2.0",
-      id: 1,
-      method: "eth_call",
-      params: [{ to: TRUSTY_CONTRACT, data: callData }, "latest"]
-    };
-
-    let lastError = "Unknown";
-    for (let i = 0; i < RPC_ENDPOINTS.length; i++) {
-      const endpoint = RPC_ENDPOINTS[i];
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) { lastError = "HTTP " + res.status; continue; }
-        const json = await res.json();
-        if (json.error) { lastError = (json.error.message || "RPC error"); continue; }
-        const hex = json.result;
-        if (!hex || hex === "0x") { lastError = "Empty RPC result"; continue; }
-
-        // hex is the raw token balance in base units (18 decimals).
-        // Divide by 10^14 in BigInt space (keeps result < Number.MAX_SAFE_INTEGER
-        // for any realistic supply), then by 10^4 in Number space.
-        const raw = BigInt(hex);
-        const balance = Number(raw / 100000000000000n) / 10000;
-
-        return { ok: true, balance: balance };
-      } catch (e) {
-        lastError = (e && e.message) || "Network error";
-      }
-    }
-
-    return { ok: false, error: "Could not reach BNB Chain RPC — " + lastError };
   }
 
   /* ── Subscription path (NOWPayments) ─────────────────────────
@@ -301,60 +226,23 @@
   /* ── Public API ──────────────────────────────────────────── */
 
   async function getTier() {
-    // Check both paths; whichever is "paid" and not expired wins.
-    const wallet = await load();
     const sub = await loadSub();
-
     const now = Date.now();
-    const walletPaid = wallet && wallet.tier === "paid" && wallet.expiresAt > now;
     const subPaid = sub && sub.status === "paid" && sub.expiresAt > now;
 
-    if (walletPaid || subPaid) {
-      return {
-        tier: "paid",
-        via: subPaid && (!walletPaid || sub.expiresAt > wallet.expiresAt) ? "subscription" : "wallet",
-        wallet: wallet,
-        subscription: sub
-      };
+    if (subPaid) {
+      return { tier: "paid", subscription: sub };
     }
-    // Free state — surface any local context the popup might want
-    const expired = (wallet && wallet.expiresAt && wallet.expiresAt <= now) ||
-                    (sub && sub.expiresAt && sub.expiresAt <= now);
-    return {
-      tier: "free",
-      expired: !!expired,
-      wallet: wallet,
-      subscription: sub
-    };
-  }
-
-  async function verifyWallet(address) {
-    const trimmed = (address || "").trim();
-    const result = await checkBalance(trimmed);
-    if (!result.ok) {
-      return { ok: false, error: result.error };
-    }
-    const tier = result.balance >= PAID_THRESHOLD ? "paid" : "free";
-    const now = Date.now();
-    const record = {
-      tier: tier,
-      address: trimmed,
-      balance: result.balance,
-      verifiedAt: now,
-      expiresAt: now + TTL_MS
-    };
-    await save(record);
-    return { ok: true, record: record };
+    const expired = sub && sub.expiresAt && sub.expiresAt <= now;
+    return { tier: "free", expired: !!expired, subscription: sub };
   }
 
   async function clearTier() {
-    await save(null);
     await saveSub(null);
   }
 
   window.TrustyTier = {
     getTier: getTier,
-    verifyWallet: verifyWallet,
     clearTier: clearTier,
     startSubscription: startSubscription,
     refreshSubscription: refreshSubscription,
@@ -365,9 +253,6 @@
     watchlistAdd: watchlistAdd,
     watchlistRemove: watchlistRemove,
     watchlistContains: watchlistContains,
-    WL_FREE_CAP: WL_FREE_CAP,
-    PAID_THRESHOLD: PAID_THRESHOLD,
-    TRUSTY_CONTRACT: TRUSTY_CONTRACT,
-    TTL_MS: TTL_MS
+    WL_FREE_CAP: WL_FREE_CAP
   };
 })();

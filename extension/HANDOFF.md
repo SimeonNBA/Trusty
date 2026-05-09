@@ -28,10 +28,10 @@ Wallet. Fair launch, 100% LP burned. Contract:
 - Hover tooltip with 5 plain-English safety checks (free tier)
 - Click → free users open trustyai.tech, paid users get an inline
   floating panel with full breakdown + KOLs + X activity + market data
-- Wallet verification via popup: paste BSC address → real `balanceOf`
-  call to public BSC RPC (binance/defibit/publicnode/ninicoin
-  fallbacks) → if balance ≥ 325,000 $TRUSTY (≈$50), tier = paid for
-  30 days, stored in `chrome.storage.local`
+- Paid tier via NOWPayments crypto-pay subscription ($5/mo or $50/yr).
+  Popup creates an invoice via `/api/subscribe`, opens hosted checkout,
+  polls `/api/subscription` until paid. Status cached in
+  `chrome.storage.local`.
 
 **What's stubbed (intentional, swap-to-real later):**
 - `lib/api.js` `scan()` returns deterministic mock data (score, checks,
@@ -46,8 +46,8 @@ trusty-extension/
 ├── background/service-worker.js
 ├── content/x-content.js, reddit-content.js, dexscreener-content.js,
 │           shared.css, dexscreener-content.css
-├── lib/ca-detector.js (regex), api.js (scan, stubbed),
-│       tier.js (verifyWallet, REAL via BSC RPC),
+├── lib/ca-detector.js (regex), api.js (scan via /api/scan),
+│       tier.js (NOWPayments subscription + watchlist),
 │       pill-injector.js (shared pill + tooltip + paid panel)
 ├── popup/popup.html, popup.css, popup.js
 ├── assets/icon-16/48/128.png, icon.svg, icon-generator.html
@@ -67,7 +67,6 @@ trusty-extension/
   splits at CA matches, inserts pill right after the CA text
 - Tier cached in memory in pill-injector; refreshed on
   `chrome.storage.onChanged`
-- Public BSC RPC has no API key, four endpoints with fallback
 
 ### What's NOT yet shipped (potential next work)
 - Day 6: submit to Chrome Web Store (manual user action,
@@ -86,15 +85,15 @@ trusty-extension/
 
 ### Decisions already made (don't relitigate)
 - Manifest V3, vanilla JS, no build step. Simplicity over framework.
-- Token-gating via `chrome.storage` only. No payment processor in v1.
-  Crypto-pay (NOWPayments) is a Day-7+ add.
+- Subscription-only paid tier via NOWPayments. No on-chain hold path
+  (removed pre-launch — bypassable without signature verification).
 - No fiat / Stripe (compliance risk for a community project).
 - Cashtags ($PEPE etc.) intentionally NOT detected — too ambiguous,
   resolving to wrong contract is dangerous.
 - Pill always sits inline next to CA, not at end of text container.
 - Free click → website (drives traffic). Paid click → inline panel.
-- $TRUSTY paid threshold = 325,000 tokens (~$50). 30-day verification
-  TTL.
+- Paid tier: $5/month or $50/year via NOWPayments. Status polled from
+  `/api/subscription`, cached locally. 30-day or 365-day expiry per plan.
 
 ### How I work
 - I sanity-check before code. No "stupid mistakes" like inventing a

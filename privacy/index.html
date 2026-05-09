@@ -216,7 +216,7 @@
 
   <header class="hero">
     <h1>Privacy Policy</h1>
-    <span class="updated">Last updated 2026-05-06</span>
+    <span class="updated">Last updated 2026-05-09</span>
     <p class="lede">
       Trusty AI is a Chrome extension that flags risky contract addresses on
       the websites you already visit. This page explains, in plain English,
@@ -243,27 +243,24 @@
   <ul>
     <li>Page text, used purely to find contract addresses. Nothing stored, nothing transmitted.</li>
     <li>An in-memory cache of recent scan results, scoped to your current page session.</li>
-    <li>Your tier preferences (paid wallet address, expiry timestamp), saved in <code>chrome.storage.local</code>.</li>
+    <li>A persistent random identifier and your subscription status, saved in <code>chrome.storage.local</code>.</li>
+    <li>Your local watchlist (saved contract addresses).</li>
   </ul>
 
   <h3>Sent to our backend (api.trustyai.tech)</h3>
   <ul>
     <li>The contract address you scanned (e.g. <code>0xabc…123</code>).</li>
     <li>A best-guess chain identifier (<code>bsc</code>, <code>ethereum</code>, <code>solana</code>).</li>
+    <li>The persistent random identifier described above (used to associate the optional paid subscription with your install and to sync your watchlist across the extension and trustyai.tech).</li>
     <li>Standard HTTP headers your browser automatically sends to any website.</li>
-  </ul>
-
-  <h3>Sent to public BNB Smart Chain RPC nodes (only when you verify a paid wallet)</h3>
-  <ul>
-    <li>Your BSC wallet address, embedded in a standard ERC-20 <code>balanceOf</code> read call, sent to a public RPC endpoint (Binance, defibit, publicnode, ninicoin).</li>
   </ul>
 
   <div class="callout green">
     <div class="callout-title">🛡️ That's it.</div>
     <p class="muted" style="margin: 0;">
       We do not send the page URL, tweet content, your X account,
-      your IP-derived identity, or any other identifying data. The contract
-      address you scan is public on-chain information.
+      your IP-derived identity, your wallet address, or any other identifying
+      data. The contract address you scan is public on-chain information.
     </p>
   </div>
 
@@ -284,27 +281,29 @@
     contains no information about who requested the scan.
   </p>
 
-  <h2>Paid tier and wallet addresses</h2>
+  <h2>Paid tier and payments</h2>
   <p>
-    If you unlock the paid tier by linking a $TRUSTY wallet address, that
-    address is stored in <code>chrome.storage.local</code> on your
-    device. We make periodic read-only calls (every 30 days, or when you
-    click "Re-verify") to public BSC RPC endpoints to check whether the
-    address still holds the required $TRUSTY balance.
+    If you unlock the paid tier, the extension creates a NOWPayments
+    invoice via our backend and opens NOWPayments' hosted checkout page
+    in a new tab. NOWPayments is a third-party payment processor; their
+    privacy policy applies to anything you do on their checkout page (we
+    never see the payment details). Our backend stores only the
+    persistent random identifier described above, the plan you chose
+    (monthly or yearly), and the resulting subscription expiry — it
+    does not store wallet addresses, transaction hashes, or any other
+    identifying information.
   </p>
   <ul>
-    <li>We never request signatures, transactions, approvals, seed phrases, or private keys.</li>
+    <li>We never request signatures, transactions, approvals, seed phrases, or private keys from any wallet.</li>
     <li>We never broadcast anything on your behalf.</li>
-    <li>The wallet address is not sent to our servers — only to public BSC RPC nodes, which already see this kind of public on-chain query.</li>
-    <li>The address is removed from local storage when you click "Re-verify" and replace it, or when you uninstall the extension.</li>
+    <li>The persistent random identifier can be reset at any time by reinstalling the extension; this generates a new identifier and removes the link between your install and the previous subscription.</li>
   </ul>
 
   <h2>Permissions, explained</h2>
   <ul>
-    <li><code>storage</code> — to remember your tier and recent scans on your device.</li>
+    <li><code>storage</code> — to remember your subscription status, persistent identifier, watchlist, and recent scans on your device.</li>
     <li><code>https://trustyai.tech/*</code> — for the website and click-through reports.</li>
-    <li><code>https://api.trustyai.tech/*</code> — to call the Trusty scanning API.</li>
-    <li><code>https://bsc-dataseed.binance.org/*</code>, <code>https://bsc-dataseed1.defibit.io/*</code>, <code>https://bsc.publicnode.com/*</code>, <code>https://bsc-dataseed1.ninicoin.io/*</code> — to verify your $TRUSTY balance via public RPC nodes.</li>
+    <li><code>https://api.trustyai.tech/*</code> — to call the Trusty scanning API and the subscription endpoint.</li>
     <li>Content scripts on <code>x.com</code>, <code>twitter.com</code> — to detect contract addresses on the pages you visit.</li>
   </ul>
   <p class="muted">

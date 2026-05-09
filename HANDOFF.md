@@ -42,8 +42,7 @@ re-suggesting completed work.
 - **RugCheck.xyz** (free, no key) — Solana LP-locked (catches Pump.fun graduates GoPlus misses)
 - **Dexscreener** (free, no key) — market data, EVM + Solana
 - **Sorsa** (paid $49/mo, 10K req/mo) — KOL mentions + X activity
-- **NOWPayments** (0.5% fee/txn) — crypto subscriptions
-- **Public BSC RPC nodes** — read-only $TRUSTY balance check
+- **NOWPayments** (0.5% fee/txn) — crypto subscriptions ($5/mo, $50/yr)
 
 ## Cloudflare secrets set
 

@@ -110,7 +110,7 @@ I unlock it."
 
 **Caption:**
 ```
-Hold ≥ 325K $TRUSTY to unlock unlimited scans and the paid panel.
+Subscribe with crypto — $5/mo or $50/yr — to unlock unlimited scans and the paid panel.
 ```
 
 ---

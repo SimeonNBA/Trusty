@@ -69,10 +69,6 @@
 
   "host_permissions": [
     "https://trustyai.tech/*",
-    "https://api.trustyai.tech/*",
-    "https://bsc-dataseed.binance.org/*",
-    "https://bsc-dataseed1.defibit.io/*",
-    "https://bsc-dataseed1.ninicoin.io/*",
-    "https://bsc.publicnode.com/*"
+    "https://api.trustyai.tech/*"
   ]
 }
