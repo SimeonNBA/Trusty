@@ -483,7 +483,8 @@ body::before {
 }
 
 .tier-ngmi { background: rgba(239,68,68,0.2); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.4); }
-.tier-degen { background: rgba(249,115,22,0.2); color: #FDBA74; border: 1px solid rgba(249,115,22,0.4); }
+.tier-caution { background: rgba(243,186,47,0.2); color: #FDE68A; border: 1px solid rgba(243,186,47,0.4); }
+.tier-degen { background: rgba(243,186,47,0.2); color: #FDE68A; border: 1px solid rgba(243,186,47,0.4); } /* legacy alias */
 .tier-maybe { background: rgba(251,191,36,0.2); color: #FDE68A; border: 1px solid rgba(251,191,36,0.4); }
 .tier-wagmi { background: rgba(34,197,94,0.2); color: #86EFAC; border: 1px solid rgba(34,197,94,0.4); }
 
@@ -8210,20 +8211,38 @@ async function scanCA() {
     document.getElementById('trustyTip').innerHTML = `🚀 <strong>${pair.baseToken?.symbol || 'Token'}</strong> scanned — ${ownershipDetected}. Auto-evaluating now...`;
     shakeTrusty();
 
-    // AUTO-EVALUATE — short delay so user can see the form filled
-    setTimeout(() => {
+    // AUTO-EVALUATE — pre-fetch /api/scan in parallel during the
+    // 900ms wait so evaluate() can use the API score as the
+    // animation target. Eliminates the homegrown→API visual jolt.
+    const _evalCa = document.getElementById('caInput').value.trim();
+    const _evalChain = state.chain || getChainId(pair.chainId || '');
+    if (_evalCa) {
+      window._trustyApiScanPromise = fetch(
+        'https://api.trustyai.tech/api/scan?ca=' + encodeURIComponent(_evalCa) +
+        '&chain=' + encodeURIComponent((_evalChain || 'bsc').toLowerCase())
+      ).then(r => r.ok ? r.json() : null).catch(() => null);
+    }
+    setTimeout(async () => {
+      // Wait briefly for the API call to land — usually back in <600ms.
+      // Race against a 200ms head-start so evaluate doesn't stall too long.
+      try {
+        window._trustyApiScan = await Promise.race([
+          window._trustyApiScanPromise,
+          new Promise(res => setTimeout(() => res(null), 200))
+        ]);
+      } catch(e) { window._trustyApiScan = null; }
       evaluate();
-      // After evaluate, run contract safety scan in parallel
-      const caVal = document.getElementById('caInput').value.trim();
-      const chainForSafety = state.chain || getChainId(pair.chainId || '');
-      if (caVal) {
-        setTimeout(() => runContractSafety(caVal, chainForSafety), 400);
+      if (_evalCa) {
+        setTimeout(() => {
+          // Contract safety panel still useful for the supply chart
+          // + honeypot.is double-check, but the duplicate score logic
+          // is now handled by evaluate() via window._trustyApiScan.
+          runContractSafety(_evalCa, _evalChain);
+        }, 400);
       }
-      // Unify the headline score with the extension — fetch /api/scan
-      // and overwrite the homegrown score so users see the same number
-      // on both surfaces.
-      if (caVal) {
-        setTimeout(() => syncHeadlineScoreWithApi(caVal, chainForSafety), 600);
+      // Fallback: if API hadn't landed by evaluate time, sync once it does.
+      if (_evalCa && !window._trustyApiScan) {
+        setTimeout(() => syncHeadlineScoreWithApi(_evalCa, _evalChain), 600);
       }
     }, 900);
 
@@ -8746,7 +8765,7 @@ function evaluate() {
   let tier, tierClass, scoreColor;
   if (total >= 72) { tier = '🟢 WAGMI'; tierClass = 'tier-wagmi'; scoreColor = '#22C55E'; }
   else if (total >= 55) { tier = '🟡 MAYBE SER'; tierClass = 'tier-maybe'; scoreColor = '#FBBF24'; }
-  else if (total >= 38) { tier = '🟠 DEGEN PLAY'; tierClass = 'tier-degen'; scoreColor = '#F97316'; }
+  else if (total >= 38) { tier = '🟡 CAUTION'; tierClass = 'tier-caution'; scoreColor = '#F3BA2F'; }
   else { tier = '🔴 NGMI BRO'; tierClass = 'tier-ngmi'; scoreColor = '#EF4444'; }
 
   let apePct, apeDesc;
@@ -8807,7 +8826,7 @@ function evaluate() {
   const finalMessages = {
     'tier-wagmi': `Ser, this one actually has some legs. The stars aligned: solid chain, good narrative, and the supply situation is not trying to kill you. Doesn't mean it's guaranteed — nothing in this space is. But if you're going to ape into something, at least this one passed Trusty's vibe check. Set your stop loss, take some profits on the way up, and don't get greedy. We've all seen 100x coins go back to zero because people got too comfortable. Stay sharp fren 🛡️`,
     'tier-maybe': `It's giving mixed signals. There are real green flags here but also some stuff that keeps Trusty up at night. This is the kind of coin where half the timeline is calling it a gem and the other half is calling it a rug. Could go either way. If you ape, keep the size small enough that you won't cry if it goes to zero. The market is irrational and so are meme coins. You've been warned 👀`,
-    'tier-degen': `Bestie this is a degen play. The red flags are waving but hey — some of the best plays came from coins that looked terrible on paper. That's the beautiful chaos of meme coins. If you're gonna do it, treat it like a lottery ticket: small size, clear exit plan, no emotions. And please for the love of Satoshi, do NOT tell your friends to buy this based on vibes alone 🙏`,
+    'tier-caution': `Bestie this is a degen play. The red flags are waving but hey — some of the best plays came from coins that looked terrible on paper. That's the beautiful chaos of meme coins. If you're gonna do it, treat it like a lottery ticket: small size, clear exit plan, no emotions. And please for the love of Satoshi, do NOT tell your friends to buy this based on vibes alone 🙏`,
     'tier-ngmi': `Trusty cares about you. That's why he's telling you to walk away from this one. The supply is sketchy, the socials are weak, and the setup doesn't pass the sniff test. There will be another coin. There's ALWAYS another coin. Being patient and protecting your capital IS the alpha. Come back when you find something with better fundamentals fren 🛡️`
   };
 
@@ -8842,10 +8861,23 @@ function showResults(scores, total, tier, tierClass, scoreColor, pros, cons, ape
 
   const scoreEl = document.getElementById('scoreNum');
   const circle = document.getElementById('scoreCircle');
+
+  // If the API scan landed before evaluate(), use ITS score as the
+  // animation target so we don't animate to the homegrown number and
+  // then re-animate to the API number. Single coherent reveal.
+  let target = total;
+  const apiScan = window._trustyApiScan;
+  if (apiScan && typeof apiScan.score === 'number') {
+    target = apiScan.score;
+    const v = (apiScan.verdict || '').toUpperCase();
+    if (v === 'APE') { tier = '🟢 APE'; tierClass = 'tier-ape'; scoreColor = '#22C55E'; }
+    else if (v === 'CAUTION') { tier = '🟡 CAUTION'; tierClass = 'tier-caution'; scoreColor = '#F3BA2F'; }
+    else if (v === 'RUN') { tier = '🔴 RUN'; tierClass = 'tier-run'; scoreColor = '#EF4444'; }
+  }
+
   circle.style.stroke = scoreColor;
   const circumference = 364;
   let current = 0;
-  const target = total;
   const interval = setInterval(() => {
     current = Math.min(current + 2, target);
     scoreEl.textContent = current;
@@ -10299,7 +10331,7 @@ const ftTranslations = {
   // Tier badges
   '🟢 WAGMI': '🟢 LOOKS SOLID',
   '🟡 MAYBE SER': '🟡 MIXED SIGNALS',
-  '🟠 DEGEN PLAY': '🟠 HIGH RISK',
+  '🟡 CAUTION': '🟡 HIGH RISK',
   '🔴 NGMI BRO': '🔴 AVOID THIS ONE',
   // Ape sizes
   '2–5%': 'Small amount — like money you can afford to lose',
