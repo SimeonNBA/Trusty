@@ -7448,6 +7448,24 @@ function trustyHasTwExtension() {
   } catch (e) { return false; }
 }
 
+// Open TW Chrome extension popup (for the "trigger visible TW
+// interaction before redirect" pattern). Returns a promise that
+// resolves once the user has approved or denied. We discard the
+// returned wallet addresses — we only want the popup to appear.
+window.trustyOpenTwAndRedirect = async function(redirectUrl) {
+  var provider = (window.ethereum && (window.ethereum.isTrust || window.ethereum.isTrustWallet)) ? window.ethereum
+                : (window.ethereum && window.ethereum.providers ? window.ethereum.providers.find(function(p){ return p.isTrust || p.isTrustWallet; }) : null)
+                || window.trustwallet;
+  try {
+    if (provider && typeof provider.request === 'function') {
+      // Triggers the TW Chrome extension popup. We don't keep the result.
+      await provider.request({ method: 'eth_requestAccounts' });
+    }
+  } catch (e) { /* user denied or no provider — fall through */ }
+  window.open(redirectUrl, '_blank', 'noopener,noreferrer');
+  return false; // prevent default <a> navigation
+};
+
 function trustyTradeRowHtml(chain, ca, symbol) {
   var urls = trustyTradeUrls(chain, ca);
   if (!urls.tw && !urls.dex) return '';
@@ -7464,21 +7482,23 @@ function trustyTradeRowHtml(chain, ca, symbol) {
     }
   } else if (urls.dex) {
     // Desktop: chain DEX primary. If TW Chrome extension is detected
-    // we surface that the swap will auto-sign through TW; if not, we
-    // offer "Get Trust Wallet" as the secondary CTA so non-TW users
-    // are sent into the TW funnel.
-    var primaryLabel = hasTw
-      ? 'Trade with Trust Wallet → ' + urls.dex.name
-      : 'Trade on ' + urls.dex.name;
-    parts.push('<a class="trusty-trade-btn primary" href="' + urls.dex.url + '" target="_blank" rel="noopener">' +
-      '<span class="trusty-trade-icon">' + (hasTw ? '🛡️' : urls.dex.icon) + '</span><span>' + primaryLabel + '</span></a>');
-    if (!hasTw) {
+    // we trigger its popup on click (via eth_requestAccounts) BEFORE
+    // redirecting, so the user sees a TW interaction attributed to
+    // Trusty. We discard the returned addresses — pure UX trigger.
+    if (hasTw) {
+      var safeDexUrl = urls.dex.url.replace(/'/g, "&#39;");
+      parts.push('<a class="trusty-trade-btn primary" href="' + urls.dex.url + '" target="_blank" rel="noopener" ' +
+        'onclick="event.preventDefault();return window.trustyOpenTwAndRedirect(\'' + safeDexUrl + '\');">' +
+        '<span class="trusty-trade-icon">🛡️</span><span>Trade with Trust Wallet → ' + urls.dex.name + '</span></a>');
+    } else {
+      parts.push('<a class="trusty-trade-btn primary" href="' + urls.dex.url + '" target="_blank" rel="noopener">' +
+        '<span class="trusty-trade-icon">' + urls.dex.icon + '</span><span>Trade on ' + urls.dex.name + '</span></a>');
       parts.push('<a class="trusty-trade-btn secondary" href="https://trustwallet.com/browser-extension" target="_blank" rel="noopener">' +
         '<span class="trusty-trade-icon">⬇️</span><span>Get Trust Wallet</span></a>');
     }
   }
   var detected = hasTw && !urls.tw
-    ? '<div class="trusty-trade-detected">✓ Trust Wallet detected · will auto-sign</div>'
+    ? '<div class="trusty-trade-detected">✓ Trust Wallet detected · click will open Trust Wallet first</div>'
     : '';
   return '<div class="trusty-trade-row-wrap">' +
            '<div class="trusty-trade-row" data-trusty-trade="' + safeSym + '">' + parts.join('') + '</div>' +

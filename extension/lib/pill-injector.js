@@ -437,6 +437,23 @@
     } catch (e) { return false; }
   }
 
+  // Trigger TW Chrome extension popup on click, then redirect.
+  // Returned wallet addresses are discarded — pure UX trigger so the
+  // user sees TW responding to a Trusty action.
+  async function trustyOpenTwAndRedirect(redirectUrl) {
+    var provider = (window.ethereum && (window.ethereum.isTrust || window.ethereum.isTrustWallet)) ? window.ethereum
+                  : (window.ethereum && window.ethereum.providers ? window.ethereum.providers.find(function(p){ return p.isTrust || p.isTrustWallet; }) : null)
+                  || window.trustwallet;
+    try {
+      if (provider && typeof provider.request === "function") {
+        await provider.request({ method: "eth_requestAccounts" });
+      }
+    } catch (e) { /* user denied or no provider — fall through */ }
+    window.open(redirectUrl, "_blank", "noopener,noreferrer");
+  }
+  // Expose so onclick attributes in the panel HTML can reach it
+  window.__trustyOpenTwAndRedirect = trustyOpenTwAndRedirect;
+
   function buildTradeRow(chain, ca) {
     if (!ca) return "";
     var coinId = tradeChainCoinId(chain);
@@ -457,22 +474,25 @@
           '<span class="trusty-pp-trade-icon">' + dex.icon + '</span><span>Or ' + dex.name + '</span></a>');
       }
     } else if (dex) {
-      // Desktop: chain DEX primary. If TW Chrome extension is detected
-      // surface it in the label; otherwise add a "Get Trust Wallet"
-      // secondary CTA to drive non-TW users into the TW install funnel.
-      var primaryLabel = hasTw
-        ? 'Trade with Trust Wallet → ' + dex.name
-        : 'Trade on ' + dex.name;
-      parts.push('<a class="trusty-pp-trade-btn primary" href="' + dex.url + '" target="_blank" rel="noopener">' +
-        '<span class="trusty-pp-trade-icon">' + (hasTw ? '🛡️' : dex.icon) + '</span><span>' + primaryLabel + '</span></a>');
-      if (!hasTw) {
+      // Desktop: chain DEX primary. If TW Chrome extension is detected,
+      // trigger its popup on click (eth_requestAccounts) BEFORE
+      // redirecting — visible TW interaction attributed to Trusty.
+      // Otherwise add a "Get Trust Wallet" secondary CTA.
+      if (hasTw) {
+        var safeDexUrl = dex.url.replace(/'/g, "&#39;");
+        parts.push('<a class="trusty-pp-trade-btn primary" href="' + dex.url + '" target="_blank" rel="noopener" ' +
+          'onclick="event.preventDefault();window.__trustyOpenTwAndRedirect(\'' + safeDexUrl + '\');return false;">' +
+          '<span class="trusty-pp-trade-icon">🛡️</span><span>Trade with Trust Wallet → ' + dex.name + '</span></a>');
+      } else {
+        parts.push('<a class="trusty-pp-trade-btn primary" href="' + dex.url + '" target="_blank" rel="noopener">' +
+          '<span class="trusty-pp-trade-icon">' + dex.icon + '</span><span>Trade on ' + dex.name + '</span></a>');
         parts.push('<a class="trusty-pp-trade-btn secondary" href="https://trustwallet.com/browser-extension" target="_blank" rel="noopener">' +
           '<span class="trusty-pp-trade-icon">⬇️</span><span>Get Trust Wallet</span></a>');
       }
     }
     if (!parts.length) return "";
     var detected = (hasTw && !(isMobileDevice() && twMobile))
-      ? '<div class="trusty-pp-trade-detected">✓ Trust Wallet detected · will auto-sign</div>'
+      ? '<div class="trusty-pp-trade-detected">✓ Trust Wallet detected · click will open Trust Wallet first</div>'
       : '';
     return '<div class="trusty-pp-section trusty-pp-trade-section">' +
       '<div class="trusty-pp-section-title">💱 Trade</div>' +
