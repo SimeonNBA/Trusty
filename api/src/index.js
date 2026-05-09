@@ -166,8 +166,59 @@ function json(body, status = 200) {
 
 // ── chain → goplus chain id ──
 function chainId(chain) {
-  const map = { bsc: "56", evm: "56", eth: "1", base: "8453", polygon: "137" };
-  return map[chain] || "56";
+  const map = {
+    bsc: "56", bnb: "56", binance: "56", evm: "56",
+    eth: "1", ethereum: "1",
+    base: "8453",
+    polygon: "137", matic: "137",
+    arbitrum: "42161", arb: "42161",
+    avalanche: "43114", avax: "43114",
+    optimism: "10", op: "10"
+  };
+  return map[(chain || "").toLowerCase()] || "56";
+}
+
+// Dexscreener `chainId` → our canonical chain key (for re-passing
+// through the scan response so the frontend uses the right chain
+// in trade-row UAI / launchpad detection / etc.).
+function dexChainToCanonical(dxChain) {
+  const c = (dxChain || "").toLowerCase();
+  if (c === "bsc") return "bsc";
+  if (c === "ethereum") return "ethereum";
+  if (c === "base") return "base";
+  if (c === "polygon") return "polygon";
+  if (c === "arbitrum") return "arbitrum";
+  if (c === "avalanche") return "avalanche";
+  if (c === "optimism") return "optimism";
+  return null;
+}
+
+// When chain is generic "evm", quickly sniff which EVM chain the
+// token actually lives on by looking at Dexscreener's pair distribution.
+// Returns the canonical chain key (e.g. "ethereum") with the highest
+// 24h volume, or null if no pairs exist.
+async function detectEvmChain(ca) {
+  try {
+    const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${ca}`, {
+      headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (!Array.isArray(data?.pairs) || !data.pairs.length) return null;
+    // Score each chain by 24h volume, fall back to liquidity if vol is 0
+    const byChain = {};
+    for (const p of data.pairs) {
+      const c = dexChainToCanonical(p.chainId);
+      if (!c) continue;
+      const score = (p.volume?.h24 || 0) || (p.liquidity?.usd || 0);
+      byChain[c] = (byChain[c] || 0) + score;
+    }
+    let best = null, bestScore = 0;
+    for (const c in byChain) {
+      if (byChain[c] > bestScore) { best = c; bestScore = byChain[c]; }
+    }
+    return best;
+  } catch (e) { return null; }
 }
 
 function isSolana(chain) {
@@ -189,10 +240,24 @@ async function scanToken(ca, chain, env) {
 }
 
 async function scanTokenEvm(ca, chain, env) {
+  // The extension's CA detector tags every 0x… address as generic
+  // "evm" because it can't tell BSC from ETH from Base from a regex.
+  // For generic-evm scans we sniff the actual chain from Dexscreener's
+  // pair distribution before calling GoPlus, otherwise GoPlus runs
+  // against BSC for an ETH token and returns nothing.
+  let resolvedChain = chain;
+  if (chain === "evm" || !chain) {
+    const detected = await detectEvmChain(ca);
+    if (detected) resolvedChain = detected;
+  }
+
   const [gpRes, dxRes, fmRes] = await Promise.allSettled([
-    fetchGoPlus(chainId(chain), ca),
-    fetchDex(ca, "bsc"),
-    fetchFourMemeOrigin(ca, chain, env),
+    fetchGoPlus(chainId(resolvedChain), ca),
+    fetchDex(ca, resolvedChain === "ethereum" ? "ethereum"
+                : resolvedChain === "base"    ? "base"
+                : resolvedChain === "polygon" ? "polygon"
+                : "bsc"),
+    fetchFourMemeOrigin(ca, resolvedChain, env),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
   const d = dxRes.status === "fulfilled" ? dxRes.value : null;
@@ -207,7 +272,9 @@ async function scanTokenEvm(ca, chain, env) {
   const symbol = "$" + rawSym.replace(/^\$/, "").toUpperCase();
   const name = d?.name || g?.token_name || "Token " + shortAddr(ca);
 
-  return baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g), fm);
+  // Return the resolved chain so the frontend uses the right chain
+  // for trade-row UAI / launchpad-badge link / future logic.
+  return baseScanShape(ca, resolvedChain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g), fm);
 }
 
 async function scanTokenSolana(ca, chain) {
@@ -837,7 +904,11 @@ function scoreSentiment(tweets) {
     bear += (text.match(BEAR_WORDS) || []).length;
   }
   const total = bull + bear;
-  if (total < 3) return "—"; // not enough signal
+  // Lowered threshold from 3 → 2 to surface signal on smaller token
+  // chatter. Fall through to "Neutral" when tweets exist but no
+  // bullish/bearish words land — better UX than "—" for a token that
+  // clearly has activity but mundane / news-style chatter.
+  if (total < 2) return "Neutral";
   const bullPct = Math.round((bull / total) * 100);
   if (bullPct >= 60) return bullPct + "% bullish";
   if (bullPct <= 40) return 100 - bullPct + "% bearish";

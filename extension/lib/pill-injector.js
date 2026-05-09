@@ -589,7 +589,7 @@
         '</div>' +
       '</div>' +
 
-      buildTradeRow(chain, ca) +
+      buildTradeRow(result.chain || chain, ca) +
 
       '<div class="trusty-pp-footer">' +
         'Open the full report on ' +
