@@ -93,8 +93,12 @@
         '</div>' +
       '</div>' +
       '<ul class="trusty-tt-checks">' + checksHtml + '</ul>' +
+      '<div class="trusty-tt-tease">' +
+        '<span class="trusty-tt-tease-icon">🐦</span>' +
+        '<span class="trusty-tt-tease-text">KOL activity · X velocity · sentiment</span>' +
+        '<span class="trusty-tt-tease-lock">🔒</span>' +
+      '</div>' +
       '<div class="trusty-tt-footer">' +
-        "Want KOL activity, X velocity and full breakdown?<br>" +
         "<strong>Hold $TRUSTY or upgrade for $5/mo</strong>" +
       '</div>'
     );
