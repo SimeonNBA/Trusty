@@ -49,6 +49,10 @@ re-suggesting completed work.
 - `SORSA_API_KEY`
 - `NOWPAYMENTS_API_KEY`
 - `NOWPAYMENTS_IPN_SECRET`
+- `ADMIN_SECRET` (for `/api/admin/mint-code` — set this once before
+  using the `scripts/mint-code.mjs` CLI)
+- `BSCSCAN_API_KEY` (optional — increases the four.meme detection
+  rate limit. Free without a key for low volume.)
 
 KV namespace: `SCAN_KV` (id in `api/wrangler.toml`).
 

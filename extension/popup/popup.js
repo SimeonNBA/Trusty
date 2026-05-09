@@ -59,7 +59,7 @@
       return;
     }
 
-    // Paid state via subscription
+    // Paid state via subscription (or code redemption)
     pill.textContent = "PAID";
     pill.classList.add("paid");
     label.textContent = "Unlimited scans · KOLs · X activity unlocked";
@@ -67,9 +67,38 @@
     subSection.style.display = "none";
 
     if (sub) {
-      $("tierPlan").textContent = sub.plan === "yearly" ? "Yearly · $50" : "Monthly · $5";
-      $("tierPlan").title = "Subscription via NOWPayments";
+      var planLabel;
+      if (sub.plan === "yearly") planLabel = "Yearly · $50";
+      else if (sub.plan === "monthly") planLabel = "Monthly · $5";
+      else if (sub.plan === "lifetime") planLabel = "Lifetime · code";
+      else if (sub.plan === "trial-7d") planLabel = "Trial · 7-day code";
+      else if (sub.via === "code") planLabel = "Code · " + (sub.codeType || "promo");
+      else planLabel = sub.plan || "Paid";
+      $("tierPlan").textContent = planLabel;
+      $("tierPlan").title = sub.via === "code" ? "Activated via redemption code" : "Subscription via NOWPayments";
       $("tierExpires").textContent = fmtDate(sub.expiresAt);
+
+      // Render the recovery code if the worker surfaced one
+      renderRecoveryCode(sub);
+    }
+  }
+
+  function renderRecoveryCode(sub) {
+    var block = $("recoveryBlock");
+    if (!block) return;
+    if (!sub || !sub.recoveryCode) {
+      block.style.display = "none";
+      return;
+    }
+    block.style.display = "block";
+    $("recoveryCode").textContent = sub.recoveryCode;
+    var hint = $("recoveryHint");
+    if (sub.recoveryUsed) {
+      block.classList.add("used");
+      if (hint) hint.textContent = "Already redeemed on a backup device";
+    } else {
+      block.classList.remove("used");
+      if (hint) hint.textContent = "1 use · save it now (paste on a 2nd Chrome install)";
     }
   }
 
@@ -242,6 +271,90 @@
     });
   }
 
+  // ── Code redemption ──
+
+  function showRedeemMsg(text, ok) {
+    let el = $("redeemMsg");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "redeemMsg";
+      el.className = "redeem-msg";
+      $("redeemSection").appendChild(el);
+    }
+    el.className = "redeem-msg " + (ok ? "ok" : "err");
+    el.textContent = text;
+  }
+
+  function clearRedeemMsg() {
+    const el = $("redeemMsg");
+    if (el) el.remove();
+  }
+
+  async function onRedeemClick() {
+    clearRedeemMsg();
+    const input = $("redeemInput");
+    const btn = $("redeemBtn");
+    const code = (input.value || "").trim().toUpperCase();
+    if (!code) {
+      showRedeemMsg("Paste your code first.", false);
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = "…";
+    try {
+      const subId = await window.TrustyTier.getOrCreateSubId();
+      const res = await fetch("https://api.trustyai.tech/api/redeem-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ code, subId }),
+      });
+      const data = await res.json().catch(function () { return null; });
+      if (!res.ok || !data || !data.ok) {
+        showRedeemMsg((data && data.error) || "Could not redeem this code.", false);
+        return;
+      }
+      showRedeemMsg(
+        "Redeemed! " + (data.type === "lifetime" ? "Lifetime access unlocked." :
+                        "Paid for " + (data.durationDays || "—") + " days."),
+        true
+      );
+      // Refresh subscription state from server, then re-render UI
+      await window.TrustyTier.refreshSubscription();
+      await reload();
+      input.value = "";
+    } catch (e) {
+      showRedeemMsg("Network error — try again.", false);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Redeem";
+    }
+  }
+
+  function onRedeemToggle() {
+    const form = $("redeemForm");
+    const toggle = $("redeemToggle");
+    if (!form || !toggle) return;
+    const open = form.style.display !== "none";
+    form.style.display = open ? "none" : "flex";
+    toggle.style.display = open ? "block" : "none";
+    if (!open) $("redeemInput").focus();
+  }
+
+  function onRecoveryCopy() {
+    const codeEl = $("recoveryCode");
+    if (!codeEl) return;
+    const code = codeEl.textContent.trim();
+    try {
+      navigator.clipboard.writeText(code);
+      const btn = $("recoveryCopyBtn");
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = orig; }, 1200);
+      }
+    } catch (e) { /* clipboard not available — ignore */ }
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     // Subscription buttons
     document.querySelectorAll(".sub-plan").forEach(function (btn) {
@@ -249,6 +362,18 @@
     });
     const cancelBtn = $("subCancelBtn");
     if (cancelBtn) cancelBtn.addEventListener("click", onSubCancel);
+
+    // Redeem code wiring
+    const redeemToggle = $("redeemToggle");
+    if (redeemToggle) redeemToggle.addEventListener("click", onRedeemToggle);
+    const redeemBtn = $("redeemBtn");
+    if (redeemBtn) redeemBtn.addEventListener("click", onRedeemClick);
+    const redeemInput = $("redeemInput");
+    if (redeemInput) redeemInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") onRedeemClick();
+    });
+    const recoveryCopy = $("recoveryCopyBtn");
+    if (recoveryCopy) recoveryCopy.addEventListener("click", onRecoveryCopy);
 
     init();
   });

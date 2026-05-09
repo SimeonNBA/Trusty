@@ -324,6 +324,154 @@ html, body {
 }
 .sub-cancel-btn:hover { color: var(--text); border-color: var(--blue); }
 
+/* ── Code redemption ── */
+.redeem-section { margin-top: 14px; }
+.redeem-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.redeem-divider::before,
+.redeem-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.redeem-toggle {
+  width: 100%;
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+.redeem-toggle:hover { color: var(--text); border-color: var(--blue); }
+.redeem-form {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.redeem-input {
+  flex: 1;
+  padding: 9px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  outline: none;
+  text-transform: uppercase;
+}
+.redeem-input:focus { border-color: var(--blue); }
+.redeem-input::placeholder { color: var(--muted); opacity: 0.5; }
+.redeem-submit {
+  padding: 9px 12px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  color: #0a0a0a;
+  border: none;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+  font-family: inherit;
+}
+.redeem-submit:hover { filter: brightness(1.1); }
+.redeem-submit:disabled { opacity: 0.4; cursor: wait; }
+.redeem-msg {
+  margin-top: 6px;
+  font-size: 10px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  text-align: center;
+}
+.redeem-msg.ok { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86EFAC; }
+.redeem-msg.err { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #FCA5A5; }
+
+/* ── Recovery code (paid users) ── */
+.recovery-block {
+  margin-top: 10px;
+  padding: 10px;
+  background: linear-gradient(135deg, rgba(243,186,47,0.08), rgba(168,85,247,0.05));
+  border: 1px solid rgba(243,186,47,0.3);
+  border-radius: 8px;
+}
+.recovery-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.recovery-help {
+  cursor: help;
+  color: var(--muted);
+  font-size: 10px;
+}
+.recovery-code-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.recovery-code {
+  flex: 1;
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(0,0,0,0.35);
+  padding: 7px 10px;
+  border-radius: 6px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recovery-copy {
+  padding: 7px 10px;
+  background: var(--bg3, rgba(255,255,255,0.05));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s;
+}
+.recovery-copy:hover { color: var(--text); border-color: var(--blue); }
+.recovery-hint {
+  margin-top: 6px;
+  font-size: 9px;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.4px;
+}
+.recovery-block.used {
+  border-color: rgba(148,163,184,0.3);
+  opacity: 0.7;
+}
+.recovery-block.used .recovery-label { color: var(--muted); }
+
 /* ── Watchlist (popup section) ── */
 .wl-section {
   background: var(--card);

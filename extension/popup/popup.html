@@ -34,6 +34,17 @@
           <span class="tier-verified-label">Renews</span>
           <span class="tier-verified-val" id="tierExpires">—</span>
         </div>
+
+        <!-- Recovery code — shown to paid users so they can activate
+             this sub on a backup device. -->
+        <div class="recovery-block" id="recoveryBlock" style="display:none;">
+          <div class="recovery-label">⭐ Backup-device code <span class="recovery-help" id="recoveryHelp" title="Save this code. On a second Chrome install of Trusty, paste it under 'Have a code?' to activate paid on that device too.">ⓘ</span></div>
+          <div class="recovery-code-row">
+            <code class="recovery-code" id="recoveryCode">—</code>
+            <button class="recovery-copy" id="recoveryCopyBtn" type="button">Copy</button>
+          </div>
+          <div class="recovery-hint" id="recoveryHint">One use · save it now</div>
+        </div>
       </div>
 
       <!-- ── Crypto-pay subscription ── -->
@@ -61,6 +72,24 @@
             <span class="sub-pending-hint">This page auto-updates when paid.</span>
           </div>
           <button class="sub-cancel-btn" id="subCancelBtn">Cancel pending</button>
+        </div>
+
+        <!-- Code redemption — backup-device codes, lifetime/promo grants -->
+        <div class="redeem-section" id="redeemSection">
+          <div class="redeem-divider"><span>or</span></div>
+          <button class="redeem-toggle" id="redeemToggle" type="button">Have a code? Redeem here</button>
+          <div class="redeem-form" id="redeemForm" style="display:none;">
+            <input
+              type="text"
+              id="redeemInput"
+              class="redeem-input"
+              placeholder="TRUSTY-XXXX-XXXX"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="17"
+            />
+            <button class="redeem-submit" id="redeemBtn" type="button">Redeem</button>
+          </div>
         </div>
       </div>
     </section>

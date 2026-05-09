@@ -69,6 +69,14 @@ export default {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       return handleSubscriptionStatus(url, env);
     }
+    if (url.pathname === "/api/redeem-code") {
+      if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
+      return handleRedeemCode(request, env);
+    }
+    if (url.pathname === "/api/admin/mint-code") {
+      if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
+      return handleAdminMintCode(request, env);
+    }
     if (url.pathname === "/api/watchlist") {
       if (request.method === "GET") return handleWatchlistGet(url, env);
       if (request.method === "POST") return handleWatchlistPost(request, url, env);
@@ -1197,6 +1205,9 @@ async function handleWebhook(request, env) {
           { expirationTtl: Math.floor(durationMs / 1000) + 86400 }
         );
       } catch (_) {}
+      // Issue (or reuse) a recovery code so the user can activate this
+      // sub on a backup device. Surfaced via /api/subscription.
+      try { await ensureRecoveryCode(env, subId); } catch (_) {}
     } else if (status === "expired" || status === "failed" || status === "refunded") {
       try { await env.SCAN_KV.delete(`sub:${subId}`); } catch (_) {}
     }
@@ -1220,7 +1231,235 @@ async function handleSubscriptionStatus(url, env) {
   if (sub.status === "paid" && sub.expiresAt && sub.expiresAt < Date.now()) {
     sub.status = "expired";
   }
+
+  // Surface the recovery code if one exists for this subId — used by
+  // the popup to display "save this for your backup device".
+  // Recovery codes are only issued for paid subs (not code-redeemed
+  // subs — those don't generate sub-codes).
+  if (sub.status === "paid" && sub.via !== "code") {
+    try {
+      const recovery = await env.SCAN_KV.get(`recovery:${subId}`, "text");
+      if (recovery && isValidCodeShape(recovery)) {
+        const rec = await env.SCAN_KV.get(`code:${recovery}`, "json");
+        if (rec && !rec.revoked) {
+          sub.recoveryCode = recovery;
+          sub.recoveryUsed = (rec.uses || 0) >= (rec.maxUses || 1);
+        }
+      }
+    } catch (_) {}
+  }
+
   return json(sub);
+}
+
+/* ================================================================
+   Redemption codes — single feature that handles:
+
+     - Recovery codes (auto-issued on payment, lets user activate
+       same sub on one backup device)
+     - Lifetime codes (admin-minted, hand-given to whales via TG)
+     - Monthly codes (admin-minted, promo for $TRUSTY holders)
+     - Trial codes (admin-minted, time-bounded access for testing)
+
+   KV schema:
+     code:<CODE> = {
+       type: "recovery"|"lifetime"|"monthly"|"yearly"|"trial-7d",
+       maxUses: number,
+       uses: number,
+       redeemedBy: [subId, ...],
+       parentSubId?: subId,    // for recovery codes — the original
+                               // payment's subId, so we can mirror its
+                               // expiresAt onto the redeeming device
+       notes?: string,         // admin reference (e.g. "whale 0x123")
+       createdAt: timestamp,
+       revoked?: boolean
+     }
+   ================================================================ */
+
+const CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // no 0,O,1,I,L
+
+function generateCode() {
+  // TRUSTY-XXXX-XXXX (10 chars + 7 prefix/dashes = 17 total).
+  // ~32^8 ≈ 1.1 trillion combos.
+  const buf = new Uint8Array(8);
+  crypto.getRandomValues(buf);
+  let s = "";
+  for (let i = 0; i < 8; i++) s += CODE_ALPHABET[buf[i] % CODE_ALPHABET.length];
+  return "TRUSTY-" + s.slice(0, 4) + "-" + s.slice(4);
+}
+
+function isValidCodeShape(code) {
+  return /^TRUSTY-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}$/.test(code);
+}
+
+async function handleAdminMintCode(request, env) {
+  const secret = request.headers.get("x-admin-secret") || "";
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  if (!env.SCAN_KV) return json({ error: "kv not configured" }, 503);
+
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "bad json" }, 400); }
+
+  const allowed = ["lifetime", "monthly", "yearly", "trial-7d"];
+  const type = String(body?.type || "");
+  if (!allowed.includes(type)) {
+    return json({ error: "invalid type — allowed: " + allowed.join(", ") }, 400);
+  }
+  const maxUses = Math.max(1, Math.min(parseInt(body?.maxUses || "1", 10) || 1, 1000));
+  const notes = String(body?.notes || "").slice(0, 200);
+
+  const code = generateCode();
+  const now = Date.now();
+  const record = {
+    type,
+    maxUses,
+    uses: 0,
+    redeemedBy: [],
+    notes,
+    createdAt: now,
+  };
+  // Codes themselves don't expire — just the resulting subscription
+  // does (per the type's duration). Admin can revoke if needed.
+  try {
+    await env.SCAN_KV.put(`code:${code}`, JSON.stringify(record));
+  } catch (_) {
+    return json({ error: "kv write failed" }, 503);
+  }
+
+  return json({ code, type, maxUses, notes, createdAt: now });
+}
+
+async function handleRedeemCode(request, env) {
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "bad json" }, 400); }
+
+  const code = String(body?.code || "").trim().toUpperCase();
+  const subId = String(body?.subId || "").trim();
+
+  if (!isValidCodeShape(code)) return json({ error: "invalid code format" }, 400);
+  if (!/^[a-zA-Z0-9_-]{8,64}$/.test(subId)) return json({ error: "invalid subId" }, 400);
+  if (!env.SCAN_KV) return json({ error: "kv not configured" }, 503);
+
+  const rec = await env.SCAN_KV.get(`code:${code}`, "json");
+  if (!rec) return json({ error: "code not found" }, 404);
+  if (rec.revoked) return json({ error: "code revoked" }, 410);
+  if (rec.uses >= rec.maxUses) return json({ error: "code already fully redeemed" }, 410);
+  if ((rec.redeemedBy || []).includes(subId)) {
+    return json({ error: "already redeemed by this device" }, 409);
+  }
+
+  // Compute the resulting subscription's expiresAt based on code type
+  const now = Date.now();
+  let expiresAt, planId;
+  if (rec.type === "lifetime") {
+    expiresAt = now + 100 * 365 * 86400000; // ~100 years
+    planId = "lifetime";
+  } else if (rec.type === "yearly") {
+    expiresAt = now + 365 * 86400000;
+    planId = "yearly";
+  } else if (rec.type === "monthly") {
+    expiresAt = now + 30 * 86400000;
+    planId = "monthly";
+  } else if (rec.type === "trial-7d") {
+    expiresAt = now + 7 * 86400000;
+    planId = "trial-7d";
+  } else if (rec.type === "recovery") {
+    // Recovery code mirrors the parent sub's expiresAt so the backup
+    // device gets exactly the remaining time of the original.
+    if (!rec.parentSubId) return json({ error: "recovery code missing parent" }, 500);
+    const parent = await env.SCAN_KV.get(`sub:${rec.parentSubId}`, "json");
+    if (!parent || !parent.expiresAt) return json({ error: "original subscription not found" }, 410);
+    if (parent.expiresAt <= now) return json({ error: "original subscription expired" }, 410);
+    expiresAt = parent.expiresAt;
+    planId = parent.plan || "recovered";
+  } else {
+    return json({ error: "unknown code type" }, 500);
+  }
+
+  // Renewal-friendly: if the redeeming subId already has an active sub,
+  // extend from that expiry instead of overriding (so codes stack with
+  // existing time, never shorten).
+  let baseTime = now;
+  try {
+    const existing = await env.SCAN_KV.get(`sub:${subId}`, "json");
+    if (existing && existing.status === "paid" && existing.expiresAt > now) {
+      // For lifetime, take the max. For time-bounded, extend.
+      if (rec.type === "lifetime") {
+        // Lifetime always wins; expiresAt stays at the 100-year mark.
+      } else {
+        baseTime = existing.expiresAt;
+        const durationMs = expiresAt - now;
+        expiresAt = baseTime + durationMs;
+      }
+    }
+  } catch (_) {}
+
+  // Apply the subscription
+  const subRecord = {
+    plan: planId,
+    status: "paid",
+    paidAt: now,
+    expiresAt,
+    via: "code",
+    codeType: rec.type,
+  };
+  try {
+    const ttlSeconds = Math.floor((expiresAt - now) / 1000) + 86400;
+    await env.SCAN_KV.put(`sub:${subId}`, JSON.stringify(subRecord), { expirationTtl: ttlSeconds });
+  } catch (_) {
+    return json({ error: "could not apply subscription" }, 503);
+  }
+
+  // Mark code as used
+  try {
+    rec.uses = (rec.uses || 0) + 1;
+    rec.redeemedBy = [...(rec.redeemedBy || []), subId];
+    rec.lastRedeemedAt = now;
+    await env.SCAN_KV.put(`code:${code}`, JSON.stringify(rec));
+  } catch (_) {
+    // Non-fatal — sub is already applied. Worst case: code might be
+    // redeemable again in a race. Rare given KV's eventual consistency.
+  }
+
+  return json({
+    ok: true,
+    type: rec.type,
+    plan: planId,
+    expiresAt,
+    durationDays: Math.round((expiresAt - now) / 86400000),
+  });
+}
+
+// Auto-issue a recovery code linked to a subscription. Called from the
+// payment webhook when a sub first goes paid. The returned code is
+// surfaced to the user via /api/subscription so the popup can display
+// "Save this for your backup device".
+async function ensureRecoveryCode(env, subId) {
+  if (!env.SCAN_KV) return null;
+  // Reuse if one already exists (e.g. on renewal).
+  const existing = await env.SCAN_KV.get(`recovery:${subId}`, "text");
+  if (existing && isValidCodeShape(existing)) {
+    // Re-fetch the code record to confirm it's still valid
+    const rec = await env.SCAN_KV.get(`code:${existing}`, "json");
+    if (rec && !rec.revoked) return existing;
+  }
+  // Mint a new recovery code
+  const code = generateCode();
+  const record = {
+    type: "recovery",
+    maxUses: 1, // one backup device
+    uses: 0,
+    redeemedBy: [],
+    parentSubId: subId,
+    createdAt: Date.now(),
+  };
+  try {
+    await env.SCAN_KV.put(`code:${code}`, JSON.stringify(record));
+    await env.SCAN_KV.put(`recovery:${subId}`, code);
+  } catch (_) { return null; }
+  return code;
 }
 
 /* ================================================================

@@ -124,6 +124,10 @@
         orderId: data.orderId,
         paidAt: data.paidAt,
         expiresAt: data.expiresAt,
+        via: data.via,
+        codeType: data.codeType,
+        recoveryCode: data.recoveryCode,
+        recoveryUsed: data.recoveryUsed,
         refreshedAt: Date.now()
       });
       return { ok: true, status: data.status, expiresAt: data.expiresAt };

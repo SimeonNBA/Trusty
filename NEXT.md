@@ -48,6 +48,15 @@ of what's been shipped, run `git log` or read `HANDOFF.md`.
 - **Real partner logos (2026-05-09)** — Grovex (CEX, TRUSTY/USDT
   pair) and Topaz Dex (DEX) now live as real partner cards. 2 of 4
   slots filled; 2 still open for future partners.
+- **Redemption code system (2026-05-09)** — backup-device codes +
+  admin-mintable promo grants. Worker endpoints
+  `/api/redeem-code` (public) + `/api/admin/mint-code`
+  (ADMIN_SECRET-protected). Recovery codes auto-issue on payment so
+  paying users can activate their sub on a backup device. Admin
+  CLI at `scripts/mint-code.mjs` for hand-grants (lifetime to
+  whales / monthly to TG holders / 7-day trials). Extension popup
+  has a "Have a code? Redeem here" toggle and shows the user's
+  recovery code when paid. Code format: `TRUSTY-XXXX-XXXX`.
 
 ---
 
@@ -96,8 +105,20 @@ Order ranked by ship-readiness. Each is its own commit.
 
 ### 2. Worker deploy — user (next morning)
 
-Four.meme Tier 2 needs a worker re-deploy. Other items above are
-frontend-only or markdown-only.
+Several items need a worker re-deploy:
+- Four.meme Tier 2 launchpad detection
+- ETH/Base/Polygon chain auto-detection (was returning RUN for ETH
+  tokens)
+- Sentiment heuristic tuning ("Neutral" fallback)
+- Redemption code system (`/api/redeem-code`,
+  `/api/admin/mint-code`, recovery codes on webhook)
+
+Before deploying, set the new secret:
+```
+npx wrangler secret put ADMIN_SECRET --config api/wrangler.toml
+```
+Pick any 32+ char random string. Save it locally — you'll need it
+for the mint-code CLI.
 
 ### 3. Local QA pass — user (~10 min)
 
@@ -143,6 +164,35 @@ Load the unpacked extension in Chrome and click through:
 - **Sentiment + coord-shill heuristic tuning** — placeholder lists. Tune once we have real-world false positives from launch usage.
 - **First Timer Mode for the extension popup** — port the website's toggle pattern to the extension.
 - **Hold-tier with signature verification** — if we ever bring back token-gating, do it properly with SIWE so it's not bypassable. Major listing-copy rewrite required.
+
+---
+
+## 🪙 Minting redemption codes (admin)
+
+The `scripts/mint-code.mjs` CLI mints codes the user can redeem in
+the extension popup. Set `TRUSTY_ADMIN_SECRET` once in your shell
+profile, then:
+
+```bash
+# Lifetime code for a whale (one-use, never expires)
+node scripts/mint-code.mjs lifetime --notes "whale czoffshoot"
+
+# Monthly promo for a TG holder (one-use, gives 30 days when redeemed)
+node scripts/mint-code.mjs monthly --notes "TG-holder-anon"
+
+# Trial code with 50 uses (50 different installs each get 7 days)
+node scripts/mint-code.mjs trial-7d --max 50 --notes "BSC-degen-drop"
+
+# Yearly code (one-use, gives 365 days)
+node scripts/mint-code.mjs yearly --notes "partner-grant-grovex"
+```
+
+Output is the code (format `TRUSTY-XXXX-XXXX`) — DM it to the user.
+They paste it under "Have a code? Redeem here" in the extension popup.
+
+Recovery codes for paying users auto-issue on payment — no action
+needed. They appear in the popup with a "Save this for your backup
+device" line.
 
 ---
 
