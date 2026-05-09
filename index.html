@@ -7297,6 +7297,51 @@ async function scanCA() {
   }
 }
 
+// ── Token logos via trustwallet/assets ──
+// Renders TW's curated logo when available, falls back to the API's
+// existing logoUrl (Dexscreener/GoPlus), then hides the <img> entirely
+// if both fail. Chain names are mapped to TW's folder convention (BSC
+// is "smartchain", etc.). EVM addresses are passed as-is — TW stores
+// most token folders by checksummed address; lowercase passes some,
+// misses others, and the fallback chain catches the rest.
+function trustyTokenLogoUrl(chain, address) {
+  if (!address) return null;
+  var c = (chain || '').toLowerCase();
+  var twChain = ({
+    bsc: 'smartchain', bnb: 'smartchain', binance: 'smartchain',
+    ethereum: 'ethereum', eth: 'ethereum',
+    solana: 'solana', sol: 'solana',
+    polygon: 'polygon', matic: 'polygon',
+    arbitrum: 'arbitrum',
+    base: 'base',
+    tron: 'tron',
+    avalanche: 'avalanchec', avax: 'avalanchec',
+    optimism: 'optimism'
+  })[c];
+  if (!twChain) return null;
+  return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/' +
+         twChain + '/assets/' + address + '/logo.png';
+}
+
+// Build an <img> tag for a token logo. TW first, then the existing
+// fallback URL (e.g. Dexscreener's pair.info.imageUrl), then hide.
+function tokenLogoImgHtml(chain, address, fallback, alt) {
+  var safeAlt = String(alt || '').replace(/"/g, '&quot;');
+  var safeFb = String(fallback || '').replace(/"/g, '&quot;');
+  var tw = trustyTokenLogoUrl(chain, address);
+  if (tw) {
+    if (safeFb) {
+      return '<img src="' + tw + '" data-fb="' + safeFb + '" alt="' + safeAlt + '" loading="lazy" ' +
+        'onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.removeAttribute(\'data-fb\');}else{this.style.display=\'none\';}">';
+    }
+    return '<img src="' + tw + '" alt="' + safeAlt + '" loading="lazy" onerror="this.style.display=\'none\'">';
+  }
+  if (safeFb) {
+    return '<img src="' + safeFb + '" alt="' + safeAlt + '" loading="lazy" onerror="this.style.display=\'none\'">';
+  }
+  return '';
+}
+
 function fmtNum(n, decimals = 0) {
   if (!n && n !== 0) return '—';
   if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
@@ -7368,17 +7413,10 @@ function renderTokenData(pair, ca) {
   const chg24 = pair.priceChange?.h24;
   const age = getTokenAge(pair.pairCreatedAt);
 
-  // Token icon
+  // Token icon — TW first, fall back to Dexscreener's logo, hide if both miss
   const iconWrap = document.getElementById('tokenIconWrap');
-  if (token.logoURI || pair.info?.imageUrl) {
-    const img = document.createElement('img');
-    img.src = token.logoURI || pair.info?.imageUrl;
-    img.onerror = () => { iconWrap.innerHTML = '🪙'; };
-    iconWrap.innerHTML = '';
-    iconWrap.appendChild(img);
-  } else {
-    iconWrap.innerHTML = '🪙';
-  }
+  const fallbackLogo = token.logoURI || pair.info?.imageUrl || '';
+  iconWrap.innerHTML = tokenLogoImgHtml(chainId, token.address, fallbackLogo, token.symbol || 'token');
 
   document.getElementById('tokenName').textContent = token.name || '—';
   document.getElementById('tokenSymbol').textContent = '$' + (token.symbol || '—');
@@ -8818,9 +8856,7 @@ function renderTrendingList(cat) {
     const change = coin.priceChange24h || 0;
     const changeClass = change >= 0 ? 'up' : 'down';
     const changeStr = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
-    const iconHtml = coin.logoUrl
-      ? `<img src="${coin.logoUrl}" onerror="this.parentElement.innerHTML='🪙'" alt="${coin.symbol}">`
-      : '🪙';
+    const iconHtml = tokenLogoImgHtml(coin.chain, ca, coin.logoUrl, coin.symbol || 'token');
     const canEval = ca && ca.length >= 10;
 
     return `<button class="trending-coin" onclick="${canEval ? `evalTrendingCoin('${ca}')` : 'void(0)'}" ${canEval ? '' : 'style="opacity:0.6;cursor:default"'}>
@@ -9697,9 +9733,7 @@ function renderWatchlist() {
   if (empty) empty.style.display = 'none';
   content.innerHTML = list.map(function(t) {
     var tierColor = t.score >= 72 ? '#86EFAC' : t.score >= 55 ? '#FDE68A' : t.score >= 38 ? '#FDBA74' : '#FCA5A5';
-    var icon = t.logoUrl
-      ? '<img src="' + t.logoUrl + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.innerHTML=\'🪙\'" />'
-      : '🪙';
+    var icon = tokenLogoImgHtml(t.chain, t.ca, t.logoUrl, t.symbol || 'token');
     var mc = t.marketCap || 0;
     var mcDisplay = mc >= 1e9 ? '$' + (mc/1e9).toFixed(2) + 'B' : mc >= 1e6 ? '$' + (mc/1e6).toFixed(2) + 'M' : mc >= 1e3 ? '$' + (mc/1e3).toFixed(1) + 'K' : mc > 0 ? '$' + mc.toFixed(0) : '—';
     return '<div class="portfolio-token" onclick="portfolioScan(\'' + t.ca + '\')">' +
