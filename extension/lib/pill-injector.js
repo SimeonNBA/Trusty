@@ -21,6 +21,23 @@
   const PANEL_BACKDROP_ID = "trusty-panel-backdrop";
   const PROCESSED_ATTR = "data-trusty-scanned";
 
+  // Decorative placeholders shown only in the BLURRED paid-panel for
+  // free users — gives the blur shape so the user sees the structure
+  // of what they'd unlock. Never shown un-blurred.
+  const BLURRED_PLACEHOLDER_KOLS = [
+    { handle: "@cz_binance", followers: "9.2M", likes: 1240, retweets: 327, replies: 89, mins: 18 },
+    { handle: "@runecrypto_", followers: "280K", likes: 412, retweets: 98, replies: 31, mins: 47 },
+    { handle: "@MarcellxMarcell", followers: "145K", likes: 287, retweets: 64, replies: 22, mins: 95 },
+    { handle: "@bnb_alpha", followers: "67K", likes: 156, retweets: 34, replies: 12, mins: 180 },
+    { handle: "@meme_chad_bsc", followers: "32K", likes: 78, retweets: 19, replies: 6, mins: 320 },
+  ];
+  const BLURRED_PLACEHOLDER_ACTIVITY = {
+    tweets24h: 248,
+    deltaPct: 340,
+    sentiment: "78% bullish",
+    coordShill: false,
+  };
+
   /* ── Cached tier (so we don't hit chrome.storage on every click) ── */
   let cachedTier = { tier: "free" };
   function refreshTier() {
@@ -177,16 +194,11 @@
       window.TrustyAPI.reportEvent("scan", ca, chain);
     }
 
-    // Paid users: open inline panel. Free: drive traffic to the website.
-    if (cachedTier && cachedTier.tier === "paid") {
-      openPaidPanel(result, ca, chain);
-      return;
-    }
-    const url =
-      "https://trustyai.tech/?ca=" + encodeURIComponent(ca) +
-      "&chain=" + encodeURIComponent(chain) +
-      "&utm_source=extension";
-    window.open(url, "_blank", "noopener,noreferrer");
+    // Paid users: full inline panel. Free users: same panel, but the
+    // KOL handles + activity numbers are blurred behind an upgrade
+    // overlay. They literally see the structure of what they're missing.
+    const isPaid = cachedTier && cachedTier.tier === "paid";
+    openPaidPanel(result, ca, chain, { blurred: !isPaid });
   }
 
   /* ── Paid panel — full breakdown + KOLs + X activity ───────── */
@@ -395,12 +407,14 @@
     '</div>';
   }
 
-  function openPaidPanel(result, ca, chain) {
+  function openPaidPanel(result, ca, chain, opts) {
     closePaidPanel();
+    opts = opts || {};
+    const blurred = !!opts.blurred;
     if (!result) {
       // Try fetching now if pill click happened before scan resolved
       if (window.TrustyAPI && window.TrustyAPI.scan) {
-        window.TrustyAPI.scan(ca, chain).then(function (r) { openPaidPanel(r, ca, chain); });
+        window.TrustyAPI.scan(ca, chain).then(function (r) { openPaidPanel(r, ca, chain, opts); });
       }
       return;
     }
@@ -413,7 +427,7 @@
 
     const panel = document.createElement("div");
     panel.id = PANEL_ID;
-    panel.className = "trusty-panel";
+    panel.className = "trusty-panel" + (blurred ? " trusty-panel-blurred" : "");
 
     const verdictClass = "trusty-tt-verdict-" + result.verdict.toLowerCase();
     const verdictEmoji =
@@ -451,12 +465,13 @@
 
       '<div class="trusty-pp-section" data-trusty-section="kols">' +
         '<div class="trusty-pp-section-title">🐦 Top KOL mentions</div>' +
-        renderKolsCta() +
+        (blurred ? renderKolsBody(BLURRED_PLACEHOLDER_KOLS) : renderKolsCta()) +
       '</div>' +
 
-      '<div class="trusty-pp-section" data-trusty-section="activity" style="display:none;">' +
+      '<div class="trusty-pp-section" data-trusty-section="activity"' +
+        (blurred ? '' : ' style="display:none;"') + '>' +
         '<div class="trusty-pp-section-title">📈 X activity</div>' +
-        renderActivityBody(null) +
+        (blurred ? renderActivityBody(BLURRED_PLACEHOLDER_ACTIVITY) : renderActivityBody(null)) +
       '</div>' +
 
       '<div class="trusty-pp-section">' +
@@ -478,6 +493,48 @@
     document.body.appendChild(panel);
     panel.querySelector(".trusty-pp-close").addEventListener("click", closePaidPanel);
     document.documentElement.style.overflow = "hidden";
+
+    // Free users: overlay an upgrade prompt on top of the blurred panel.
+    if (blurred) {
+      const overlay = document.createElement("div");
+      overlay.className = "trusty-pp-upgrade-overlay";
+      overlay.innerHTML =
+        '<div class="trusty-pp-upgrade-card">' +
+          '<div class="trusty-pp-upgrade-icon">✨</div>' +
+          '<div class="trusty-pp-upgrade-title">Free catches rugs.<br>Paid catches winners.</div>' +
+          '<div class="trusty-pp-upgrade-sub">' +
+            'KOL handles · X velocity · sentiment · coord-shill detection · unlimited watchlist' +
+          '</div>' +
+          '<button class="trusty-pp-upgrade-btn" type="button" data-action="open-popup">' +
+            '🛡️ Unlock — $5/mo or hold $TRUSTY' +
+          '</button>' +
+          '<a class="trusty-pp-upgrade-secondary" href="https://trustyai.tech/?ca=' +
+            encodeURIComponent(ca) + '&chain=' + encodeURIComponent(chain) +
+            '&utm_source=extension_blurred" target="_blank" rel="noopener">' +
+            'Or open the full free report on trustyai.tech →' +
+          '</a>' +
+        '</div>';
+      panel.appendChild(overlay);
+
+      // Open the extension popup so the user can subscribe / verify wallet
+      const upgradeBtn = overlay.querySelector('[data-action="open-popup"]');
+      if (upgradeBtn) {
+        upgradeBtn.addEventListener("click", function () {
+          // Best-effort: most modern Chrome supports openPopup() but only
+          // from a user gesture in the action context. Fall back to opening
+          // the trustyai.tech upgrade page if that doesn't work here.
+          try {
+            chrome.runtime.sendMessage({ action: "openSubscribe" });
+          } catch (_) {}
+          window.open("https://trustyai.tech/?upgrade=1&utm_source=extension_blurred", "_blank", "noopener,noreferrer");
+        });
+      }
+
+      // Disable the click-to-reveal Sorsa CTA inside the blurred panel —
+      // the blur is the visual gate; the reveal CTA would be confusing.
+      const revealCta = panel.querySelector(".trusty-pp-reveal-cta");
+      if (revealCta) revealCta.style.display = "none";
+    }
 
     // Wire the star button on the panel header — same flow as the
     // pill star, but on a token the user is actively examining.
