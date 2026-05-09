@@ -679,6 +679,13 @@
   transition: filter 0.15s ease;
 }
 .trusty-pp-upgrade-inline-btn:hover { filter: brightness(1.1); }
+.trusty-pp-upgrade-inline-arrow {
+  flex-shrink: 0;
+  font-size: 22px;
+  color: #F3BA2F !important;
+  font-weight: 700;
+  padding-left: 8px;
+}
 
 .trusty-pp-fourmeme {
   display: flex;

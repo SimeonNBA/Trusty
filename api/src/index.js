@@ -81,6 +81,14 @@ export default {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       return handleAdminStats(request, env);
     }
+    if (url.pathname === "/api/admin/codes") {
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      return handleAdminListCodes(request, env);
+    }
+    if (url.pathname === "/api/admin/revoke-code") {
+      if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
+      return handleAdminRevokeCode(request, env);
+    }
     if (url.pathname === "/api/watchlist") {
       if (request.method === "GET") return handleWatchlistGet(url, env);
       if (request.method === "POST") return handleWatchlistPost(request, url, env);
@@ -145,8 +153,11 @@ async function handleKols(ca, chain, env, symbol) {
   // Cache key includes symbol so two calls for the same CA with
   // different symbols (rare, but possible) don't conflict. In practice
   // CAs are 1:1 with symbols so this just adds harmless precision.
+  // The v2 suffix invalidates pre-2026-05-09 cache so the new
+  // "Neutral" sentiment fallback takes effect immediately. Bump
+  // again whenever sentiment / activity logic changes server-side.
   const sk = symbol ? "+" + symbol.toLowerCase() : "";
-  const cacheKey = `kols:${chain}:${ca}${sk}`;
+  const cacheKey = `kols:v2:${chain}:${ca}${sk}`;
   if (env.SCAN_KV) {
     const cached = await env.SCAN_KV.get(cacheKey, "json");
     if (cached) return json(cached);
@@ -1410,10 +1421,16 @@ async function handleRedeemCode(request, env) {
     codeType: rec.type,
   };
   try {
-    const ttlSeconds = Math.floor((expiresAt - now) / 1000) + 86400;
-    await env.SCAN_KV.put(`sub:${subId}`, JSON.stringify(subRecord), { expirationTtl: ttlSeconds });
-  } catch (_) {
-    return json({ error: "could not apply subscription" }, 503);
+    // Cloudflare KV caps expirationTtl around 1 year; for lifetime
+    // codes (100-year expiry) we just skip the TTL entirely so the
+    // record persists forever. Other types fit fine.
+    const durationDays = (expiresAt - now) / 86400000;
+    const putOpts = (rec.type === "lifetime" || durationDays > 360)
+      ? undefined
+      : { expirationTtl: Math.floor((expiresAt - now) / 1000) + 86400 };
+    await env.SCAN_KV.put(`sub:${subId}`, JSON.stringify(subRecord), putOpts);
+  } catch (e) {
+    return json({ error: "could not apply subscription: " + (e?.message || "kv error") }, 503);
   }
 
   // Mark code as used
@@ -1557,6 +1574,85 @@ async function handleAdminStats(request, env) {
       fullyUsed: codesFullyUsed,
     },
   });
+}
+
+async function handleAdminListCodes(request, env) {
+  const secret = request.headers.get("x-admin-secret") || "";
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  if (!env.SCAN_KV) return json({ error: "kv not configured" }, 503);
+
+  // List all code:* keys (paginated, capped at 5k)
+  const out = [];
+  let cursor;
+  for (let i = 0; i < 5; i++) {
+    const page = await env.SCAN_KV.list({ prefix: "code:", cursor, limit: 1000 });
+    for (const k of page.keys) {
+      try {
+        const rec = await env.SCAN_KV.get(k.name, "json");
+        if (!rec) continue;
+        out.push({
+          code: k.name.replace(/^code:/, ""),
+          type: rec.type,
+          maxUses: rec.maxUses || 1,
+          uses: rec.uses || 0,
+          redeemedBy: rec.redeemedBy || [],
+          notes: rec.notes || "",
+          createdAt: rec.createdAt || 0,
+          revoked: !!rec.revoked,
+          parentSubId: rec.parentSubId || null,
+        });
+      } catch (_) {}
+    }
+    if (page.list_complete || !page.cursor) break;
+    cursor = page.cursor;
+  }
+  // Sort newest first
+  out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return json({ codes: out });
+}
+
+async function handleAdminRevokeCode(request, env) {
+  const secret = request.headers.get("x-admin-secret") || "";
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  if (!env.SCAN_KV) return json({ error: "kv not configured" }, 503);
+
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "bad json" }, 400); }
+  const code = String(body?.code || "").trim().toUpperCase();
+  if (!isValidCodeShape(code)) return json({ error: "invalid code format" }, 400);
+
+  const rec = await env.SCAN_KV.get(`code:${code}`, "json");
+  if (!rec) return json({ error: "code not found" }, 404);
+
+  // Mark revoked so future redemptions fail
+  rec.revoked = true;
+  rec.revokedAt = Date.now();
+  try {
+    await env.SCAN_KV.put(`code:${code}`, JSON.stringify(rec));
+  } catch (_) {
+    return json({ error: "kv write failed" }, 503);
+  }
+
+  // Tear down access for everyone who already redeemed this code.
+  // Only deletes subs whose `via:"code"` came from this exact code
+  // type — so we don't accidentally nuke a paid user who later
+  // happened to reuse the same subId.
+  let revokedSubs = 0;
+  for (const subId of (rec.redeemedBy || [])) {
+    try {
+      const sub = await env.SCAN_KV.get(`sub:${subId}`, "json");
+      if (sub && sub.via === "code" && sub.codeType === rec.type) {
+        await env.SCAN_KV.delete(`sub:${subId}`);
+        revokedSubs++;
+      }
+    } catch (_) {}
+  }
+
+  return json({ ok: true, revokedSubs });
 }
 
 // Auto-issue a recovery code linked to a subscription. Called from the

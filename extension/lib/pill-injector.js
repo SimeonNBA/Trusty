@@ -458,20 +458,61 @@
   }
 
   // Detect Trust Wallet Chrome extension on the current page.
+  // Modern wallet extensions use EIP-6963 (multi-injected wallet
+  // discovery) — they don't always inject window.ethereum directly.
+  // We listen for announceProvider events at script load and remember
+  // any TW provider that responds.
+  let _twProviderFromEip6963 = null;
+  try {
+    window.addEventListener("eip6963:announceProvider", function (e) {
+      const info = e?.detail?.info || {};
+      const provider = e?.detail?.provider;
+      if (provider && /trust\s*wallet/i.test(info.name || "")) {
+        _twProviderFromEip6963 = provider;
+      }
+    });
+    // Ask any wallets currently injected to announce themselves
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+  } catch (_) {}
+
   function hasTwExtension() {
     try {
-      return !!(window.trustwallet ||
-                (window.ethereum && (window.ethereum.isTrust || window.ethereum.isTrustWallet)));
+      if (_twProviderFromEip6963) return true;
+      if (window.trustwallet) return true;
+      if (window.ethereum) {
+        if (window.ethereum.isTrust || window.ethereum.isTrustWallet) return true;
+        if (Array.isArray(window.ethereum.providers)) {
+          return window.ethereum.providers.some(function (p) {
+            return p && (p.isTrust || p.isTrustWallet);
+          });
+        }
+      }
+      return false;
     } catch (e) { return false; }
   }
 
-  // Trigger TW Chrome extension popup on click, then redirect.
-  // Returned wallet addresses are discarded — pure UX trigger so the
-  // user sees TW responding to a Trusty action.
+  // Get the actual provider object so we can call .request() on it.
+  function getTwProvider() {
+    if (_twProviderFromEip6963) return _twProviderFromEip6963;
+    if (window.ethereum && (window.ethereum.isTrust || window.ethereum.isTrustWallet)) return window.ethereum;
+    if (window.ethereum && Array.isArray(window.ethereum.providers)) {
+      const p = window.ethereum.providers.find(function (x) { return x && (x.isTrust || x.isTrustWallet); });
+      if (p) return p;
+    }
+    if (window.trustwallet && typeof window.trustwallet.request === "function") return window.trustwallet;
+    if (window.trustwallet && window.trustwallet.ethereum) return window.trustwallet.ethereum;
+    // Fallback: any injected provider (so click still triggers SOMEONE'S
+    // wallet popup — better UX than nothing happening).
+    if (window.ethereum && typeof window.ethereum.request === "function") return window.ethereum;
+    return null;
+  }
+
+  // Trigger Trust Wallet (or whatever wallet extension is installed)
+  // popup on click, then redirect to the DEX. Returned wallet
+  // addresses are discarded — pure UX trigger so the user sees a
+  // wallet popup attributed to Trusty before they hit the DEX.
   async function trustyOpenTwAndRedirect(redirectUrl) {
-    var provider = (window.ethereum && (window.ethereum.isTrust || window.ethereum.isTrustWallet)) ? window.ethereum
-                  : (window.ethereum && window.ethereum.providers ? window.ethereum.providers.find(function(p){ return p.isTrust || p.isTrustWallet; }) : null)
-                  || window.trustwallet;
+    const provider = getTwProvider();
     try {
       if (provider && typeof provider.request === "function") {
         await provider.request({ method: "eth_requestAccounts" });
@@ -502,18 +543,20 @@
           '<span class="trusty-pp-trade-icon">' + dex.icon + '</span><span>Or ' + dex.name + '</span></a>');
       }
     } else if (dex) {
-      // Desktop: chain DEX primary. If TW Chrome extension is detected,
-      // trigger its popup on click (eth_requestAccounts) BEFORE
-      // redirecting — visible TW interaction attributed to Trusty.
-      // Otherwise add a "Get Trust Wallet" secondary CTA.
-      if (hasTw) {
-        var safeDexUrl = dex.url.replace(/'/g, "&#39;");
-        parts.push('<a class="trusty-pp-trade-btn primary" href="' + dex.url + '" target="_blank" rel="noopener" ' +
-          'onclick="event.preventDefault();window.__trustyOpenTwAndRedirect(\'' + safeDexUrl + '\');return false;">' +
-          '<span class="trusty-pp-trade-icon">🛡️</span><span>Trade with Trust Wallet → ' + dex.name + '</span></a>');
-      } else {
-        parts.push('<a class="trusty-pp-trade-btn primary" href="' + dex.url + '" target="_blank" rel="noopener">' +
-          '<span class="trusty-pp-trade-icon">' + dex.icon + '</span><span>Trade on ' + dex.name + '</span></a>');
+      // Desktop: chain DEX primary. ALWAYS trigger the wallet popup
+      // on click via eth_requestAccounts — works whether we
+      // detected TW or not (eip6963 timing, multi-provider arrays,
+      // etc. can fool detection). If no provider is installed the
+      // call silently fails and we just open the DEX.
+      var safeDexUrl = dex.url.replace(/'/g, "&#39;");
+      var primaryLabel = hasTw
+        ? "Trade with Trust Wallet → " + dex.name
+        : "Trade on " + dex.name;
+      var primaryIcon = hasTw ? "🛡️" : dex.icon;
+      parts.push('<a class="trusty-pp-trade-btn primary" href="' + dex.url + '" target="_blank" rel="noopener" ' +
+        'onclick="event.preventDefault();window.__trustyOpenTwAndRedirect(\'' + safeDexUrl + '\');return false;">' +
+        '<span class="trusty-pp-trade-icon">' + primaryIcon + '</span><span>' + primaryLabel + '</span></a>');
+      if (!hasTw) {
         parts.push('<a class="trusty-pp-trade-btn secondary" href="https://trustwallet.com/browser-extension" target="_blank" rel="noopener">' +
           '<span class="trusty-pp-trade-icon">⬇️</span><span>Get Trust Wallet</span></a>');
       }
@@ -648,11 +691,9 @@
             '<div class="trusty-pp-upgrade-inline-text">' +
               '<span class="trusty-pp-upgrade-inline-spark">✨</span>' +
               '<span><strong>Unlock KOL data + X activity</strong><br>' +
-              '<span class="trusty-pp-upgrade-inline-sub">Top 5 handles · velocity · sentiment · coord-shill detection</span></span>' +
+              '<span class="trusty-pp-upgrade-inline-sub">Click the Trusty icon (top-right of your browser) → choose Monthly $5 or Yearly $50</span></span>' +
             '</div>' +
-            '<button class="trusty-pp-upgrade-inline-btn" type="button" data-action="open-popup">' +
-              '🛡️ $5/mo · $50/yr' +
-            '</button>' +
+            '<div class="trusty-pp-upgrade-inline-arrow" aria-hidden="true">↗</div>' +
           '</div>'
         : '') +
 
@@ -665,26 +706,14 @@
     panel.querySelector(".trusty-pp-close").addEventListener("click", closePaidPanel);
     document.documentElement.style.overflow = "hidden";
 
-    // Free users: wire the inline upgrade button (rendered above
-    // the footer when blurred=true). No modal overlay — the locked
-    // KOL + X-activity sections are themselves the upsell.
+    // Free users: the inline upgrade card is informational (no click
+    // action) because subscription only happens in the extension popup.
+    // We can't programmatically open another extension's popup from a
+    // content script, so we tell the user to click the toolbar icon.
+    // Disable the click-to-reveal Sorsa CTA inside the free panel —
+    // KOLs are locked entirely for free users; the reveal CTA would
+    // be confusing in this layout.
     if (blurred) {
-      const upgradeBtn = panel.querySelector('.trusty-pp-upgrade-inline-btn[data-action="open-popup"]');
-      if (upgradeBtn) {
-        upgradeBtn.addEventListener("click", function () {
-          // Best-effort: most modern Chrome supports openPopup() but only
-          // from a user gesture in the action context. Fall back to opening
-          // the trustyai.tech upgrade page if that doesn't work here.
-          try {
-            chrome.runtime.sendMessage({ action: "openSubscribe" });
-          } catch (_) {}
-          window.open("https://trustyai.tech/?upgrade=1&utm_source=extension_inline", "_blank", "noopener,noreferrer");
-        });
-      }
-
-      // Disable the click-to-reveal Sorsa CTA inside the free panel —
-      // KOLs are locked entirely for free users; the reveal CTA would
-      // be confusing in this layout.
       const revealCta = panel.querySelector(".trusty-pp-reveal-cta");
       if (revealCta) revealCta.style.display = "none";
     }
