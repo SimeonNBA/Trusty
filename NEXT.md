@@ -167,32 +167,44 @@ Load the unpacked extension in Chrome and click through:
 
 ---
 
-## 🪙 Minting redemption codes (admin)
+## 🛡️ Admin page — minting codes + viewing stats
 
-The `scripts/mint-code.mjs` CLI mints codes the user can redeem in
-the extension popup. Set `TRUSTY_ADMIN_SECRET` once in your shell
-profile, then:
+**Easiest path** — go to `https://trustyai.tech/admin/`, sign in
+with your `ADMIN_SECRET`, and you get:
+
+- **Snapshot stats**: paid users (active), installs, scans last 24h,
+  saves, distinct tokens scanned, pending payments
+- **Plan + via breakdown**: how many monthly / yearly / lifetime /
+  trial users, and how they got there (paid vs code-redeemed)
+- **Code inventory**: total minted, unused, partly used, fully
+  redeemed; counts per type (lifetime / yearly / monthly / trial-7d /
+  recovery)
+- **Mint form**: pick type → pick max uses → add notes → click "Mint
+  code" → copy the generated `TRUSTY-XXXX-XXXX` code → DM the user
+
+The admin page is `noindex,nofollow` — search engines ignore it.
+The URL itself isn't a secret; the password is. Keep `ADMIN_SECRET`
+private (don't commit, don't share screenshots).
+
+### CLI alternative — `scripts/mint-code.mjs`
+
+If you'd rather mint from a terminal (e.g. scripted bulk drops), the
+CLI is:
 
 ```bash
-# Lifetime code for a whale (one-use, never expires)
-node scripts/mint-code.mjs lifetime --notes "whale czoffshoot"
-
-# Monthly promo for a TG holder (one-use, gives 30 days when redeemed)
-node scripts/mint-code.mjs monthly --notes "TG-holder-anon"
-
-# Trial code with 50 uses (50 different installs each get 7 days)
-node scripts/mint-code.mjs trial-7d --max 50 --notes "BSC-degen-drop"
-
-# Yearly code (one-use, gives 365 days)
-node scripts/mint-code.mjs yearly --notes "partner-grant-grovex"
+TRUSTY_ADMIN_SECRET=xxx node scripts/mint-code.mjs lifetime --notes "whale czoffshoot"
+TRUSTY_ADMIN_SECRET=xxx node scripts/mint-code.mjs monthly --notes "TG-holder-anon"
+TRUSTY_ADMIN_SECRET=xxx node scripts/mint-code.mjs trial-7d --max 50 --notes "BSC-degen-drop"
+TRUSTY_ADMIN_SECRET=xxx node scripts/mint-code.mjs yearly --notes "partner-grant-grovex"
 ```
 
-Output is the code (format `TRUSTY-XXXX-XXXX`) — DM it to the user.
-They paste it under "Have a code? Redeem here" in the extension popup.
+Both the web page and CLI hit the same `/api/admin/mint-code`
+endpoint — use whichever is more convenient.
 
-Recovery codes for paying users auto-issue on payment — no action
-needed. They appear in the popup with a "Save this for your backup
-device" line.
+### Recovery codes for paying users
+
+Auto-issued on payment — no action needed on your side. Appear in
+the user's popup with a "save this for your backup device" line.
 
 ---
 

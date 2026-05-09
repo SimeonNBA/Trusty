@@ -77,6 +77,10 @@ export default {
       if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
       return handleAdminMintCode(request, env);
     }
+    if (url.pathname === "/api/admin/stats") {
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      return handleAdminStats(request, env);
+    }
     if (url.pathname === "/api/watchlist") {
       if (request.method === "GET") return handleWatchlistGet(url, env);
       if (request.method === "POST") return handleWatchlistPost(request, url, env);
@@ -1429,6 +1433,129 @@ async function handleRedeemCode(request, env) {
     plan: planId,
     expiresAt,
     durationDays: Math.round((expiresAt - now) / 86400000),
+  });
+}
+
+// Aggregate counts across the major KV prefixes. Used by the
+// /admin/ web page to surface "active subs / total installs /
+// scans last 24h" without exposing any per-user data. KV list is
+// paginated (1000 keys/page) and we cap at 5 pages each (5k items)
+// to keep latency bounded — at launch scale that's plenty.
+async function handleAdminStats(request, env) {
+  const secret = request.headers.get("x-admin-secret") || "";
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  if (!env.SCAN_KV) return json({ error: "kv not configured" }, 503);
+
+  const now = Date.now();
+
+  async function listAll(prefix, maxPages = 5) {
+    const out = [];
+    let cursor;
+    for (let i = 0; i < maxPages; i++) {
+      const page = await env.SCAN_KV.list({ prefix, cursor, limit: 1000 });
+      out.push(...page.keys);
+      if (page.list_complete || !page.cursor) break;
+      cursor = page.cursor;
+    }
+    return out;
+  }
+
+  // Subscriptions: count paid (active) vs expired vs pending
+  const subKeys = await listAll("sub:");
+  let paidActive = 0, paidExpired = 0, pending = 0;
+  let viaCode = 0, viaPayment = 0;
+  let monthly = 0, yearly = 0, lifetime = 0, trial = 0;
+  for (const k of subKeys) {
+    try {
+      const rec = await env.SCAN_KV.get(k.name, "json");
+      if (!rec) continue;
+      if (rec.status === "pending") { pending++; continue; }
+      if (rec.status === "paid") {
+        if (rec.expiresAt && rec.expiresAt > now) {
+          paidActive++;
+          if (rec.via === "code") viaCode++; else viaPayment++;
+          if (rec.plan === "monthly") monthly++;
+          else if (rec.plan === "yearly") yearly++;
+          else if (rec.plan === "lifetime") lifetime++;
+          else if (rec.plan === "trial-7d") trial++;
+        } else {
+          paidExpired++;
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Installs (proxy via watchlist keys — each install creates one)
+  const wlKeys = await listAll("wl:");
+
+  // Codes
+  const codeKeys = await listAll("code:");
+  let codesByType = { lifetime: 0, yearly: 0, monthly: 0, "trial-7d": 0, recovery: 0 };
+  let codesUnused = 0, codesPartial = 0, codesFullyUsed = 0;
+  for (const k of codeKeys) {
+    try {
+      const rec = await env.SCAN_KV.get(k.name, "json");
+      if (!rec) continue;
+      if (codesByType[rec.type] !== undefined) codesByType[rec.type]++;
+      const uses = rec.uses || 0;
+      const max = rec.maxUses || 1;
+      if (uses === 0) codesUnused++;
+      else if (uses < max) codesPartial++;
+      else codesFullyUsed++;
+    } catch (_) {}
+  }
+
+  // Last 24h activity — sum the hourly buckets in evt:*
+  // Bucket key: evt:<type>:<chain>:<ca>:<hour>
+  const cutoff = Math.floor(now / 3600000) - 24;
+  const evtKeys = await listAll("evt:");
+  let scans24h = 0, saves24h = 0;
+  for (const k of evtKeys) {
+    const parts = k.name.split(":");
+    if (parts.length < 5) continue;
+    const type = parts[1];
+    const hour = parseInt(parts[parts.length - 1], 10);
+    if (!Number.isFinite(hour) || hour < cutoff) continue;
+    try {
+      const v = await env.SCAN_KV.get(k.name);
+      const n = parseInt(v || "0", 10) || 0;
+      if (type === "scan") scans24h += n;
+      else if (type === "watchlist_add") saves24h += n;
+    } catch (_) {}
+  }
+
+  // Distinct CAs scanned in last 24h (proxy for breadth of activity)
+  const evtIdxKeys = await listAll("evtidx:");
+
+  return json({
+    generatedAt: now,
+    subscriptions: {
+      paidActive,
+      paidExpired,
+      pending,
+      byPlan: { monthly, yearly, lifetime, trial },
+      byVia: { payment: viaPayment, code: viaCode },
+    },
+    installs: {
+      // wlKeys.length is a lower bound — only counts installs that
+      // saved at least one token. Real installs include people who
+      // never used the watchlist.
+      withWatchlist: wlKeys.length,
+    },
+    activity24h: {
+      scans: scans24h,
+      saves: saves24h,
+      distinctTokens: evtIdxKeys.length,
+    },
+    codes: {
+      total: codeKeys.length,
+      byType: codesByType,
+      unused: codesUnused,
+      partiallyUsed: codesPartial,
+      fullyUsed: codesFullyUsed,
+    },
   });
 }
 

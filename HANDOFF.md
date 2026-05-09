@@ -29,10 +29,11 @@ re-suggesting completed work.
 
 | Surface | Status |
 |---|---|
-| `api.trustyai.tech` | All 8 endpoints live: scan, kols, subscribe, nowpayments-webhook, subscription, watchlist, event, trending |
+| `api.trustyai.tech` | 11 endpoints live: scan, kols, subscribe, nowpayments-webhook, subscription, watchlist, event, trending, redeem-code, admin/mint-code, admin/stats |
 | `trustyai.tech/` | Homepage with BNB-niche hero, Free/Paid value cards, auto-scan from `?ca=`, trending feed (auto-hides Featured at ≥3 items) |
 | `trustyai.tech/privacy/` | Live |
 | `trustyai.tech/watchlist/` | Live (reads subId from URL hash) |
+| `trustyai.tech/admin/` | Live (password-protected via `ADMIN_SECRET`) — stats + code minting |
 | Extension | **v0.3.0 in Web Store review** (Unlisted). Many changes since 0.3.0 — re-zip as 0.4.0 when 0.3.0 lands. X-only pill injection. |
 
 ## Backend data sources
