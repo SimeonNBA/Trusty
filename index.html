@@ -3545,11 +3545,16 @@ body::before {
 .trusty-link-card-title { font-weight:700; font-size:14px; color:var(--text); }
 .trusty-link-card-sub { font-size:11px; color:var(--muted); font-family:var(--mono); letter-spacing:0.3px; margin-top:2px; }
 .trusty-partner-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
-.trusty-partner-card { padding:18px 12px; background:var(--bg2); border:1px dashed var(--border); border-radius:12px; text-align:center; transition: border-color 0.15s ease, background 0.15s ease; }
+.trusty-partner-card { padding:18px 12px; background:var(--bg2); border:1px dashed var(--border); border-radius:12px; text-align:center; transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease; }
 .trusty-partner-card:hover { border-color:var(--border2); background:var(--card2); }
 .trusty-partner-soon { opacity:0.65; }
+.trusty-partner-card.real { border-style:solid; opacity:1; text-decoration:none; color:inherit; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.trusty-partner-card.real:hover { transform:translateY(-1px); border-color:rgba(59,130,246,0.4); }
+.trusty-partner-logo { width:44px; height:44px; object-fit:contain; border-radius:10px; flex-shrink:0; }
 .trusty-partner-name { font-weight:700; font-size:13px; color:var(--text); margin-bottom:6px; }
+.trusty-partner-card.real .trusty-partner-name { margin-bottom:0; }
 .trusty-partner-tag { font-size:9px; letter-spacing:1.4px; color:var(--yellow); font-family:var(--mono); font-weight:600; }
+.trusty-partner-card.real .trusty-partner-tag { color:var(--blue2); }
 .trusty-proof-grid { display:flex; flex-direction:column; gap:10px; }
 .trusty-proof-row { display:grid; grid-template-columns:auto 1fr auto; gap:14px; align-items:center; padding:12px 14px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; }
 .trusty-proof-icon { font-size:18px; line-height:1; }
@@ -5216,14 +5221,16 @@ body::before {
             <a href="https://x.com/Trusty_BSC" target="_blank" rel="noopener" style="color:var(--blue2);">@Trusty_BSC</a>.
           </div>
           <div class="trusty-partner-grid">
-            <div class="trusty-partner-card trusty-partner-soon">
-              <div class="trusty-partner-name">Your Project</div>
-              <div class="trusty-partner-tag">PARTNER SLOT OPEN</div>
-            </div>
-            <div class="trusty-partner-card trusty-partner-soon">
-              <div class="trusty-partner-name">Your Project</div>
-              <div class="trusty-partner-tag">PARTNER SLOT OPEN</div>
-            </div>
+            <a class="trusty-partner-card real" href="https://grovex.io/en_US/trade/TRUSTY_USDT" target="_blank" rel="noopener">
+              <img class="trusty-partner-logo" src="assets/partners/grovex.png" alt="Grovex logo" loading="lazy" />
+              <div class="trusty-partner-name">Grovex</div>
+              <div class="trusty-partner-tag">EXCHANGE · TRUSTY/USDT</div>
+            </a>
+            <a class="trusty-partner-card real" href="https://www.topazdex.com/" target="_blank" rel="noopener">
+              <img class="trusty-partner-logo" src="assets/partners/topazdex.png" alt="Topaz Dex logo" loading="lazy" />
+              <div class="trusty-partner-name">Topaz Dex</div>
+              <div class="trusty-partner-tag">DEX</div>
+            </a>
             <div class="trusty-partner-card trusty-partner-soon">
               <div class="trusty-partner-name">Your Project</div>
               <div class="trusty-partner-tag">PARTNER SLOT OPEN</div>
