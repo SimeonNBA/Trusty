@@ -584,6 +584,102 @@
   text-align: center;
 }
 
+/* ── Locked KOL rows / X activity (free-tier inline upsell) ── */
+.trusty-pp-kol-row.trusty-pp-kol-locked {
+  display: grid !important;
+  grid-template-columns: 18px 1fr auto auto !important;
+  gap: 8px !important;
+  align-items: center !important;
+  padding: 8px 10px !important;
+  background: rgba(255,255,255,0.02) !important;
+  border: 1px solid #233247 !important;
+  border-radius: 8px !important;
+  margin-bottom: 4px !important;
+  cursor: default !important;
+  pointer-events: none !important;
+}
+.trusty-pp-kol-lock {
+  font-size: 12px !important;
+  color: #8b95a8 !important;
+  opacity: 0.7;
+}
+.trusty-pp-locked-bar {
+  display: inline-block !important;
+  height: 10px !important;
+  background: linear-gradient(90deg, rgba(139,149,168,0.18), rgba(139,149,168,0.08)) !important;
+  border-radius: 4px !important;
+  background-size: 200% 100%;
+  animation: trustyLockedShimmer 2.4s infinite linear;
+}
+.trusty-pp-locked-bar-handle { width: 110px !important; }
+.trusty-pp-locked-bar-eng    { width: 64px !important; }
+.trusty-pp-locked-bar-time   { width: 38px !important; }
+@keyframes trustyLockedShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.trusty-pp-locked-hint {
+  margin-top: 8px;
+  font-size: 11px !important;
+  color: #8b95a8 !important;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace !important;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+.trusty-pp-stat.trusty-pp-stat-locked {
+  background: rgba(255,255,255,0.02) !important;
+  border-style: dashed !important;
+}
+.trusty-pp-stat-locked-num {
+  color: #8b95a8 !important;
+  opacity: 0.7;
+}
+
+/* ── Inline upgrade CTA (free-tier, replaces full-panel overlay) ── */
+.trusty-pp-section.trusty-pp-upgrade-inline {
+  background: linear-gradient(135deg, rgba(243,186,47,0.10), rgba(168,85,247,0.06));
+  border: 1px solid rgba(243,186,47,0.4) !important;
+  border-radius: 10px;
+  padding: 12px 14px !important;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px !important;
+  padding-top: 14px !important;
+}
+.trusty-pp-upgrade-inline-text {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px !important;
+  color: #f5f5f7 !important;
+  line-height: 1.4;
+}
+.trusty-pp-upgrade-inline-spark { font-size: 18px; flex-shrink: 0; }
+.trusty-pp-upgrade-inline-text strong { color: #F3BA2F !important; }
+.trusty-pp-upgrade-inline-sub {
+  font-size: 10px !important;
+  color: #8b95a8 !important;
+  font-family: ui-monospace, monospace !important;
+}
+.trusty-pp-upgrade-inline-btn {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #F3BA2F, #B8860B) !important;
+  color: #0a0a0a !important;
+  border: none !important;
+  border-radius: 8px;
+  padding: 9px 12px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.3px;
+  cursor: pointer !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  white-space: nowrap;
+  transition: filter 0.15s ease;
+}
+.trusty-pp-upgrade-inline-btn:hover { filter: brightness(1.1); }
+
 .trusty-pp-fourmeme {
   display: flex;
   align-items: center;

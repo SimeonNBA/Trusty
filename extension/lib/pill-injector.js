@@ -21,22 +21,9 @@
   const PANEL_BACKDROP_ID = "trusty-panel-backdrop";
   const PROCESSED_ATTR = "data-trusty-scanned";
 
-  // Decorative placeholders shown only in the BLURRED paid-panel for
-  // free users — gives the blur shape so the user sees the structure
-  // of what they'd unlock. Never shown un-blurred.
-  const BLURRED_PLACEHOLDER_KOLS = [
-    { handle: "@cz_binance", followers: "9.2M", likes: 1240, retweets: 327, replies: 89, mins: 18 },
-    { handle: "@runecrypto_", followers: "280K", likes: 412, retweets: 98, replies: 31, mins: 47 },
-    { handle: "@MarcellxMarcell", followers: "145K", likes: 287, retweets: 64, replies: 22, mins: 95 },
-    { handle: "@bnb_alpha", followers: "67K", likes: 156, retweets: 34, replies: 12, mins: 180 },
-    { handle: "@meme_chad_bsc", followers: "32K", likes: 78, retweets: 19, replies: 6, mins: 320 },
-  ];
-  const BLURRED_PLACEHOLDER_ACTIVITY = {
-    tweets24h: 248,
-    deltaPct: 340,
-    sentiment: "78% bullish",
-    coordShill: false,
-  };
+  // (Legacy fake-data placeholders removed. Free-tier view now uses
+  // explicitly-locked rows — see renderLockedKolsBody +
+  // renderLockedActivityBody below.)
 
   /* ── Cached tier (so we don't hit chrome.storage on every click) ── */
   let cachedTier = { tier: "free" };
@@ -326,6 +313,47 @@
     }
   }
 
+  // Locked KOL list shown to free users in the paid panel. No fake
+  // data, no clickable rows, no real API calls (saves Sorsa quota).
+  // Matches the structure of the unblurred KOL list so the user can
+  // see exactly what they'd unlock — but every row is explicitly
+  // locked with a 🔒 icon and obfuscated bars instead of made-up
+  // @handles. Cannot be clicked through.
+  function renderLockedKolsBody() {
+    const rows = [];
+    for (let i = 0; i < 5; i++) {
+      rows.push(
+        '<div class="trusty-pp-kol-row trusty-pp-kol-locked" aria-disabled="true">' +
+          '<span class="trusty-pp-kol-lock">🔒</span>' +
+          '<span class="trusty-pp-kol-handle trusty-pp-locked-bar trusty-pp-locked-bar-handle"></span>' +
+          '<span class="trusty-pp-kol-engagement trusty-pp-locked-bar trusty-pp-locked-bar-eng"></span>' +
+          '<span class="trusty-pp-kol-time trusty-pp-locked-bar trusty-pp-locked-bar-time"></span>' +
+        '</div>'
+      );
+    }
+    return rows.join("") +
+      '<div class="trusty-pp-locked-hint">🔒 Top 5 KOL handles · engagement · last-mention time — paid only</div>';
+  }
+
+  // Locked X-activity grid — same 4 stat cards as the unblurred view
+  // but each value replaced with a lock icon. Labels visible so the
+  // user knows what they'd unlock.
+  function renderLockedActivityBody() {
+    const cell = function (label) {
+      return '<div class="trusty-pp-stat trusty-pp-stat-locked">' +
+        '<div class="trusty-pp-stat-num trusty-pp-stat-locked-num">🔒</div>' +
+        '<div class="trusty-pp-stat-lbl">' + label + '</div>' +
+      '</div>';
+    };
+    return '<div class="trusty-pp-stat-grid">' +
+      cell("tweets / 24h") +
+      cell("vs yesterday") +
+      cell("sentiment") +
+      cell("coord. shill") +
+    '</div>' +
+    '<div class="trusty-pp-locked-hint">🔒 X velocity · sentiment · coord-shill detection — paid only</div>';
+  }
+
   function renderKolsBody(kols) {
     if (kols === null) {
       return '<div class="trusty-pp-empty trusty-pp-loading-line">Loading KOL mentions…</div>';
@@ -540,7 +568,11 @@
 
     const panel = document.createElement("div");
     panel.id = PANEL_ID;
-    panel.className = "trusty-panel" + (blurred ? " trusty-panel-blurred" : "");
+    // Free users see real safety + market data with locked KOL/X
+    // sections inline. Paid users see everything unlocked. The
+    // legacy panel-wide blur class is gone — replaced by per-section
+    // locked rows for cleaner UX.
+    panel.className = "trusty-panel" + (blurred ? " trusty-panel-free" : "");
 
     const verdictClass = "trusty-tt-verdict-" + result.verdict.toLowerCase();
     const verdictEmoji =
@@ -589,13 +621,13 @@
 
       '<div class="trusty-pp-section" data-trusty-section="kols">' +
         '<div class="trusty-pp-section-title">🐦 Top KOL mentions</div>' +
-        (blurred ? renderKolsBody(BLURRED_PLACEHOLDER_KOLS) : renderKolsCta()) +
+        (blurred ? renderLockedKolsBody() : renderKolsCta()) +
       '</div>' +
 
       '<div class="trusty-pp-section" data-trusty-section="activity"' +
         (blurred ? '' : ' style="display:none;"') + '>' +
         '<div class="trusty-pp-section-title">📈 X activity</div>' +
-        (blurred ? renderActivityBody(BLURRED_PLACEHOLDER_ACTIVITY) : renderActivityBody(null)) +
+        (blurred ? renderLockedActivityBody() : renderActivityBody(null)) +
       '</div>' +
 
       '<div class="trusty-pp-section">' +
@@ -611,6 +643,19 @@
 
       buildTradeRow(result.chain || chain, ca) +
 
+      (blurred
+        ? '<div class="trusty-pp-section trusty-pp-upgrade-inline">' +
+            '<div class="trusty-pp-upgrade-inline-text">' +
+              '<span class="trusty-pp-upgrade-inline-spark">✨</span>' +
+              '<span><strong>Unlock KOL data + X activity</strong><br>' +
+              '<span class="trusty-pp-upgrade-inline-sub">Top 5 handles · velocity · sentiment · coord-shill detection</span></span>' +
+            '</div>' +
+            '<button class="trusty-pp-upgrade-inline-btn" type="button" data-action="open-popup">' +
+              '🛡️ $5/mo · $50/yr' +
+            '</button>' +
+          '</div>'
+        : '') +
+
       '<div class="trusty-pp-footer">' +
         'Open the full report on ' +
         '<a href="https://trustyai.tech/?ca=' + encodeURIComponent(ca) + '&chain=' + encodeURIComponent(chain) + '&utm_source=extension_paid" target="_blank" rel="noopener">trustyai.tech →</a>' +
@@ -620,30 +665,11 @@
     panel.querySelector(".trusty-pp-close").addEventListener("click", closePaidPanel);
     document.documentElement.style.overflow = "hidden";
 
-    // Free users: overlay an upgrade prompt on top of the blurred panel.
+    // Free users: wire the inline upgrade button (rendered above
+    // the footer when blurred=true). No modal overlay — the locked
+    // KOL + X-activity sections are themselves the upsell.
     if (blurred) {
-      const overlay = document.createElement("div");
-      overlay.className = "trusty-pp-upgrade-overlay";
-      overlay.innerHTML =
-        '<div class="trusty-pp-upgrade-card">' +
-          '<div class="trusty-pp-upgrade-icon">✨</div>' +
-          '<div class="trusty-pp-upgrade-title">Free catches rugs.<br>Paid catches winners.</div>' +
-          '<div class="trusty-pp-upgrade-sub">' +
-            'KOL handles · X velocity · sentiment · coord-shill detection · unlimited watchlist' +
-          '</div>' +
-          '<button class="trusty-pp-upgrade-btn" type="button" data-action="open-popup">' +
-            '🛡️ Unlock — $5/mo or $50/yr' +
-          '</button>' +
-          '<a class="trusty-pp-upgrade-secondary" href="https://trustyai.tech/?ca=' +
-            encodeURIComponent(ca) + '&chain=' + encodeURIComponent(chain) +
-            '&utm_source=extension_blurred" target="_blank" rel="noopener">' +
-            'Or open the full free report on trustyai.tech →' +
-          '</a>' +
-        '</div>';
-      panel.appendChild(overlay);
-
-      // Open the extension popup so the user can subscribe / verify wallet
-      const upgradeBtn = overlay.querySelector('[data-action="open-popup"]');
+      const upgradeBtn = panel.querySelector('.trusty-pp-upgrade-inline-btn[data-action="open-popup"]');
       if (upgradeBtn) {
         upgradeBtn.addEventListener("click", function () {
           // Best-effort: most modern Chrome supports openPopup() but only
@@ -652,12 +678,13 @@
           try {
             chrome.runtime.sendMessage({ action: "openSubscribe" });
           } catch (_) {}
-          window.open("https://trustyai.tech/?upgrade=1&utm_source=extension_blurred", "_blank", "noopener,noreferrer");
+          window.open("https://trustyai.tech/?upgrade=1&utm_source=extension_inline", "_blank", "noopener,noreferrer");
         });
       }
 
-      // Disable the click-to-reveal Sorsa CTA inside the blurred panel —
-      // the blur is the visual gate; the reveal CTA would be confusing.
+      // Disable the click-to-reveal Sorsa CTA inside the free panel —
+      // KOLs are locked entirely for free users; the reveal CTA would
+      // be confusing in this layout.
       const revealCta = panel.querySelector(".trusty-pp-reveal-cta");
       if (revealCta) revealCta.style.display = "none";
     }
