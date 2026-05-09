@@ -2110,150 +2110,6 @@ body::before {
   font-weight: 600;
 }
 
-/* ── CONTRACT SAFETY PANEL (in results) ── */
-.contract-safety-panel {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px;
-  margin-bottom: 16px;
-}
-
-.contract-safety-panel.scanning {
-  border-color: rgba(168,85,247,0.3);
-}
-
-.contract-safety-panel.safe {
-  border-color: rgba(34,197,94,0.35);
-}
-
-.contract-safety-panel.danger {
-  border-color: rgba(239,68,68,0.35);
-}
-
-.contract-safety-panel.warning {
-  border-color: rgba(251,191,36,0.35);
-}
-
-.cs-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.cs-title {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--muted);
-  flex: 1;
-}
-
-.cs-source-badge {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 1px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  background: rgba(168,85,247,0.12);
-  color: #C084FC;
-  border: 1px solid rgba(168,85,247,0.25);
-}
-
-.cs-scanning {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: #C084FC;
-  padding: 6px 0;
-}
-
-.cs-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.cs-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: var(--bg3);
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  transition: all 0.2s;
-}
-
-.cs-item.good { border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.06); }
-.cs-item.bad { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.06); }
-.cs-item.warn { border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.06); }
-.cs-item.unknown { opacity: 0.5; }
-
-.cs-item-icon { font-size: 18px; flex-shrink: 0; }
-.cs-item-label { font-size: 12px; font-weight: 700; color: var(--text); }
-.cs-item-val {
-  font-family: var(--mono);
-  font-size: 10px;
-  margin-top: 2px;
-  color: var(--muted);
-}
-.cs-item.good .cs-item-val { color: var(--green); }
-.cs-item.bad .cs-item-val { color: var(--red); }
-.cs-item.warn .cs-item-val { color: var(--yellow); }
-
-.cs-rugcheck-score {
-  margin-top: 12px;
-  padding: 10px 14px;
-  background: var(--bg3);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-}
-
-.cs-score-label { color: var(--muted); font-size: 12px; }
-.cs-score-val {
-  font-family: var(--display);
-  font-size: 20px;
-  letter-spacing: 1px;
-}
-.cs-score-val.good { color: var(--green); }
-.cs-score-val.warn { color: var(--yellow); }
-.cs-score-val.bad { color: var(--red); }
-
-.cs-risks {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.cs-risk-tag {
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-family: var(--mono);
-}
-.cs-risk-tag.danger { background: rgba(239,68,68,0.15); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.3); }
-.cs-risk-tag.warn { background: rgba(251,191,36,0.15); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
-.cs-risk-tag.info { background: rgba(59,130,246,0.15); color: var(--blue2); border: 1px solid rgba(59,130,246,0.3); }
-
-.cs-na-notice {
-  font-size: 12px;
-  color: var(--muted);
-  padding: 8px 0 2px;
-  font-style: italic;
-}
-
-@media (max-width: 700px) {
-  .cs-grid { grid-template-columns: 1fr; }
-}
-
 /* ── CLICKABLE METRIC ROWS ── */
 .cat-row {
   cursor: pointer;
@@ -5709,19 +5565,6 @@ body::before {
         <div id="trusty-final" style="font-size:14px; line-height:1.7; color: var(--text);"></div>
       </div>
 
-      <!-- CONTRACT SAFETY PANEL (moved up — critical info) -->
-      <div class="contract-safety-panel" id="contractSafetyPanel" style="display:none">
-        <div class="cs-header">
-          <div class="cs-title">🔒 CONTRACT SAFETY</div>
-          <div class="cs-source-badge" id="csSourceBadge">RugCheck</div>
-        </div>
-        <div class="cs-scanning" id="csScanning" style="display:none">
-          <div class="ca-spinner" style="border-top-color:#A855F7"></div>
-          <span>Running contract safety checks...</span>
-        </div>
-        <div id="csContent"></div>
-      </div>
-
       <!-- GREENS / REDS -->
       <div class="result-grid">
         <div class="result-card">
@@ -5781,12 +5624,6 @@ body::before {
             <div class="cat-name">Supply Safety</div>
             <div class="cat-bar-wrap"><div class="cat-bar" id="bar-sup"></div></div>
             <div class="cat-score" id="score-sup">—</div>
-            <span class="tap-hint">tap to think</span>
-          </div>
-          <div class="cat-row" id="contract-safety-row" style="display:none" onclick="openMetricPopup('contract')">
-            <div class="cat-name">Contract Safety</div>
-            <div class="cat-bar-wrap"><div class="cat-bar" id="bar-contract"></div></div>
-            <div class="cat-score" id="score-contract">—</div>
             <span class="tap-hint">tap to think</span>
           </div>
         </div>
@@ -8232,12 +8069,10 @@ async function scanCA() {
         ]);
       } catch(e) { window._trustyApiScan = null; }
       evaluate();
-      // Contract Safety panel removed — its data (honeypot, renounced,
-      // mint, sell tax) is already returned by /api/scan and reflected
-      // in the headline score + verdict via window._trustyApiScan.
-      // runContractSafety() definition stays as orphan code; it just
-      // never fires. Will be fully cleaned up in a follow-up pass.
-      // Fallback: if API hadn't landed by evaluate time, sync once it does.
+      // Contract-safety data (honeypot, renounced, mint, sell tax) is
+      // returned by /api/scan and reflected in the headline score +
+      // verdict via window._trustyApiScan. Fallback: if the API hadn't
+      // landed by evaluate time, sync once it does.
       if (_evalCa && !window._trustyApiScan) {
         setTimeout(() => syncHeadlineScoreWithApi(_evalCa, _evalChain), 600);
       }
@@ -8978,14 +8813,9 @@ function resetAll() {
   document.getElementById('evalBtn').disabled = true;
   document.getElementById('results-section').style.display = 'none';
   document.getElementById('form-sections').style.display = 'block';
-  contractSafetyData = null;
   // Scroll back to top
   var scrollTarget = document.getElementById('ca-section') || document.body;
   if (scrollTarget && scrollTarget.scrollIntoView) scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  const csp = document.getElementById('contractSafetyPanel');
-  if (csp) csp.style.display = 'none';
-  const csr = document.getElementById('contract-safety-row');
-  if (csr) csr.style.display = 'none';
   Object.keys(currentScores).forEach(k => delete currentScores[k]);
   closeMetricPopup();
   closeGutCheck();
@@ -9333,11 +9163,6 @@ function handleCaHelpClick(e) {
   if (e.target === document.getElementById('caHelpOverlay')) closeCaHelp();
 }
 
-// ── CONTRACT SAFETY SCANNING ──
-// Called after evaluate() finishes — runs in parallel with results display
-// State stored here so scoring can use it
-let contractSafetyData = null;
-
 // ── Sync the website's headline score with the extension's /api/scan ──
 // The website's evaluate() computes a market-quality score (liquidity
 // ratio, age, holders, etc.). The extension uses the GoPlus safety
@@ -9386,306 +9211,6 @@ async function syncHeadlineScoreWithApi(ca, chainId) {
     badge.className = 'tier-badge ' + tierClass;
   } catch (e) { /* silent — leave the homegrown score in place */ }
 }
-
-async function runContractSafety(ca, chainId) {
-  const panel = document.getElementById('contractSafetyPanel');
-  const scanning = document.getElementById('csScanning');
-  const content = document.getElementById('csContent');
-  const badge = document.getElementById('csSourceBadge');
-  const safetyRow = document.getElementById('contract-safety-row');
-
-  if (!ca || ca.length < 32) return;
-
-  panel.style.display = 'block';
-  panel.className = 'contract-safety-panel scanning';
-  scanning.style.display = 'flex';
-  content.innerHTML = '';
-  safetyRow.style.display = 'flex';
-
-  try {
-    let safetyResult = null;
-    const isSolana = chainId === 'solana' || (!ca.startsWith('0x') && ca.length >= 32 && ca.length <= 44);
-
-    if (isSolana) {
-      badge.textContent = 'RugCheck.xyz';
-      safetyResult = await fetchRugCheck(ca);
-    } else {
-      badge.textContent = 'GoPlus + Honeypot.is';
-      safetyResult = await fetchEvmSafety(ca, chainId);
-    }
-
-    contractSafetyData = safetyResult;
-    scanning.style.display = 'none';
-    renderContractSafety(safetyResult, panel, content);
-    updateContractSafetyScore(safetyResult);
-
-  } catch (err) {
-    scanning.style.display = 'none';
-    panel.className = 'contract-safety-panel warning';
-    content.innerHTML = '<div class="cs-na-notice">Could not fetch contract safety data. Manual check recommended — try RugCheck.xyz or GoPlus.</div>';
-  }
-}
-
-// ── RUGCHECK API (Solana) ──
-async function fetchRugCheck(mintAddress) {
-  const url = `https://api.rugcheck.xyz/v1/tokens/${mintAddress}/report/summary`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('RugCheck API error');
-  const data = await res.json();
-  // data = { score, score_normalised, lpLockedPct, risks: [{name, description, level, score, value}] }
-
-  const risks = data.risks || [];
-  const mintRisk = risks.find(r => r.name && r.name.toLowerCase().includes('mint'));
-  const freezeRisk = risks.find(r => r.name && r.name.toLowerCase().includes('freeze'));
-  const lpRisk = risks.find(r => r.name && r.name.toLowerCase().includes('liquidity') || r.name && r.name.toLowerCase().includes('lp'));
-
-  return {
-    source: 'rugcheck',
-    score: data.score_normalised || data.score || 0,
-    lpLockedPct: data.lpLockedPct || 0,
-    mintAuthorityRevoked: !mintRisk || mintRisk.level === 'info',
-    mintAuthorityDanger: mintRisk && (mintRisk.level === 'danger' || mintRisk.level === 'warn'),
-    freezeAuthorityRevoked: !freezeRisk || freezeRisk.level === 'info',
-    freezeAuthorityDanger: freezeRisk && (freezeRisk.level === 'danger' || freezeRisk.level === 'warn'),
-    risks: risks,
-    rawData: data
-  };
-}
-
-// ── GOPLUS + HONEYPOT.IS (EVM) ──
-async function fetchEvmSafety(address, chainId) {
-  const chainMap = { ethereum: '1', bnb: '56', base: '8453', tron: '728126428', polygon: '137', other: '1' };
-  const goplusChain = chainMap[chainId] || '1';
-
-  // Run both in parallel
-  const [goplusResult, honeypotResult] = await Promise.allSettled([
-    fetchGoPlus(address, goplusChain),
-    fetchHoneypot(address, goplusChain)
-  ]);
-
-  const gp = goplusResult.status === 'fulfilled' ? goplusResult.value : null;
-  const hp = honeypotResult.status === 'fulfilled' ? honeypotResult.value : null;
-
-  return {
-    source: 'evm',
-    chainId: goplusChain,
-    // Mint = owner can create more tokens
-    mintAuthorityRevoked: gp ? gp.is_mintable === '0' || gp.is_mintable === false : null,
-    mintAuthorityDanger: gp ? gp.is_mintable === '1' || gp.is_mintable === true : false,
-    // Freeze = blacklist function (EVM equivalent)
-    freezeAuthorityRevoked: gp ? gp.is_blacklisted === '0' || gp.is_blacklisted === false : null,
-    freezeAuthorityDanger: gp ? gp.is_blacklisted === '1' || gp.is_blacklisted === true : false,
-    // Contract renounced
-    contractRenounced: gp ? (gp.owner_address === '' || gp.owner_address === null || gp.renounce_ownership === '1') : null,
-    // Honeypot check
-    isHoneypot: hp ? hp.isHoneypot : (gp ? gp.is_honeypot === '1' : null),
-    canSell: hp ? !hp.isHoneypot : (gp ? gp.is_honeypot !== '1' : null),
-    buyTax: hp ? hp.simulationResult?.buyTax : null,
-    sellTax: hp ? hp.simulationResult?.sellTax : null,
-    openSource: gp ? gp.is_open_source === '1' : null,
-    holderCount: gp ? parseInt(gp.holder_count || 0) : 0,
-    gp: gp,
-    hp: hp
-  };
-}
-
-async function fetchGoPlus(address, chainId) {
-  const url = `https://api.gopluslabs.io/api/v1/token_security/${chainId}?contract_addresses=${address}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('GoPlus error');
-  const data = await res.json();
-  if (data.code !== 1) throw new Error('GoPlus bad response');
-  const tokenData = data.result[address.toLowerCase()] || data.result[address];
-  if (!tokenData) throw new Error('GoPlus no data');
-  return tokenData;
-}
-
-async function fetchHoneypot(address, chainId) {
-  const url = `https://api.honeypot.is/v2/IsHoneypot?address=${address}&chainID=${chainId}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Honeypot.is error');
-  return await res.json();
-}
-
-// ── RENDER CONTRACT SAFETY PANEL ──
-function renderContractSafety(data, panel, content) {
-  if (!data) return;
-
-  if (data.source === 'rugcheck') {
-    renderRugCheck(data, panel, content);
-  } else {
-    renderEvm(data, panel, content);
-  }
-
-  // Add education cards for any red flags found
-  addEducationCards(data);
-}
-
-function getStatusClass(revoked, danger) {
-  if (danger) return 'bad';
-  if (revoked === true) return 'good';
-  if (revoked === null) return 'unknown';
-  return revoked ? 'good' : 'bad';
-}
-
-function renderRugCheck(data, panel, content) {
-  const score = data.score || 0;
-  // RugCheck score: lower = safer (it's a risk score)
-  // Normalise: 0 risk = 100 safety, high risk = low safety
-  const safetyScore = Math.max(0, 100 - Math.min(score, 100));
-  const overallClass = safetyScore >= 70 ? 'safe' : safetyScore >= 40 ? 'warning' : 'danger';
-  panel.className = 'contract-safety-panel ' + overallClass;
-
-  const mintClass = getStatusClass(data.mintAuthorityRevoked, data.mintAuthorityDanger);
-  const freezeClass = getStatusClass(data.freezeAuthorityRevoked, data.freezeAuthorityDanger);
-  const lpPct = data.lpLockedPct ? (data.lpLockedPct * 100).toFixed(1) : '0';
-
-  const dangerRisks = (data.risks || []).filter(r => r.level === 'danger');
-  const warnRisks = (data.risks || []).filter(r => r.level === 'warn');
-
-  let scoreClass = safetyScore >= 70 ? 'good' : safetyScore >= 40 ? 'warn' : 'bad';
-  let scoreLabel = safetyScore >= 70 ? 'GOOD' : safetyScore >= 40 ? 'CAUTION' : 'DANGER';
-
-  let html = `<div class="cs-grid">
-    <div class="cs-item ${mintClass}">
-      <div class="cs-item-icon">${mintClass === 'good' ? '✅' : mintClass === 'bad' ? '🚫' : '❓'}</div>
-      <div>
-        <div class="cs-item-label">Mint Authority</div>
-        <div class="cs-item-val">${mintClass === 'good' ? 'Revoked — supply fixed' : mintClass === 'bad' ? 'ACTIVE — dev can print' : 'Unknown'}</div>
-      </div>
-    </div>
-    <div class="cs-item ${freezeClass}">
-      <div class="cs-item-icon">${freezeClass === 'good' ? '✅' : freezeClass === 'bad' ? '🚫' : '❓'}</div>
-      <div>
-        <div class="cs-item-label">Freeze Authority</div>
-        <div class="cs-item-val">${freezeClass === 'good' ? 'Revoked — can always sell' : freezeClass === 'bad' ? 'ACTIVE — can freeze wallets' : 'Unknown'}</div>
-      </div>
-    </div>
-    <div class="cs-item ${parseFloat(lpPct) > 50 ? 'good' : parseFloat(lpPct) > 0 ? 'warn' : 'bad'}">
-      <div class="cs-item-icon">${parseFloat(lpPct) > 50 ? '🔒' : parseFloat(lpPct) > 0 ? '⚠️' : '🚨'}</div>
-      <div>
-        <div class="cs-item-label">LP Locked</div>
-        <div class="cs-item-val">${lpPct}% of liquidity locked</div>
-      </div>
-    </div>
-    <div class="cs-item ${dangerRisks.length === 0 ? 'good' : 'bad'}">
-      <div class="cs-item-icon">${dangerRisks.length === 0 ? '✅' : '🚨'}</div>
-      <div>
-        <div class="cs-item-label">Risk Flags</div>
-        <div class="cs-item-val">${dangerRisks.length} danger, ${warnRisks.length} warnings</div>
-      </div>
-    </div>
-  </div>
-  <div class="cs-rugcheck-score">
-    <span class="cs-score-label">RugCheck Safety Score</span>
-    <span class="cs-score-val ${scoreClass}">${safetyScore}/100 — ${scoreLabel}</span>
-  </div>`;
-
-  if (dangerRisks.length > 0 || warnRisks.length > 0) {
-    html += '<div class="cs-risks">';
-    dangerRisks.forEach(r => {
-      html += `<span class="cs-risk-tag danger">🚨 ${r.name || r.description}</span>`;
-    });
-    warnRisks.slice(0, 3).forEach(r => {
-      html += `<span class="cs-risk-tag warn">⚠️ ${r.name || r.description}</span>`;
-    });
-    html += '</div>';
-  }
-
-  content.innerHTML = html;
-}
-
-function renderEvm(data, panel, content) {
-  const mintClass = data.mintAuthorityRevoked === true ? 'good' : data.mintAuthorityRevoked === false ? 'bad' : 'unknown';
-  const freezeClass = data.freezeAuthorityRevoked === true ? 'good' : data.freezeAuthorityRevoked === false ? 'bad' : 'unknown';
-  const honeypotClass = data.isHoneypot === false ? 'good' : data.isHoneypot === true ? 'bad' : 'unknown';
-  const renounceClass = data.contractRenounced === true ? 'good' : data.contractRenounced === false ? 'bad' : 'unknown';
-
-  const badCount = [mintClass, freezeClass, honeypotClass, renounceClass].filter(c => c === 'bad').length;
-  panel.className = 'contract-safety-panel ' + (badCount === 0 ? 'safe' : badCount <= 1 ? 'warning' : 'danger');
-
-  const buyTaxStr = data.buyTax !== null && data.buyTax !== undefined ? data.buyTax.toFixed(1) + '%' : 'Unknown';
-  const sellTaxStr = data.sellTax !== null && data.sellTax !== undefined ? data.sellTax.toFixed(1) + '%' : 'Unknown';
-  const taxClass = (data.sellTax >= 5) ? 'bad' : (data.sellTax > 0) ? 'warn' : 'good';
-
-  let html = `<div class="cs-grid">
-    <div class="cs-item ${honeypotClass}">
-      <div class="cs-item-icon">${honeypotClass === 'good' ? '✅' : honeypotClass === 'bad' ? '🍯' : '❓'}</div>
-      <div>
-        <div class="cs-item-label">Honeypot Check</div>
-        <div class="cs-item-val">${honeypotClass === 'good' ? 'Can sell — not a honeypot' : honeypotClass === 'bad' ? 'HONEYPOT — cannot sell!' : 'Could not verify'}</div>
-      </div>
-    </div>
-    <div class="cs-item ${renounceClass}">
-      <div class="cs-item-icon">${renounceClass === 'good' ? '✅' : renounceClass === 'bad' ? '🚫' : '❓'}</div>
-      <div>
-        <div class="cs-item-label">Contract Renounced</div>
-        <div class="cs-item-val">${renounceClass === 'good' ? 'Owner renounced' : renounceClass === 'bad' ? 'Owner still in control' : 'Unknown'}</div>
-      </div>
-    </div>
-    <div class="cs-item ${mintClass}">
-      <div class="cs-item-icon">${mintClass === 'good' ? '✅' : mintClass === 'bad' ? '🚫' : '❓'}</div>
-      <div>
-        <div class="cs-item-label">Mint Function</div>
-        <div class="cs-item-val">${mintClass === 'good' ? 'Disabled — supply fixed' : mintClass === 'bad' ? 'ACTIVE — can inflate supply' : 'Unknown'}</div>
-      </div>
-    </div>
-    <div class="cs-item ${taxClass}">
-      <div class="cs-item-icon">${taxClass === 'good' ? '✅' : taxClass === 'bad' ? '💸' : '⚠️'}</div>
-      <div>
-        <div class="cs-item-label">Sell Tax</div>
-        <div class="cs-item-val">Buy: ${buyTaxStr} / Sell: ${sellTaxStr}</div>
-      </div>
-    </div>
-  </div>`;
-
-  if (data.openSource === false) {
-    html += '<div class="cs-risks"><span class="cs-risk-tag danger">🚨 Contract not open source</span></div>';
-  }
-
-  content.innerHTML = html;
-
-  // Also update the token data card tax fields
-  updateTokenCardTax(data.buyTax, data.sellTax);
-}
-
-// ── UPDATE SCORE WITH CONTRACT SAFETY ──
-function updateContractSafetyScore(data) {
-  if (!data) return;
-  let contractScore = 50; // default unknown
-
-  if (data.source === 'rugcheck') {
-    const rugScore = data.score || 0;
-    contractScore = Math.max(0, 100 - Math.min(rugScore, 100));
-    // Bonus: both authorities revoked
-    if (data.mintAuthorityRevoked && data.freezeAuthorityRevoked) contractScore = Math.min(contractScore + 10, 100);
-  } else {
-    // EVM scoring
-    contractScore = 50;
-    if (data.isHoneypot === false) contractScore += 25;
-    if (data.isHoneypot === true) contractScore = 0; // instant fail
-    if (data.contractRenounced === true) contractScore += 15;
-    if (data.mintAuthorityRevoked === true) contractScore += 10;
-    if (data.mintAuthorityRevoked === false) contractScore -= 20;
-    if (data.sellTax >= 5) contractScore -= 10;
-  if (data.sellTax > 10) contractScore -= 15; // stacks with above
-    contractScore = Math.max(0, Math.min(100, contractScore));
-  }
-
-  // Show the bar
-  const row = document.getElementById('contract-safety-row');
-  row.style.display = 'flex';
-  setTimeout(() => {
-    setBar('contract', Math.round(contractScore), contractScore >= 65 ? '#22C55E' : contractScore >= 40 ? '#FBBF24' : '#EF4444');
-  }, 600);
-}
-
-// ── HOOK INTO evaluate() TO TRIGGER CONTRACT SCAN ──
-// Wrap the original evaluate to also fire contract scan after results show
-const _originalEvaluate = evaluate;
-// Override will be done by modifying the auto-evaluate call in scanCA
-
-
 
 // ════════════════════════════════════════════
 //  METRIC POPUP SYSTEM
@@ -9753,16 +9278,6 @@ const metricData = {
       `Have you VERIFIED the LP status on-chain — not just taken the project's word for it? RugCheck or BubbleMaps, not Telegram.`,
       'Do you know who the top 10 wallet holders are? Have they been accumulating or slowly distributing?',
       'If the biggest wallet decided to sell 20% of their position tomorrow, what would that do to the price and your position?'
-    ]
-  },
-  contract: {
-    title: 'Contract Safety',
-    eyebrow: 'METRIC — CONTRACT',
-    what: 'Contract safety is the technical layer under everything. Mint authority active means infinite supply risk. Freeze authority means your wallet can be frozen. A honeypot means you literally cannot sell. These are non-negotiable checkboxes.',
-    questions: [
-      'Is the mint authority actually revoked on-chain, or did you just see "renounced" in a Telegram message? Always verify independently.',
-      `Have you tried a small test buy and sell to confirm it's actually tradeable — especially on a new coin?`,
-      `Are there any hidden functions in the contract that aren't obvious? Even if everything looks clean, have you cross-checked on at least 2 tools?`
     ]
   }
 };
@@ -10497,74 +10012,6 @@ const redFlagEducation = {
   }
 };
 
-function showRedFlagCard(flagKey, containerId) {
-  const flag = redFlagEducation[flagKey];
-  if (!flag) return;
-
-  const container = document.getElementById(containerId);
-  if (!container) return;
-
-  // Don't add twice
-  if (container.querySelector('.edu-card')) return;
-
-  const isWarn = flagKey === 'highTax' || flagKey === 'whaleDanger' || flagKey === 'noLiquidity';
-  const cardClass = isWarn ? 'edu-card warn-card' : 'edu-card';
-
-  const card = document.createElement('div');
-  card.className = cardClass;
-  card.innerHTML = `
-    <div class="edu-card-header">
-      <div class="edu-card-icon">${flag.icon}</div>
-      <div>
-        <div class="edu-card-title">${flag.title}</div>
-        <div class="edu-card-subtitle">${flag.subtitle}</div>
-      </div>
-    </div>
-    <div class="edu-section">
-      <div class="edu-section-label">In plain English</div>
-      <div class="edu-section-text">${flag.plain}</div>
-    </div>
-    <div class="edu-example">${flag.example}</div>
-    <div class="edu-action">💡 ${flag.action}</div>
-  `;
-
-  container.appendChild(card);
-}
-
-// Hook education cards into contract safety rendering
-function addEducationCards(data) {
-  if (!data) return;
-
-  // Wait for DOM to render — use longer delay and retry
-  function tryAddCards(attempts) {
-    const csContent = document.getElementById('csContent');
-    if (!csContent && attempts > 0) {
-      setTimeout(() => tryAddCards(attempts - 1), 300);
-      return;
-    }
-    if (!csContent) return;
-
-    // Always show panel
-    const panel = document.getElementById('contractSafetyPanel');
-    if (panel) panel.style.display = 'block';
-
-    if (data.isHoneypot === true) {
-      showRedFlagCard('honeypot', 'csContent');
-    }
-    if (data.mintAuthorityRevoked === false || data.mintAuthorityDanger === true) {
-      showRedFlagCard('mintAuthority', 'csContent');
-    }
-    if (data.freezeAuthorityRevoked === false || data.freezeAuthorityDanger === true) {
-      showRedFlagCard('freezeAuthority', 'csContent');
-    }
-    if (data.sellTax !== null && data.sellTax !== undefined && data.sellTax >= 5) {
-      showRedFlagCard('highTax', 'csContent');
-    }
-  }
-
-  setTimeout(() => tryAddCards(5), 500);
-}
-
 // Hook education cards for red flags in the pros/cons section too
 function addSupplyEducation(supplyType) {
   // Retry until apeSection exists in DOM
@@ -10600,33 +10047,6 @@ function addSupplyEducation(supplyType) {
       div.appendChild(card);
       apeSection.insertAdjacentElement('afterend', div);
     }
-  }
-}
-
-// ── UPDATE TOKEN CARD TAX (called after contract safety scan) ──
-function updateTokenCardTax(buyTax, sellTax) {
-  if (buyTax === null && sellTax === null) return;
-  const wrap = document.getElementById('td-tax-wrap');
-  const taxEl = document.getElementById('td-tax');
-  const taxWarn = document.getElementById('td-tax-warn');
-  const taxWarnPct = document.getElementById('td-tax-warn-pct');
-  if (!wrap || !taxEl) return;
-
-  const buyStr = buyTax !== null && buyTax !== undefined ? buyTax.toFixed(1) + '%' : '?';
-  const sellStr = sellTax !== null && sellTax !== undefined ? sellTax.toFixed(1) + '%' : '?';
-
-  wrap.style.display = 'block';
-  taxEl.textContent = buyStr + ' / ' + sellStr;
-
-  // Flag if sell tax >= 5%
-  if (sellTax >= 5) {
-    taxEl.className = 'token-stat-val red';
-    taxWarn.style.display = 'block';
-    taxWarnPct.textContent = sellStr;
-  } else if (sellTax > 0) {
-    taxEl.className = 'token-stat-val yellow';
-  } else {
-    taxEl.className = 'token-stat-val green';
   }
 }
 
