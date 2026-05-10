@@ -166,9 +166,78 @@ helping users avoid risky tokens before transacting.
 
 ---
 
+## What's new — v0.4.0
+
+(Paste into the "What's new in this version?" field on the v0.4.0
+submission. Update the version string in `manifest.json` to match.)
+
+```
+v0.4.0 — Subscription tier, multi-chain trade button, four.meme aware.
+
+• Subscribe with crypto: $5/month or $50/year via NOWPayments. Pay
+  with BTC, ETH, USDT, BNB, SOL or 200+ other coins. No account
+  needed. Inline redemption code system — one click to activate
+  paid on a backup device.
+• Wallet-paste tier removed. Cleaner privacy story: we no longer
+  read your $TRUSTY balance from BSC RPC, no wallet-address
+  collection at all.
+• Multi-chain Trade button: every paid panel now has a one-click
+  "Trade with Trust Wallet → DEX" button. Mobile opens the Trust
+  Wallet app via universal link; desktop auto-connects to the Trust
+  Wallet Chrome extension and routes to PancakeSwap (BSC), Uniswap
+  (ETH/Polygon/Base), or Jupiter (Solana).
+• Four.meme launchpad badge: when you scan a token deployed via
+  four.meme's bonding curve, the panel surfaces a "🚀 Launched on
+  four.meme" link to the token's native page.
+• Better Ethereum / Base / Polygon support: chain auto-detection
+  fixed — ETH-native tokens used to score 0/100 RUN incorrectly
+  because the worker assumed BSC.
+• Dead-token-aware scoring: a token with $2 of 24h volume no longer
+  scores APE just because its safety checks pass. Volume,
+  liquidity, holder count, and pair age all factor into the verdict.
+• Free-tier paid panel cleaned up: real safety + market data shown,
+  KOL handles + X activity rendered as locked rows (no fake
+  placeholder data, no clickable links to dead URLs). Single inline
+  upsell card directs users to the toolbar to subscribe.
+• Token logos loaded from trustwallet/assets CDN.
+• Watchlist sync between extension and trustyai.tech improved.
+• Reddit + Dexscreener pill injection removed — extension is X-only
+  for v1 launch.
+```
+
+---
+
+## Paid declaration (for Chrome Web Store dashboard)
+
+When submitting v0.4.0, the dashboard will ask whether the extension
+includes paid features. Toggle that **on** and paste this into the
+description field:
+
+```
+Trusty AI offers an optional paid subscription that unlocks
+additional features (KOL mentions, X activity, sentiment analysis,
+unlimited watchlist). Pricing: $5/month or $50/year. Payment is
+processed by NOWPayments — a third-party crypto payment processor.
+The user pays with cryptocurrency of their choice (BTC, ETH, USDT,
+BNB, SOL, or 200+ others). Payments are voluntary; the extension is
+fully usable without subscribing.
+
+We never collect or store credit card numbers, bank details, or
+similar payment instruments. The extension generates a NOWPayments
+invoice URL and opens it in the user's browser for them to complete
+the transaction on NOWPayments' hosted checkout. We only learn
+whether the payment succeeded (via NOWPayments IPN webhook), not how
+the user paid.
+
+Privacy policy: https://trustyai.tech/privacy/
+Support: https://x.com/Trusty_BSC
+```
+
+---
+
 ## What's new — v0.3.0
 
-(Paste into the "What's new in this version?" field on update submission.)
+(Previous release notes — kept for archive.)
 
 ```
 v0.3.0 — Bigger, faster, and now on Solana.
