@@ -47,10 +47,6 @@ No more tab-hopping between DexScreener, GoPlus, and Honeypot.is. No more aping 
 
 More platforms coming: Reddit, Telegram Web, Discord, Farcaster.
 
-✦ SUPPORTED CHAINS
-
-BNB Smart Chain · Ethereum · Base · Solana · Polygon · Arbitrum · Avalanche · and more.
-
 ✦ FREE TIER (NO ACCOUNT, NO LIMITS BEYOND DAILY)
 
 • Trusty pill on every detected contract address across supported sites
