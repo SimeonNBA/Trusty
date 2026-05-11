@@ -73,12 +73,6 @@ We do not read your tweets, your DMs, or any text on a page other than the contr
 
 Full privacy policy: trustyai.tech/privacy
 
-✦ ABOUT $TRUSTY
-
-$TRUSTY is a community-takeover project around the blue shield mascot that appeared in Trust Wallet's 2019 marketing — Telegram stickers, blog posts, product announcements. In 2025 the community relaunched it on BNB Smart Chain as a fair launch (no team allocation, no VCs, no presale, 100% LP burned). The community then built trustyai.tech and this extension as the safety layer the chain actually needs.
-
-$TRUSTY is a community project. Not affiliated with or endorsed by Trust Wallet.
-
 ✦ LINKS
 
 • Web app: trustyai.tech
