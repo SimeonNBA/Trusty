@@ -65,7 +65,7 @@ Subscribe with crypto in the extension popup to unlock:
 • Market data inline — market cap, liquidity, age, holders
 • Save tokens to a personal Watchlist
 
-To unlock: open the extension popup → choose Monthly ($5) or Yearly ($50) → pay with BTC, ETH, USDT, BNB, SOL or 200+ other coins via NOWPayments hosted checkout. No account, no signup. The paid tier activates as soon as the payment confirms on-chain.
+To unlock: open the extension popup → choose Monthly ($5) or Yearly ($50) → pay with crypto via NOWPayments hosted checkout (200+ coins supported). No account, no signup. The paid tier activates as soon as the payment confirms on-chain.
 
 ✦ PRIVACY
 
