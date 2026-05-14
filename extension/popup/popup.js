@@ -388,8 +388,33 @@
     // extension popups have their own localStorage scope.
     setupHelpSection();
 
+    // What's-new banner — shown once per version after an update lands.
+    setupWhatsNew();
+
     init();
   });
+
+  const WHATS_NEW_KEY = "trusty_whatsnew_dismissed";
+  function setupWhatsNew() {
+    const banner = $("whatsNew");
+    if (!banner) return;
+    // Tie the dismiss state to the manifest version. If user dismissed
+    // v0.5.0's callout and v0.6.0 ships, the banner shows again automatically.
+    const version = (chrome.runtime && chrome.runtime.getManifest)
+      ? chrome.runtime.getManifest().version
+      : "0.0.0";
+    let dismissedVer = "";
+    try { dismissedVer = localStorage.getItem(WHATS_NEW_KEY) || ""; } catch (_) {}
+    if (dismissedVer === version) return; // already dismissed this version
+    banner.style.display = "";
+    const btn = $("whatsNewClose");
+    if (btn) {
+      btn.addEventListener("click", function () {
+        try { localStorage.setItem(WHATS_NEW_KEY, version); } catch (_) {}
+        banner.style.display = "none";
+      });
+    }
+  }
 
   const HELP_DISMISSED_KEY = "trusty_help_dismissed_v1";
   function setupHelpSection() {
