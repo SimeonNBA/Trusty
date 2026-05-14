@@ -81,6 +81,15 @@ export default {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       return handleAdminStats(request, env);
     }
+    if (url.pathname === "/api/admin/warm-goplus") {
+      // Bootstrap GoPlus cache from a non-Cloudflare IP (GitHub Actions
+      // runner / ops machine) — CF Worker IPs are throttled by GoPlus,
+      // so the worker can't always populate its own cache. Caller pre-
+      // fetches GoPlus data and POSTs it here. We write it to the same
+      // KV key fetchGoPlus reads from, so the next scan returns instantly.
+      if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
+      return handleAdminWarmGoPlus(request, env);
+    }
     if (url.pathname === "/api/admin/codes") {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       return handleAdminListCodes(request, env);
@@ -1628,6 +1637,50 @@ async function handleRedeemCode(request, env) {
 // scans last 24h" without exposing any per-user data. KV list is
 // paginated (1000 keys/page) and we cap at 5 pages each (5k items)
 // to keep latency bounded — at launch scale that's plenty.
+// ── /api/admin/warm-goplus ──
+// Accepts pre-fetched GoPlus data and seeds the 24h cache. Used to
+// bootstrap the cache for tokens the worker can't fetch itself due to
+// GoPlus rate-limiting Cloudflare IPs. Caller (cron / ops script) does
+// the GoPlus fetch from a non-CF IP, then POSTs the entry here.
+//
+// Body shape:
+//   { chain: "bsc"|"ethereum"|..., ca: "0x...", goplus: { ... raw GoPlus result entry ... } }
+async function handleAdminWarmGoPlus(request, env) {
+  const secret = request.headers.get("x-admin-secret") || "";
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  if (!env.SCAN_KV) return json({ error: "kv not configured" }, 503);
+
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "bad json" }, 400); }
+
+  const ca = String(body?.ca || "").toLowerCase().trim();
+  const chain = String(body?.chain || "bsc").toLowerCase();
+  const gp = body?.goplus;
+
+  if (!/^0x[a-f0-9]{40}$/.test(ca)) return json({ error: "invalid ca" }, 400);
+  if (!gp || typeof gp !== "object" || !Object.keys(gp).length) {
+    return json({ error: "missing or empty goplus payload" }, 400);
+  }
+
+  const cid = chainId(chain);
+  const cacheKey = `gp:v2:${cid}:${ca}`;
+
+  try {
+    await env.SCAN_KV.put(cacheKey, JSON.stringify(gp), {
+      expirationTtl: GOPLUS_CACHE_TTL,
+    });
+    // Bust the per-scan cache so the next /api/scan re-runs through
+    // scanTokenEvm and picks up the freshly-seeded GoPlus entry.
+    try { await env.SCAN_KV.delete(`scan:v2:${chain}:${ca}`); } catch (_) {}
+  } catch (e) {
+    return json({ error: "kv write failed: " + e.message }, 500);
+  }
+
+  return json({ ok: true, chain, ca, cacheKey });
+}
+
 async function handleAdminStats(request, env) {
   const secret = request.headers.get("x-admin-secret") || "";
   if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
