@@ -419,7 +419,15 @@
      ────────────────────────────────────────────────────────────── */
   const TRENDING_URL = "https://trustyai.tech/data/trending.json";
   const TRENDING_CACHE_MS = 5 * 60 * 1000;
+  const TRENDING_CHAIN_KEY = "trusty_popup_trending_chain";
   let trendingCache = { at: 0, data: null };
+
+  function getSelectedChain() {
+    const select = $("popupTrendingChain");
+    if (select && select.value) return select.value;
+    try { return localStorage.getItem(TRENDING_CHAIN_KEY) || "bnb"; }
+    catch (_) { return "bnb"; }
+  }
 
   function switchTab(target) {
     document.querySelectorAll(".tab-btn").forEach(function (b) {
@@ -429,6 +437,24 @@
       v.style.display = v.getAttribute("data-view") === target ? "" : "none";
     });
     if (target === "trending") {
+      // Restore last selected chain preference on first activation
+      const select = $("popupTrendingChain");
+      if (select && !select.dataset.wired) {
+        try {
+          const remembered = localStorage.getItem(TRENDING_CHAIN_KEY);
+          if (remembered) select.value = remembered;
+        } catch (_) {}
+        select.addEventListener("change", function () {
+          try { localStorage.setItem(TRENDING_CHAIN_KEY, select.value); } catch (_) {}
+          // Re-render from cache if available, otherwise refetch
+          if (trendingCache.data) {
+            renderTrendingTab(trendingCache.data, $("popupTrendingList"), $("popupTrendingUpdated"));
+          } else {
+            loadTrendingTab();
+          }
+        });
+        select.dataset.wired = "1";
+      }
       loadTrendingTab();
     }
   }
@@ -458,9 +484,10 @@
   }
 
   function renderTrendingTab(data, listEl, updatedEl) {
-    const coins = (data && data.categories && data.categories.bnb) || [];
+    const chain = getSelectedChain();
+    const coins = (data && data.categories && data.categories[chain]) || [];
     if (!coins.length) {
-      listEl.innerHTML = '<div class="trending-tab-empty">No trending data right now.</div>';
+      listEl.innerHTML = '<div class="trending-tab-empty">No hot tokens on this chain right now.</div>';
       if (updatedEl) updatedEl.textContent = "—";
       return;
     }
