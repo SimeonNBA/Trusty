@@ -67,7 +67,11 @@ jobs:
               const p = (bscPairs.length ? bscPairs : data.pairs)
                 .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
               return {
-                name: p.baseToken.name,
+                // Display name is "Trusty AI" — the project's brand name.
+                // On-chain .name() is "TWT Mascot" (community legacy, immutable),
+                // but every Trusty surface (site, popup, listings) uses "Trusty AI"
+                // for consistency and to avoid Trust Wallet brand association.
+                name: 'Trusty AI',
                 symbol: p.baseToken.symbol,
                 assetId: p.baseToken.address,
                 chain: p.chainId,
@@ -133,6 +137,26 @@ jobs:
                 }
               }
             } catch(e) { console.error('Boosts error:', e.message); }
+
+            // Dedupe each category by token address. Dexscreener's
+            // /search endpoint can return multiple LP pairs for the same
+            // token (e.g. two $SATO entries from different pair contracts),
+            // which renders as visible duplicates. Keep the first occurrence
+            // of each assetId — preserves the more-liquid pair since search
+            // results are roughly liquidity-sorted upstream.
+            function dedupeByAssetId(arr) {
+              const seen = new Set();
+              const out = [];
+              for (const item of arr) {
+                const key = (item.assetId || '').toLowerCase();
+                if (!key || seen.has(key)) continue;
+                seen.add(key);
+                out.push(item);
+              }
+              arr.length = 0;
+              arr.push(...out);
+            }
+            [memes, bnb, sol, ai, pumpfun].forEach(dedupeByAssetId);
 
             // Sort all by 24h price change
             [memes, bnb, sol, ai, pumpfun].forEach(arr => {
