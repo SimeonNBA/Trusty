@@ -262,7 +262,7 @@ function isValidCa(ca, chain) {
 }
 
 async function scanToken(ca, chain, env) {
-  if (isSolana(chain)) return scanTokenSolana(ca, chain);
+  if (isSolana(chain)) return scanTokenSolana(ca, chain, env);
   return scanTokenEvm(ca, chain, env);
 }
 
@@ -279,7 +279,7 @@ async function scanTokenEvm(ca, chain, env) {
   }
 
   const [gpRes, dxRes, fmRes] = await Promise.allSettled([
-    fetchGoPlus(chainId(resolvedChain), ca),
+    fetchGoPlus(chainId(resolvedChain), ca, env),
     fetchDex(ca, resolvedChain === "ethereum" ? "ethereum"
                 : resolvedChain === "base"    ? "base"
                 : resolvedChain === "polygon" ? "polygon"
@@ -314,9 +314,9 @@ async function scanTokenEvm(ca, chain, env) {
   return shape;
 }
 
-async function scanTokenSolana(ca, chain) {
+async function scanTokenSolana(ca, chain, env) {
   const [gpRes, dxRes, rcRes] = await Promise.allSettled([
-    fetchGoPlusSolana(ca),
+    fetchGoPlusSolana(ca, env),
     fetchDex(ca, "solana"),
     fetchRugCheck(ca),
   ]);
@@ -355,27 +355,33 @@ function baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChec
 }
 
 // ── GoPlus token-security ──
-// Retries with backoff on transient failures (429 rate-limit, 5xx, or
-// empty result). Without retries, a single rate-limit hit produces a
-// scan with `g = null`, which buildChecks renders as all-checks-failed.
-// That false-negative pattern was the root of the "$TRUSTY shows 0/100
-// RUN with everything ❌" bug — GoPlus was returning legitimate data,
-// but we were giving up on the first 429 and showing the all-failed
-// fallback to users.
-async function fetchGoPlus(cid, ca) {
+// GoPlus rate-limits Cloudflare Worker IPs aggressively — even with
+// retries, the worker often gets 200 OK with empty result (their soft
+// throttle pattern). The fix: cache successful GoPlus responses in KV
+// for 24h, and use stale-while-revalidate (return cached data when
+// fresh fetch fails). Token safety data is effectively immutable per
+// CA (LP burn is permanent, mint flag is permanent, owner renounce is
+// permanent), so a 24h cache produces no real staleness for users.
+const GOPLUS_CACHE_TTL = 24 * 60 * 60; // 24h in seconds
+const GOPLUS_UA =
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " +
+  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+async function fetchGoPlusRaw(cid, ca) {
   const url = `https://api.gopluslabs.io/api/v1/token_security/${cid}?contract_addresses=${ca}`;
   let lastErr = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     if (attempt > 0) {
-      // Exponential backoff: 400ms, 1000ms
-      await new Promise(r => setTimeout(r, attempt === 1 ? 400 : 1000));
+      // Exponential backoff: 500ms, 1500ms, 3000ms (covers GoPlus's
+      // ~2-sec free-tier rate-limit window so a stuck IP can recover).
+      const delay = attempt === 1 ? 500 : attempt === 2 ? 1500 : 3000;
+      await new Promise(r => setTimeout(r, delay));
     }
     try {
       const r = await fetch(url, {
-        headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
+        headers: { Accept: "application/json", "User-Agent": GOPLUS_UA },
       });
       if (!r.ok) {
-        // Retry transients (429 / 5xx). Don't retry 4xx (probably bad CA).
         if (r.status === 429 || r.status >= 500) {
           lastErr = new Error("goplus " + r.status);
           continue;
@@ -385,17 +391,42 @@ async function fetchGoPlus(cid, ca) {
       const data = await r.json();
       const entry = data?.result?.[ca] || data?.result?.[ca.toLowerCase()] || null;
       if (entry && Object.keys(entry).length) return entry;
-      // Empty result — could be soft-throttle. Retry once or twice.
       lastErr = new Error("goplus empty result");
       continue;
     } catch (e) {
       lastErr = e;
-      // Network errors / aborts — retry.
     }
   }
-  // All retries exhausted. Throw so Promise.allSettled records it as
-  // rejected and buildChecks falls back to the "data unavailable" path.
   throw lastErr || new Error("goplus exhausted retries");
+}
+
+async function fetchGoPlus(cid, ca, env) {
+  const cacheKey = `gp:v2:${cid}:${ca}`;
+
+  // Attempt fresh fetch first. If it works, refresh the cache.
+  try {
+    const fresh = await fetchGoPlusRaw(cid, ca);
+    if (fresh && env && env.SCAN_KV) {
+      try {
+        await env.SCAN_KV.put(cacheKey, JSON.stringify(fresh), {
+          expirationTtl: GOPLUS_CACHE_TTL,
+        });
+      } catch (_) {}
+    }
+    return fresh;
+  } catch (freshErr) {
+    // Fresh fetch failed (likely rate-limited). Fall back to cached
+    // data if we have any — stale-while-revalidate. Token security
+    // doesn't change minute-to-minute, so 24h-old data is far better
+    // than the all-checks-failed fallback.
+    if (env && env.SCAN_KV) {
+      try {
+        const cached = await env.SCAN_KV.get(cacheKey, "json");
+        if (cached) return cached;
+      } catch (_) {}
+    }
+    throw freshErr;
+  }
 }
 
 // ── Dexscreener (works for both EVM and Solana — just filter chainId) ──
@@ -530,17 +561,18 @@ async function fetchFourMemeOrigin(ca, chain, env) {
 }
 
 // ── GoPlus Solana token-security ──
-// Same retry pattern as the EVM fetcher — see fetchGoPlus for rationale.
-async function fetchGoPlusSolana(ca) {
+// Same retry + stale-while-revalidate pattern as the EVM fetcher.
+async function fetchGoPlusSolanaRaw(ca) {
   const url = `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${ca}`;
   let lastErr = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     if (attempt > 0) {
-      await new Promise(r => setTimeout(r, attempt === 1 ? 400 : 1000));
+      const delay = attempt === 1 ? 500 : attempt === 2 ? 1500 : 3000;
+      await new Promise(r => setTimeout(r, delay));
     }
     try {
       const r = await fetch(url, {
-        headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
+        headers: { Accept: "application/json", "User-Agent": GOPLUS_UA },
       });
       if (!r.ok) {
         if (r.status === 429 || r.status >= 500) {
@@ -550,13 +582,11 @@ async function fetchGoPlusSolana(ca) {
         throw new Error("goplus-sol " + r.status);
       }
       const data = await r.json();
-      // Solana endpoint returns a result keyed by the original-case CA.
       let entry =
         data?.result?.[ca] ||
         data?.result?.[ca.toLowerCase()] ||
         data?.result?.[ca.toUpperCase()] ||
         null;
-      // Fallback: take first key in the result map (case-insensitive lookup didn't hit)
       if (!entry && data?.result) {
         const keys = Object.keys(data.result);
         if (keys.length) entry = data.result[keys[0]];
@@ -569,6 +599,29 @@ async function fetchGoPlusSolana(ca) {
     }
   }
   throw lastErr || new Error("goplus-sol exhausted retries");
+}
+
+async function fetchGoPlusSolana(ca, env) {
+  const cacheKey = `gpsol:v2:${ca}`;
+  try {
+    const fresh = await fetchGoPlusSolanaRaw(ca);
+    if (fresh && env && env.SCAN_KV) {
+      try {
+        await env.SCAN_KV.put(cacheKey, JSON.stringify(fresh), {
+          expirationTtl: GOPLUS_CACHE_TTL,
+        });
+      } catch (_) {}
+    }
+    return fresh;
+  } catch (freshErr) {
+    if (env && env.SCAN_KV) {
+      try {
+        const cached = await env.SCAN_KV.get(cacheKey, "json");
+        if (cached) return cached;
+      } catch (_) {}
+    }
+    throw freshErr;
+  }
 }
 
 // ── checks ──
