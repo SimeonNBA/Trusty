@@ -130,8 +130,23 @@ html, body {
   font-family: ui-monospace, "SF Mono", monospace;
 }
 .help-steps li strong { color: var(--text); font-weight: 700; }
+.help-steps li em { color: var(--muted); font-style: normal; font-size: 9px; letter-spacing: 0.5px; text-transform: uppercase; margin-left: 4px; }
 .help-steps li a { color: var(--gold); text-decoration: none; }
 .help-steps li a:hover { text-decoration: underline; }
+.help-verdict {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  margin: 2px 2px 0 0;
+  font-family: ui-monospace, "SF Mono", monospace;
+  white-space: nowrap;
+}
+.help-verdict.ape { background: rgba(34,197,94,0.16); color: var(--green); }
+.help-verdict.cau { background: rgba(243,186,47,0.16); color: var(--gold); }
+.help-verdict.run { background: rgba(239,68,68,0.16); color: var(--red); }
 .help-dismiss {
   position: absolute;
   top: 6px;
