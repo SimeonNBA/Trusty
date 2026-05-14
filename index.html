@@ -3197,6 +3197,51 @@ body::before {
 .hero-badge.blue { background: rgba(59,130,246,0.12); color: var(--blue2); border: 1px solid rgba(59,130,246,0.25); }
 .hero-badge.yellow { background: rgba(251,191,36,0.12); color: var(--yellow); border: 1px solid rgba(251,191,36,0.25); }
 
+/* ── Install Chrome Extension CTA (hero band) ── */
+.install-cta-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 14px auto 22px;
+  padding: 0 8px;
+}
+.install-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 520px;
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #F3BA2F 0%, #E89800 100%);
+  color: #0a0f1c;
+  border-radius: 14px;
+  text-decoration: none;
+  font-weight: 700;
+  box-shadow: 0 4px 18px rgba(243,186,47,0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.install-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(243,186,47,0.5);
+}
+.install-cta-icon { font-size: 26px; line-height: 1; }
+.install-cta-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.install-cta-title { font-size: 15px; font-weight: 800; letter-spacing: -0.2px; }
+.install-cta-sub { font-size: 11px; font-weight: 500; opacity: 0.78; }
+.install-cta-arrow { font-size: 22px; font-weight: 800; opacity: 0.7; }
+@media (max-width: 600px) {
+  .install-cta { padding: 12px 14px; gap: 10px; }
+  .install-cta-icon { font-size: 22px; }
+  .install-cta-title { font-size: 13px; }
+  .install-cta-sub { font-size: 10px; }
+  .install-cta-arrow { font-size: 18px; }
+}
+
 /* Result verdict image */
 /* ════════════════════════════════════
    MOBILE FIXES — max-width: 480px
@@ -4497,6 +4542,18 @@ body::before {
           <a href="https://four.meme" target="_blank" rel="noopener" class="hero-badge green" style="text-decoration:none;">🚀 four.meme launches</a>
         </div>
       </div>
+    </div>
+
+    <!-- ── Install Chrome Extension CTA ── -->
+    <div class="install-cta-wrap">
+      <a class="install-cta" href="https://chromewebstore.google.com/detail/trusty-ai/alinmihaphkbladdgmaammedglpldamj?utm_source=trustyai_home&utm_medium=hero" target="_blank" rel="noopener">
+        <span class="install-cta-icon">🛡️</span>
+        <span class="install-cta-text">
+          <span class="install-cta-title">Add Trusty to Chrome — free</span>
+          <span class="install-cta-sub">Safety pills on every contract address you see on X</span>
+        </span>
+        <span class="install-cta-arrow">→</span>
+      </a>
     </div>
 
     <!-- ── FREE vs PAID value cards ── -->
