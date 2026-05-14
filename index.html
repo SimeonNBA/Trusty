@@ -3391,6 +3391,24 @@ body::before {
 }
 .hot-token-change.up { color: #86EFAC; }
 .hot-token-change.down { color: #FCA5A5; }
+.hot-tokens-scan-cta {
+  display: block;
+  text-align: center;
+  margin-top: 12px;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  border-top: 1px dashed var(--border);
+  letter-spacing: 0.2px;
+  transition: color 0.15s, background 0.15s;
+}
+.hot-tokens-scan-cta:hover {
+  color: var(--yellow);
+  background: rgba(251,191,36,0.05);
+  border-radius: 0 0 14px 14px;
+}
 @media (max-width: 600px) {
   .hot-tokens-section { padding: 12px 14px; }
   .hot-token-row { grid-template-columns: 18px 24px 1fr auto auto; gap: 8px; padding: 8px 10px; }
@@ -4730,6 +4748,9 @@ body::before {
       <div id="hotTokensList" class="hot-tokens-list">
         <div class="hot-tokens-loading">Loading hot tokens…</div>
       </div>
+      <a href="#ca-section" class="hot-tokens-scan-cta" onclick="document.getElementById('ca-section').scrollIntoView({behavior:'smooth',block:'start'}); document.getElementById('caInput')?.focus(); return false;">
+        ↑ Paste any contract address in the scanner above
+      </a>
     </section>
 
     <!-- ── FREE vs PAID value cards ── -->
