@@ -383,8 +383,29 @@
       });
     });
 
+    // How-it-works helper — show on first opens, dismissible per-device.
+    // Storage key persists across popup re-opens via localStorage; chrome
+    // extension popups have their own localStorage scope.
+    setupHelpSection();
+
     init();
   });
+
+  const HELP_DISMISSED_KEY = "trusty_help_dismissed_v1";
+  function setupHelpSection() {
+    const section = $("helpSection");
+    if (!section) return;
+    let dismissed = false;
+    try { dismissed = localStorage.getItem(HELP_DISMISSED_KEY) === "1"; } catch (_) {}
+    section.style.display = dismissed ? "none" : "";
+    const btn = $("helpDismiss");
+    if (btn) {
+      btn.addEventListener("click", function () {
+        try { localStorage.setItem(HELP_DISMISSED_KEY, "1"); } catch (_) {}
+        section.style.display = "none";
+      });
+    }
+  }
 
   /* ──────────────────────────────────────────────────────────────
      Trending tab — fetches data/trending.json from trustyai.tech.
