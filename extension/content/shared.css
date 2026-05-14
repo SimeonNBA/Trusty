@@ -141,6 +141,18 @@
   color: rgba(148, 163, 184, 1);
   border-color: rgba(148, 163, 184, 0.3);
 }
+/* Pending = scanned but real safety data unavailable (worker timeout
+   after retry). Visually distinct from a real verdict — we don't want
+   users mistaking "we don't know" for "we said CAUTION". */
+.trusty-pill-pending {
+  background: rgba(148, 163, 184, 0.10);
+  color: rgba(148, 163, 184, 0.95);
+  border-color: rgba(148, 163, 184, 0.35);
+  border-style: dashed;
+}
+.trusty-pill-pending .trusty-pill-score {
+  opacity: 0.8;
+}
 
 /* ── Hover tooltip ─────────────────────────────────────────────── */
 
@@ -181,6 +193,28 @@
   padding: 10px 0;
   font-size: 12px;
 }
+
+/* "Safety data unavailable" message — shown when the worker timed out
+   after retries. Honest about not having data, not faked. */
+.trusty-tt-unavailable {
+  padding: 4px 2px 6px;
+}
+.trusty-tt-unavailable-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #F59E0B;
+  margin-bottom: 6px;
+}
+.trusty-tt-unavailable-body {
+  font-size: 11px;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+.trusty-tt-unavailable-body a {
+  color: #F3BA2F;
+  text-decoration: none;
+}
+.trusty-tt-unavailable-body a:hover { text-decoration: underline; }
 
 /* Header with verdict + score */
 .trusty-tt-header {
