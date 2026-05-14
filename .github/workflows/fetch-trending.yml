@@ -93,9 +93,10 @@ jobs:
           async function main() {
             console.log('Fetching trending data...');
 
-            const [memes, bnb, sol, ai, pumpfun, trustyPin] = await Promise.all([
+            const [memes, bnb, eth, sol, ai, pumpfun, trustyPin] = await Promise.all([
               fetchCategory('meme', 'bsc'),
               fetchCategory('bnb bsc', 'bsc'),
+              fetchCategory('eth ethereum', 'ethereum'),
               fetchCategory('solana sol', 'solana'),
               fetchCategory('ai agent', 'bsc'),
               fetchCategory('pump fun', 'solana'),
@@ -156,10 +157,10 @@ jobs:
               arr.length = 0;
               arr.push(...out);
             }
-            [memes, bnb, sol, ai, pumpfun].forEach(dedupeByAssetId);
+            [memes, bnb, eth, sol, ai, pumpfun].forEach(dedupeByAssetId);
 
             // Sort all by 24h price change
-            [memes, bnb, sol, ai, pumpfun].forEach(arr => {
+            [memes, bnb, eth, sol, ai, pumpfun].forEach(arr => {
               arr.sort((a, b) => (b.priceChange24h || 0) - (a.priceChange24h || 0));
               arr.splice(10); // keep top 10
             });
@@ -179,12 +180,12 @@ jobs:
 
             const output = {
               updatedAt: new Date().toISOString(),
-              categories: { memes, bnb, sol, ai, pumpfun }
+              categories: { memes, bnb, eth, sol, ai, pumpfun }
             };
 
             fs.writeFileSync('data/trending.json', JSON.stringify(output, null, 2));
             console.log('Saved trending.json');
-            console.log('Memes:', memes.length, '| BNB:', bnb.length, '| SOL:', sol.length, '| AI:', ai.length, '| PumpFun:', pumpfun.length);
+            console.log('Memes:', memes.length, '| BNB:', bnb.length, '| ETH:', eth.length, '| SOL:', sol.length, '| AI:', ai.length, '| PumpFun:', pumpfun.length);
           }
 
           main().catch(console.error);

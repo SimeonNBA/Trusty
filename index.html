@@ -3242,6 +3242,164 @@ body::before {
   .install-cta-arrow { font-size: 18px; }
 }
 
+/* ── Hot Tokens (chain-filtered trending) ── */
+.hot-tokens-section {
+  max-width: 720px;
+  margin: 0 auto 22px;
+  padding: 16px 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.hot-tokens-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.hot-tokens-title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+.hot-tokens-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hot-tokens-chain-select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 28px 6px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23F3BA2F' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.hot-tokens-chain-select:hover { border-color: var(--yellow); }
+.hot-tokens-chain-select:focus { outline: none; border-color: var(--yellow); }
+.hot-tokens-updated {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--mono);
+  letter-spacing: 0.3px;
+}
+.hot-tokens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hot-tokens-loading,
+.hot-tokens-error,
+.hot-tokens-empty {
+  text-align: center;
+  color: var(--muted);
+  font-style: italic;
+  padding: 24px;
+  font-size: 13px;
+}
+.hot-token-row {
+  display: grid;
+  grid-template-columns: 24px 28px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.hot-token-row:hover {
+  border-color: var(--yellow);
+  background: var(--bg3);
+  transform: translateX(3px);
+}
+.hot-token-row.pinned {
+  border-color: var(--yellow);
+  background: linear-gradient(135deg, rgba(243,186,47,0.10) 0%, var(--bg) 60%);
+  box-shadow: 0 0 0 1px rgba(243,186,47,0.25);
+}
+.hot-token-row.pinned:hover {
+  background: linear-gradient(135deg, rgba(243,186,47,0.15) 0%, var(--bg3) 60%);
+}
+.hot-token-rank {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.hot-token-row.pinned .hot-token-rank {
+  color: var(--yellow);
+  font-size: 16px;
+  font-weight: 700;
+}
+.hot-token-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  overflow: hidden;
+}
+.hot-token-icon img { width: 100%; height: 100%; object-fit: cover; }
+.hot-token-info {
+  min-width: 0;
+  overflow: hidden;
+}
+.hot-token-symbol {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hot-token-name {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.hot-token-mc {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.hot-token-change {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--mono);
+  min-width: 56px;
+  text-align: right;
+}
+.hot-token-change.up { color: #86EFAC; }
+.hot-token-change.down { color: #FCA5A5; }
+@media (max-width: 600px) {
+  .hot-tokens-section { padding: 12px 14px; }
+  .hot-token-row { grid-template-columns: 18px 24px 1fr auto auto; gap: 8px; padding: 8px 10px; }
+  .hot-token-symbol { font-size: 12px; }
+  .hot-token-name { font-size: 9px; }
+  .hot-token-mc { font-size: 10px; }
+  .hot-token-change { font-size: 11px; min-width: 44px; }
+}
+
 /* Result verdict image */
 /* ════════════════════════════════════
    MOBILE FIXES — max-width: 480px
@@ -4555,6 +4713,24 @@ body::before {
         <span class="install-cta-arrow">→</span>
       </a>
     </div>
+
+    <!-- ── Hot Tokens — chain-filtered trending feed ── -->
+    <section class="hot-tokens-section" id="hotTokensSection">
+      <div class="hot-tokens-header">
+        <div class="hot-tokens-title">🔥 Hot Tokens</div>
+        <div class="hot-tokens-controls">
+          <select id="hotTokensChain" aria-label="Chain" class="hot-tokens-chain-select">
+            <option value="bnb">🟡 BNB Chain</option>
+            <option value="eth">🔵 Ethereum</option>
+            <option value="sol">🟣 Solana</option>
+          </select>
+          <span class="hot-tokens-updated" id="hotTokensUpdated">—</span>
+        </div>
+      </div>
+      <div id="hotTokensList" class="hot-tokens-list">
+        <div class="hot-tokens-loading">Loading hot tokens…</div>
+      </div>
+    </section>
 
     <!-- ── FREE vs PAID value cards ── -->
     <div class="value-cards">
@@ -9248,6 +9424,108 @@ loadTrendingData();
 
 // Refresh every 15 minutes to match GitHub Action schedule
 setInterval(loadTrendingData, 15 * 60 * 1000);
+
+// ════════════════════════════════════════════
+//  HOT TOKENS — chain-filtered trending feed
+//  Default = BNB. User can switch BNB / ETH / SOL via dropdown.
+//  Reads the same data/trending.json the cron writes.
+//  Self-contained — does not reuse the dormant trendingList code above.
+// ════════════════════════════════════════════
+(function () {
+  let hotTokensData = null;
+
+  function fmtUsdCompact(n) {
+    if (!n || !isFinite(n)) return '—';
+    if (n >= 1e9) return '$' + (n/1e9).toFixed(1) + 'B';
+    if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+    return '$' + n.toFixed(0);
+  }
+  function escAttr(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function timeAgoShort(ts) {
+    const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+    if (s < 60) return s + 's ago';
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + 'm ago';
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ago';
+    return Math.floor(h/24) + 'd ago';
+  }
+
+  async function loadHotTokens() {
+    const listEl = document.getElementById('hotTokensList');
+    const updatedEl = document.getElementById('hotTokensUpdated');
+    if (!listEl) return;
+    try {
+      const res = await fetch('data/trending.json?t=' + Date.now());
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      hotTokensData = await res.json();
+      if (updatedEl && hotTokensData.updatedAt) {
+        updatedEl.textContent = 'updated ' + timeAgoShort(new Date(hotTokensData.updatedAt).getTime());
+      }
+      const select = document.getElementById('hotTokensChain');
+      const chain = (select && select.value) || 'bnb';
+      renderHotTokens(chain);
+    } catch (e) {
+      listEl.innerHTML = '<div class="hot-tokens-error">Could not load hot tokens. Try again in a moment.</div>';
+      if (updatedEl) updatedEl.textContent = 'error';
+    }
+  }
+
+  function renderHotTokens(chain) {
+    const listEl = document.getElementById('hotTokensList');
+    if (!listEl || !hotTokensData) return;
+    const coins = (hotTokensData.categories && hotTokensData.categories[chain]) || [];
+    if (!coins.length) {
+      listEl.innerHTML = '<div class="hot-tokens-empty">No hot tokens for this chain right now. Try another chain.</div>';
+      return;
+    }
+    listEl.innerHTML = coins.slice(0, 10).map(function (coin, i) {
+      const isPinned = coin.pinned === true;
+      const ca = coin.assetId || '';
+      const change = Number(coin.priceChange24h) || 0;
+      const changeClass = change >= 0 ? 'up' : 'down';
+      const changeStr = (change >= 0 ? '+' : '') + change.toFixed(1) + '%';
+      const mc = fmtUsdCompact(coin.marketCapUsd);
+      const symbol = coin.symbol ? '$' + escAttr(coin.symbol) : '—';
+      const name = escAttr(coin.name || '—');
+      const rank = isPinned ? '★' : (i + 1);
+      const logo = coin.logoUrl
+        ? '<img src="' + escAttr(coin.logoUrl) + '" alt="" onerror="this.style.display=\'none\'">'
+        : '🪙';
+      // Click → scroll to scanner + auto-scan, same UX as existing trending.
+      return '<a class="hot-token-row' + (isPinned ? ' pinned' : '') + '" '
+        +    'href="javascript:void(0)" '
+        +    'onclick="evalTrendingCoin(\'' + escAttr(ca) + '\')">'
+        +   '<div class="hot-token-rank">' + rank + '</div>'
+        +   '<div class="hot-token-icon">' + logo + '</div>'
+        +   '<div class="hot-token-info">'
+        +     '<div class="hot-token-symbol">' + symbol + '</div>'
+        +     '<div class="hot-token-name">' + name + '</div>'
+        +   '</div>'
+        +   '<div class="hot-token-mc">' + mc + '</div>'
+        +   '<div class="hot-token-change ' + changeClass + '">' + changeStr + '</div>'
+        + '</a>';
+    }).join('');
+  }
+
+  // Wire dropdown change → re-render
+  document.addEventListener('DOMContentLoaded', function () {
+    const select = document.getElementById('hotTokensChain');
+    if (select) {
+      select.addEventListener('change', function () {
+        renderHotTokens(select.value);
+      });
+    }
+    loadHotTokens();
+  });
+
+  // Refresh every 15 min to align with cron cadence
+  setInterval(loadHotTokens, 15 * 60 * 1000);
+})();
 
 // ════════════════════════════════════════════
 //  SEARCH HISTORY (localStorage)
