@@ -52,15 +52,50 @@ jobs:
             } catch(e) { console.error('Error fetching ' + query + ':', e.message); return []; }
           }
 
+          async function fetchTrustyPinned() {
+            // Fetch live $TRUSTY data from Dexscreener so the pinned row
+            // shows real price / mcap / volume, not stale hardcoded values.
+            // Returns null on failure — the renderer falls back to no pin
+            // rather than rendering broken data.
+            const TRUSTY_CA = '0x65aea108c21439693468fcd542d81c29e8df4444';
+            try {
+              const res = await fetch('https://api.dexscreener.com/latest/dex/tokens/' + TRUSTY_CA);
+              const data = await res.json();
+              if (!data.pairs || !data.pairs[0]) return null;
+              // Prefer the highest-liquidity pair on BSC.
+              const bscPairs = data.pairs.filter(p => p.chainId === 'bsc');
+              const p = (bscPairs.length ? bscPairs : data.pairs)
+                .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+              return {
+                name: p.baseToken.name,
+                symbol: p.baseToken.symbol,
+                assetId: p.baseToken.address,
+                chain: p.chainId,
+                priceUsd: parseFloat(p.priceUsd) || 0,
+                marketCapUsd: p.fdv || 0,
+                priceChange24h: p.priceChange?.h24 || 0,
+                volume24h: p.volume?.h24 || 0,
+                liquidity: p.liquidity?.usd || 0,
+                logoUrl: p.info?.imageUrl || null,
+                pairAddress: p.pairAddress,
+                pinned: true,
+              };
+            } catch(e) {
+              console.error('Trusty pin fetch error:', e.message);
+              return null;
+            }
+          }
+
           async function main() {
             console.log('Fetching trending data...');
 
-            const [memes, bnb, sol, ai, pumpfun] = await Promise.all([
+            const [memes, bnb, sol, ai, pumpfun, trustyPin] = await Promise.all([
               fetchCategory('meme', 'bsc'),
               fetchCategory('bnb bsc', 'bsc'),
               fetchCategory('solana sol', 'solana'),
               fetchCategory('ai agent', 'bsc'),
               fetchCategory('pump fun', 'solana'),
+              fetchTrustyPinned(),
             ]);
 
             // Also fetch top movers from DexScreener token boosts
@@ -104,6 +139,19 @@ jobs:
               arr.sort((a, b) => (b.priceChange24h || 0) - (a.priceChange24h || 0));
               arr.splice(10); // keep top 10
             });
+
+            // Pin $TRUSTY at position 0 of BNB category.
+            // - Done AFTER sort/splice so the pin can't be dropped by ranking.
+            // - Dedupe in case Dexscreener already returned Trusty organically.
+            // - If the live fetch failed (trustyPin is null), skip silently —
+            //   the BNB list still renders, just without the pin.
+            if (trustyPin) {
+              const trustyCaLower = trustyPin.assetId.toLowerCase();
+              const dedupedBnb = bnb.filter(t => (t.assetId || '').toLowerCase() !== trustyCaLower);
+              dedupedBnb.unshift(trustyPin);
+              bnb.length = 0;
+              bnb.push(...dedupedBnb);
+            }
 
             const output = {
               updatedAt: new Date().toISOString(),
