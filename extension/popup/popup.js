@@ -375,6 +375,133 @@
     const recoveryCopy = $("recoveryCopyBtn");
     if (recoveryCopy) recoveryCopy.addEventListener("click", onRecoveryCopy);
 
+    // Tab navigation — Home (default) vs Trending
+    document.querySelectorAll(".tab-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const target = btn.getAttribute("data-tab");
+        switchTab(target);
+      });
+    });
+
     init();
   });
+
+  /* ──────────────────────────────────────────────────────────────
+     Trending tab — fetches data/trending.json from trustyai.tech.
+
+     Reuses the same JSON the website uses, so the BNB list and the
+     pinned $TRUSTY entry render identically across surfaces.
+
+     Cached in module scope for the lifetime of the popup; popup
+     re-opens are fast (no refetch within ~5 min) but always fresh
+     enough since the cron updates every 15 min anyway.
+     ────────────────────────────────────────────────────────────── */
+  const TRENDING_URL = "https://trustyai.tech/data/trending.json";
+  const TRENDING_CACHE_MS = 5 * 60 * 1000;
+  let trendingCache = { at: 0, data: null };
+
+  function switchTab(target) {
+    document.querySelectorAll(".tab-btn").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-tab") === target);
+    });
+    document.querySelectorAll(".tab-view").forEach(function (v) {
+      v.style.display = v.getAttribute("data-view") === target ? "" : "none";
+    });
+    if (target === "trending") {
+      loadTrendingTab();
+    }
+  }
+
+  async function loadTrendingTab() {
+    const listEl = $("popupTrendingList");
+    const updatedEl = $("popupTrendingUpdated");
+    if (!listEl) return;
+
+    // Serve cached data if fresh.
+    const now = Date.now();
+    if (trendingCache.data && (now - trendingCache.at) < TRENDING_CACHE_MS) {
+      renderTrendingTab(trendingCache.data, listEl, updatedEl);
+      return;
+    }
+
+    try {
+      const res = await fetch(TRENDING_URL + "?t=" + now);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      trendingCache = { at: now, data: data };
+      renderTrendingTab(data, listEl, updatedEl);
+    } catch (e) {
+      listEl.innerHTML = '<div class="trending-tab-error">Could not load trending. Try again later.</div>';
+      if (updatedEl) updatedEl.textContent = "error";
+    }
+  }
+
+  function renderTrendingTab(data, listEl, updatedEl) {
+    const coins = (data && data.categories && data.categories.bnb) || [];
+    if (!coins.length) {
+      listEl.innerHTML = '<div class="trending-tab-empty">No trending data right now.</div>';
+      if (updatedEl) updatedEl.textContent = "—";
+      return;
+    }
+
+    if (updatedEl && data.updatedAt) {
+      updatedEl.textContent = "updated " + timeAgo(new Date(data.updatedAt).getTime());
+    }
+
+    listEl.innerHTML = coins.slice(0, 10).map(function (coin, i) {
+      const isPinned = coin.pinned === true;
+      const ca = coin.assetId || "";
+      const change = Number(coin.priceChange24h) || 0;
+      const changeClass = change >= 0 ? "up" : "down";
+      const changeStr = (change >= 0 ? "+" : "") + change.toFixed(1) + "%";
+      const mc = fmtCompactUsd(coin.marketCapUsd);
+      const symbol = coin.symbol ? "$" + escapeHtml(coin.symbol) : "—";
+      const name = escapeHtml(coin.name || "—");
+      const rank = isPinned ? "★" : (i + 1);
+      const logo = coin.logoUrl
+        ? '<img src="' + escapeAttr(coin.logoUrl) + '" alt="" onerror="this.style.display=\'none\'">'
+        : '🪙';
+      const href = "https://trustyai.tech/?ca=" + encodeURIComponent(ca);
+      return ''
+        + '<a class="trending-tab-item' + (isPinned ? ' pinned' : '') + '" '
+        +     'href="' + href + '" target="_blank" rel="noopener">'
+        +   '<div class="trending-tab-rank">' + rank + '</div>'
+        +   '<div class="trending-tab-icon">' + logo + '</div>'
+        +   '<div class="trending-tab-info">'
+        +     '<div class="trending-tab-symbol">' + symbol + '</div>'
+        +     '<div class="trending-tab-name">' + name + '</div>'
+        +   '</div>'
+        +   '<div class="trending-tab-mc">' + mc + '</div>'
+        +   '<div class="trending-tab-change ' + changeClass + '">' + changeStr + '</div>'
+        + '</a>';
+    }).join("");
+  }
+
+  function fmtCompactUsd(n) {
+    if (!n || !isFinite(n)) return "—";
+    if (n >= 1e9) return "$" + (n / 1e9).toFixed(1) + "B";
+    if (n >= 1e6) return "$" + (n / 1e6).toFixed(1) + "M";
+    if (n >= 1e3) return "$" + (n / 1e3).toFixed(0) + "K";
+    return "$" + n.toFixed(0);
+  }
+
+  function timeAgo(ts) {
+    const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+    if (s < 60) return s + "s ago";
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + "m ago";
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + "h ago";
+    return Math.floor(h / 24) + "d ago";
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
 })();

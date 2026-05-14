@@ -18,6 +18,15 @@
 
   <main class="body">
 
+    <!-- Tab navigation -->
+    <nav class="tab-nav" id="tabNav">
+      <button class="tab-btn active" type="button" data-tab="home">Home</button>
+      <button class="tab-btn" type="button" data-tab="trending">Trending</button>
+    </nav>
+
+    <!-- Home view (default) -->
+    <div class="tab-view" id="viewHome" data-view="home">
+
     <!-- Tier status block -->
     <section class="tier" id="tierBlock">
       <div class="tier-header">
@@ -116,6 +125,22 @@
     <div class="footnote">
       Trusty is a community project. Not affiliated with Trust Wallet.<br />
       Not financial advice. DYOR.
+    </div>
+
+    </div><!-- /#viewHome -->
+
+    <!-- Trending view (BNB-focused, fetched from trustyai.tech) -->
+    <div class="tab-view" id="viewTrending" data-view="trending" style="display:none;">
+      <div class="trending-tab-header">
+        <span class="trending-tab-title">🔥 BNB Trending</span>
+        <span class="trending-tab-updated" id="popupTrendingUpdated">—</span>
+      </div>
+      <div class="trending-tab-list" id="popupTrendingList">
+        <div class="trending-tab-loading">Loading…</div>
+      </div>
+      <a class="trending-tab-seeall" href="https://trustyai.tech/#trending" target="_blank" rel="noopener">
+        See all categories on trustyai.tech →
+      </a>
     </div>
   </main>
 
