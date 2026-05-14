@@ -2856,6 +2856,21 @@ body::before {
   transform: translateX(3px);
 }
 
+/* Pinned (Featured) entries — subtle yellow highlight, no animation. */
+.trending-coin.pinned {
+  border-color: var(--yellow);
+  background: linear-gradient(135deg, rgba(251,191,36,0.08) 0%, var(--card) 60%);
+  box-shadow: 0 0 0 1px rgba(251,191,36,0.25), 0 4px 12px rgba(251,191,36,0.08);
+}
+.trending-coin.pinned:hover {
+  background: linear-gradient(135deg, rgba(251,191,36,0.12) 0%, var(--card2) 60%);
+}
+.trending-coin.pinned .trending-rank {
+  color: var(--yellow);
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .trending-rank {
   font-family: var(--mono);
   font-size: 11px;
@@ -9137,9 +9152,11 @@ function renderTrendingList(cat) {
     const changeStr = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
     const iconHtml = tokenLogoImgHtml(coin.chain, ca, coin.logoUrl, coin.symbol || 'token');
     const canEval = ca && ca.length >= 10;
+    const isPinned = coin.pinned === true;
+    const rankDisplay = isPinned ? '★' : (i + 1);
 
-    return `<button class="trending-coin" onclick="${canEval ? `evalTrendingCoin('${ca}')` : 'void(0)'}" ${canEval ? '' : 'style="opacity:0.6;cursor:default"'}>
-      <div class="trending-rank">${i + 1}</div>
+    return `<button class="trending-coin${isPinned ? ' pinned' : ''}" onclick="${canEval ? `evalTrendingCoin('${ca}')` : 'void(0)'}" ${canEval ? '' : 'style="opacity:0.6;cursor:default"'}>
+      <div class="trending-rank">${rankDisplay}</div>
       <div class="trending-icon">${iconHtml}</div>
       <div class="trending-info">
         <div class="trending-name">${coin.name || '—'}</div>
