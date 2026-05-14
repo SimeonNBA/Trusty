@@ -355,15 +355,47 @@ function baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChec
 }
 
 // ── GoPlus token-security ──
+// Retries with backoff on transient failures (429 rate-limit, 5xx, or
+// empty result). Without retries, a single rate-limit hit produces a
+// scan with `g = null`, which buildChecks renders as all-checks-failed.
+// That false-negative pattern was the root of the "$TRUSTY shows 0/100
+// RUN with everything ❌" bug — GoPlus was returning legitimate data,
+// but we were giving up on the first 429 and showing the all-failed
+// fallback to users.
 async function fetchGoPlus(cid, ca) {
   const url = `https://api.gopluslabs.io/api/v1/token_security/${cid}?contract_addresses=${ca}`;
-  const r = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
-  });
-  if (!r.ok) throw new Error("goplus " + r.status);
-  const data = await r.json();
-  const entry = data?.result?.[ca] || data?.result?.[ca.toLowerCase()] || null;
-  return entry && Object.keys(entry).length ? entry : null;
+  let lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      // Exponential backoff: 400ms, 1000ms
+      await new Promise(r => setTimeout(r, attempt === 1 ? 400 : 1000));
+    }
+    try {
+      const r = await fetch(url, {
+        headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
+      });
+      if (!r.ok) {
+        // Retry transients (429 / 5xx). Don't retry 4xx (probably bad CA).
+        if (r.status === 429 || r.status >= 500) {
+          lastErr = new Error("goplus " + r.status);
+          continue;
+        }
+        throw new Error("goplus " + r.status);
+      }
+      const data = await r.json();
+      const entry = data?.result?.[ca] || data?.result?.[ca.toLowerCase()] || null;
+      if (entry && Object.keys(entry).length) return entry;
+      // Empty result — could be soft-throttle. Retry once or twice.
+      lastErr = new Error("goplus empty result");
+      continue;
+    } catch (e) {
+      lastErr = e;
+      // Network errors / aborts — retry.
+    }
+  }
+  // All retries exhausted. Throw so Promise.allSettled records it as
+  // rejected and buildChecks falls back to the "data unavailable" path.
+  throw lastErr || new Error("goplus exhausted retries");
 }
 
 // ── Dexscreener (works for both EVM and Solana — just filter chainId) ──
@@ -498,25 +530,45 @@ async function fetchFourMemeOrigin(ca, chain, env) {
 }
 
 // ── GoPlus Solana token-security ──
+// Same retry pattern as the EVM fetcher — see fetchGoPlus for rationale.
 async function fetchGoPlusSolana(ca) {
   const url = `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${ca}`;
-  const r = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
-  });
-  if (!r.ok) throw new Error("goplus-sol " + r.status);
-  const data = await r.json();
-  // Solana endpoint returns a result keyed by the original-case CA.
-  const entry =
-    data?.result?.[ca] ||
-    data?.result?.[ca.toLowerCase()] ||
-    data?.result?.[ca.toUpperCase()] ||
-    null;
-  // Fallback: take first key in the result map (case-insensitive lookup didn't hit)
-  if (!entry && data?.result) {
-    const keys = Object.keys(data.result);
-    if (keys.length) return data.result[keys[0]];
+  let lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      await new Promise(r => setTimeout(r, attempt === 1 ? 400 : 1000));
+    }
+    try {
+      const r = await fetch(url, {
+        headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
+      });
+      if (!r.ok) {
+        if (r.status === 429 || r.status >= 500) {
+          lastErr = new Error("goplus-sol " + r.status);
+          continue;
+        }
+        throw new Error("goplus-sol " + r.status);
+      }
+      const data = await r.json();
+      // Solana endpoint returns a result keyed by the original-case CA.
+      let entry =
+        data?.result?.[ca] ||
+        data?.result?.[ca.toLowerCase()] ||
+        data?.result?.[ca.toUpperCase()] ||
+        null;
+      // Fallback: take first key in the result map (case-insensitive lookup didn't hit)
+      if (!entry && data?.result) {
+        const keys = Object.keys(data.result);
+        if (keys.length) entry = data.result[keys[0]];
+      }
+      if (entry && Object.keys(entry).length) return entry;
+      lastErr = new Error("goplus-sol empty result");
+      continue;
+    } catch (e) {
+      lastErr = e;
+    }
   }
-  return entry && Object.keys(entry).length ? entry : null;
+  throw lastErr || new Error("goplus-sol exhausted retries");
 }
 
 // ── checks ──
