@@ -832,8 +832,26 @@
     }
 
     if (window.TrustyAPI && window.TrustyAPI.scan) {
+      // Apply whatever result comes back. If it's a mock fallback (worker
+      // was slow on first scan and we timed out client-side), schedule a
+      // single retry after 8s — by then the worker has finished its scan
+      // and cached the real result in KV, so the retry returns instantly.
+      const handle = function (result) {
+        applyResultToPill(pill, result);
+        if (result && result._isMock) {
+          setTimeout(function () {
+            // Only retry if the pill is still in the DOM (user didn't navigate away)
+            if (!pill.isConnected) return;
+            window.TrustyAPI.scan(ca, chain)
+              .then(function (r2) {
+                if (r2 && !r2._isMock) applyResultToPill(pill, r2);
+              })
+              .catch(function () { /* keep mock display, don't degrade further */ });
+          }, 8000);
+        }
+      };
       window.TrustyAPI.scan(ca, chain)
-        .then(function (result) { applyResultToPill(pill, result); })
+        .then(handle)
         .catch(function (err) {
           console.warn("Trusty scan failed for", ca, err);
           pill.classList.remove(PILL_CLASS + "-loading");
