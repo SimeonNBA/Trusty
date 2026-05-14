@@ -372,9 +372,10 @@ function baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChec
 // CA (LP burn is permanent, mint flag is permanent, owner renounce is
 // permanent), so a 24h cache produces no real staleness for users.
 const GOPLUS_CACHE_TTL = 24 * 60 * 60; // 24h in seconds
-const GOPLUS_UA =
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " +
-  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+// Keep the original curl-style identifier. Switching to a browser UA
+// from a Cloudflare Worker IP appeared to make GoPlus throttling worse —
+// public APIs often treat browser UAs from datacenter IPs as bot traffic.
+const GOPLUS_UA = "trusty-ai/0.1";
 
 async function fetchGoPlusRaw(cid, ca) {
   const url = `https://api.gopluslabs.io/api/v1/token_security/${cid}?contract_addresses=${ca}`;
