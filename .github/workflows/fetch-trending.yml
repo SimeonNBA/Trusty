@@ -27,6 +27,20 @@ jobs:
           node << 'SCRIPT'
           const fs = require('fs');
 
+          // Quality thresholds — Trusty is a SAFETY product. Surfacing
+          // $7K-mcap dust as "trending" undermines the brand. These cutoffs
+          // exclude untradeable / scam-prone / brand-new pairs while still
+          // leaving plenty of real meme-tier tokens to surface.
+          const MIN_LIQUIDITY = 20000;   // $20K — tradeable without 50% slippage
+          const MIN_MCAP      = 50000;   // $50K — above pure-scam-dust band
+          const MIN_VOLUME    = 5000;    // $5K  — proves it's actually traded
+
+          function passesQuality(p) {
+            return (p.liquidity?.usd || 0) >= MIN_LIQUIDITY
+                && (p.fdv || 0) >= MIN_MCAP
+                && (p.volume?.h24 || 0) >= MIN_VOLUME;
+          }
+
           async function fetchCategory(query, chainId) {
             try {
               const res = await fetch('https://api.dexscreener.com/latest/dex/search?q=' + encodeURIComponent(query));
@@ -34,6 +48,7 @@ jobs:
               if (!data.pairs) return [];
               return data.pairs
                 .filter(p => !chainId || p.chainId === chainId)
+                .filter(passesQuality)
                 .sort((a, b) => (b.priceChange?.h24 || 0) - (a.priceChange?.h24 || 0))
                 .slice(0, 10)
                 .map(p => ({
@@ -103,41 +118,53 @@ jobs:
               fetchTrustyPinned(),
             ]);
 
-            // Also fetch top movers from DexScreener token boosts
-            let topMovers = [];
-            try {
-              const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
-              const data = await res.json();
-              if (Array.isArray(data)) {
-                const bscMovers = data.filter(t => t.chainId === 'bsc').slice(0, 10);
-                const solMovers = data.filter(t => t.chainId === 'solana').slice(0, 10);
-                // Enhance BNB category with boosted tokens
-                for (const t of bscMovers) {
-                  if (!bnb.find(b => b.address === t.tokenAddress)) {
-                    try {
-                      const pRes = await fetch('https://api.dexscreener.com/latest/dex/tokens/' + t.tokenAddress);
-                      const pData = await pRes.json();
-                      if (pData.pairs && pData.pairs[0]) {
-                        const p = pData.pairs[0];
-                        bnb.push({
-                          name: p.baseToken.name,
-                          symbol: p.baseToken.symbol,
-                          assetId: p.baseToken.address,
-                          chain: p.chainId,
-                          priceUsd: parseFloat(p.priceUsd) || 0,
-                          marketCapUsd: p.fdv || 0,
-                          priceChange24h: p.priceChange?.h24 || 0,
-                          volume24h: p.volume?.h24 || 0,
-                          liquidity: p.liquidity?.usd || 0,
-                          logoUrl: p.info?.imageUrl || null,
-                          pairAddress: p.pairAddress
-                        });
-                      }
-                    } catch(e) {}
-                  }
+            // Also fetch top movers from DexScreener token boosts.
+            // Boosts = currently-promoted tokens, a better trending signal
+            // than the open search endpoint for chains with weak keyword
+            // queries (notably ETH, where "eth ethereum" returns mostly
+            // wrapped-asset noise). We hit /token-boosts/top, filter per
+            // chain, hydrate each token via /latest/dex/tokens, gate on
+            // the same quality thresholds as fetchCategory, then merge.
+            async function mergeBoostsInto(target, chainId, limit) {
+              try {
+                const res = await fetch('https://api.dexscreener.com/token-boosts/top/v1');
+                const data = await res.json();
+                if (!Array.isArray(data)) return;
+                const movers = data.filter(t => t.chainId === chainId).slice(0, limit);
+                for (const t of movers) {
+                  const lowerAddr = (t.tokenAddress || '').toLowerCase();
+                  if (!lowerAddr) continue;
+                  if (target.find(b => (b.assetId || '').toLowerCase() === lowerAddr)) continue;
+                  try {
+                    const pRes = await fetch('https://api.dexscreener.com/latest/dex/tokens/' + t.tokenAddress);
+                    const pData = await pRes.json();
+                    if (!pData.pairs || !pData.pairs[0]) continue;
+                    // Prefer the highest-liquidity pair on the target chain.
+                    const chainPairs = pData.pairs.filter(p => p.chainId === chainId);
+                    const p = (chainPairs.length ? chainPairs : pData.pairs)
+                      .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+                    if (!passesQuality(p)) continue;
+                    target.push({
+                      name: p.baseToken.name,
+                      symbol: p.baseToken.symbol,
+                      assetId: p.baseToken.address,
+                      chain: p.chainId,
+                      priceUsd: parseFloat(p.priceUsd) || 0,
+                      marketCapUsd: p.fdv || 0,
+                      priceChange24h: p.priceChange?.h24 || 0,
+                      volume24h: p.volume?.h24 || 0,
+                      liquidity: p.liquidity?.usd || 0,
+                      logoUrl: p.info?.imageUrl || null,
+                      pairAddress: p.pairAddress
+                    });
+                  } catch(_) {}
                 }
-              }
-            } catch(e) { console.error('Boosts error:', e.message); }
+              } catch(e) { console.error('Boosts merge error for ' + chainId + ':', e.message); }
+            }
+
+            await mergeBoostsInto(bnb, 'bsc', 15);
+            await mergeBoostsInto(eth, 'ethereum', 20); // ETH leans heavily on boosts since search is weak
+            await mergeBoostsInto(sol, 'solana', 15);
 
             // Dedupe each category by token address. Dexscreener's
             // /search endpoint can return multiple LP pairs for the same
