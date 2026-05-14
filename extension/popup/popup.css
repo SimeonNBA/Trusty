@@ -199,6 +199,30 @@ html, body {
   color: var(--muted);
   font-family: ui-monospace, "SF Mono", monospace;
 }
+.trending-tab-chain {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 22px 3px 8px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23F3BA2F' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+}
+.trending-tab-chain:hover { border-color: var(--gold); }
+.trending-tab-chain:focus { outline: none; border-color: var(--gold); }
+.trending-tab-meta {
+  display: flex;
+  justify-content: flex-end;
+  margin: -6px 0 8px;
+  padding: 0 2px;
+}
 .trending-tab-list {
   display: flex;
   flex-direction: column;

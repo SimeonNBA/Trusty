@@ -140,10 +140,17 @@
 
     </div><!-- /#viewHome -->
 
-    <!-- Trending view (BNB-focused, fetched from trustyai.tech) -->
+    <!-- Trending view (chain-filtered, fetched from trustyai.tech) -->
     <div class="tab-view" id="viewTrending" data-view="trending" style="display:none;">
       <div class="trending-tab-header">
-        <span class="trending-tab-title">🔥 BNB Trending</span>
+        <span class="trending-tab-title">🔥 Hot Tokens</span>
+        <select id="popupTrendingChain" class="trending-tab-chain" aria-label="Chain">
+          <option value="bnb">🟡 BNB</option>
+          <option value="eth">🔵 ETH</option>
+          <option value="sol">🟣 SOL</option>
+        </select>
+      </div>
+      <div class="trending-tab-meta">
         <span class="trending-tab-updated" id="popupTrendingUpdated">—</span>
       </div>
       <div class="trending-tab-list" id="popupTrendingList">
