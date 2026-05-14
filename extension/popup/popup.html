@@ -27,6 +27,15 @@
     <!-- Home view (default) -->
     <div class="tab-view" id="viewHome" data-view="home">
 
+    <!-- What's new — auto-shows once per version, dismissible -->
+    <div class="whats-new" id="whatsNew" style="display:none;">
+      <button class="whats-new-close" id="whatsNewClose" type="button" aria-label="Dismiss">×</button>
+      <div class="whats-new-tag">🆕 v0.5.0</div>
+      <div class="whats-new-body">
+        New <strong>Trending</strong> tab with BNB / ETH / SOL chain switcher, live <strong>$TRUSTY</strong> pin, and a refreshed help overview.
+      </div>
+    </div>
+
     <!-- How it works — onboarding helper, dismissible per-device -->
     <section class="help-section" id="helpSection">
       <button class="help-dismiss" id="helpDismiss" type="button" aria-label="Dismiss">×</button>
