@@ -292,7 +292,7 @@ async function scanTokenEvm(ca, chain, env) {
     fetchDex(ca, resolvedChain === "ethereum" ? "ethereum"
                 : resolvedChain === "base"    ? "base"
                 : resolvedChain === "polygon" ? "polygon"
-                : "bsc"),
+                : "bsc", env),
     fetchFourMemeOrigin(ca, resolvedChain, env),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
@@ -326,7 +326,7 @@ async function scanTokenEvm(ca, chain, env) {
 async function scanTokenSolana(ca, chain, env) {
   const [gpRes, dxRes, rcRes] = await Promise.allSettled([
     fetchGoPlusSolana(ca, env),
-    fetchDex(ca, "solana"),
+    fetchDex(ca, "solana", env),
     fetchRugCheck(ca),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
@@ -440,44 +440,106 @@ async function fetchGoPlus(cid, ca, env) {
 }
 
 // ── Dexscreener (works for both EVM and Solana — just filter chainId) ──
-async function fetchDex(ca, preferredChain) {
-  const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${ca}`, {
-    headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
-  });
-  if (!r.ok) throw new Error("dex " + r.status);
-  const data = await r.json();
-  if (!Array.isArray(data?.pairs) || !data.pairs.length) return null;
-  const filtered = preferredChain
-    ? data.pairs.filter((p) => p.chainId === preferredChain)
-    : [];
-  const candidates = filtered.length ? filtered : data.pairs;
+// Mirror of the GoPlus fetch+cache pattern. Without this, transient
+// Dexscreener failures (429 / 5xx / empty pairs) cause the scan to be
+// stored with empty market data — symbol falls back to hex slice,
+// score loses the liveness bonus, pill looks broken. Retries cover
+// most transients; the 6h KV cache + stale-while-revalidate makes
+// repeated cold-cache scans of the same token instant even when
+// Dexscreener is having a bad minute.
+const DEX_CACHE_TTL = 6 * 60 * 60; // 6h — market data refreshes more
+                                    // often than safety data, hence shorter
+                                    // than the GoPlus 24h cache.
 
-  // Choose the canonical pair by 24h volume (with a $1k liquidity floor
-  // to avoid wash-trade fake pools) — but aggregate liquidity + volume
-  // across ALL pairs of the same chain so the user sees the token's
-  // real market depth, not a single thin pool.
-  const principal = candidates
-    .filter((p) => (p.liquidity?.usd || 0) >= 1000)
-    .sort((a, b) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))[0]
-    || candidates.sort(
-      (a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
-    )[0];
+async function fetchDexRaw(ca, preferredChain) {
+  let lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      const delay = attempt === 1 ? 400 : 1200;
+      await new Promise(r => setTimeout(r, delay));
+    }
+    try {
+      const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${ca}`, {
+        headers: { Accept: "application/json", "User-Agent": "trusty-ai/0.1" },
+      });
+      if (!r.ok) {
+        if (r.status === 429 || r.status >= 500) {
+          lastErr = new Error("dex " + r.status);
+          continue;
+        }
+        throw new Error("dex " + r.status);
+      }
+      const data = await r.json();
+      if (!Array.isArray(data?.pairs) || !data.pairs.length) {
+        // Empty pairs — could be soft-throttle or a genuinely unindexed
+        // token. Retry once; if still empty, give up.
+        lastErr = new Error("dex empty pairs");
+        continue;
+      }
+      const filtered = preferredChain
+        ? data.pairs.filter((p) => p.chainId === preferredChain)
+        : [];
+      const candidates = filtered.length ? filtered : data.pairs;
 
-  let totalLiq = 0, totalVol = 0;
-  for (const p of candidates) {
-    totalLiq += p.liquidity?.usd || 0;
-    totalVol += p.volume?.h24 || 0;
+      const principal = candidates
+        .filter((p) => (p.liquidity?.usd || 0) >= 1000)
+        .sort((a, b) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))[0]
+        || candidates.sort(
+          (a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)
+        )[0];
+
+      if (!principal) {
+        lastErr = new Error("dex no principal pair");
+        continue;
+      }
+
+      let totalLiq = 0, totalVol = 0;
+      for (const p of candidates) {
+        totalLiq += p.liquidity?.usd || 0;
+        totalVol += p.volume?.h24 || 0;
+      }
+
+      return {
+        symbol: principal.baseToken?.symbol,
+        name: principal.baseToken?.name,
+        priceUsd: parseFloat(principal.priceUsd) || 0,
+        mcap: principal.marketCap || principal.fdv || 0,
+        liquidityUsd: totalLiq,
+        volume24h: totalVol,
+        pairCreatedAt: principal.pairCreatedAt || 0,
+      };
+    } catch (e) {
+      lastErr = e;
+    }
   }
+  throw lastErr || new Error("dex exhausted retries");
+}
 
-  return {
-    symbol: principal.baseToken?.symbol,
-    name: principal.baseToken?.name,
-    priceUsd: parseFloat(principal.priceUsd) || 0,
-    mcap: principal.marketCap || principal.fdv || 0,
-    liquidityUsd: totalLiq,
-    volume24h: totalVol,
-    pairCreatedAt: principal.pairCreatedAt || 0,
-  };
+async function fetchDex(ca, preferredChain, env) {
+  const cacheKey = `dex:v1:${preferredChain || "any"}:${ca}`;
+  try {
+    const fresh = await fetchDexRaw(ca, preferredChain);
+    if (fresh && env && env.SCAN_KV) {
+      try {
+        await env.SCAN_KV.put(cacheKey, JSON.stringify(fresh), {
+          expirationTtl: DEX_CACHE_TTL,
+        });
+      } catch (_) {}
+    }
+    return fresh;
+  } catch (freshErr) {
+    // Fresh fetch failed — fall back to cached data if any.
+    // Market data goes stale faster than safety data, but a 6h-old
+    // mcap is still vastly better than "—" placeholders that make
+    // the pill look broken.
+    if (env && env.SCAN_KV) {
+      try {
+        const cached = await env.SCAN_KV.get(cacheKey, "json");
+        if (cached) return cached;
+      } catch (_) {}
+    }
+    return null;
+  }
 }
 
 // ── RugCheck.xyz: Solana-specific LP analysis (free, no key) ──
@@ -1001,6 +1063,16 @@ function isUpstreamOk(scan) {
       return false;
     }
   }
+  // Also refuse to cache scans where Dexscreener didn't return — those
+  // produce hex-fallback symbols ($65AE-style) and empty market data,
+  // which makes the pill look broken. Better to re-fetch next call.
+  const md = scan.marketData || {};
+  const noMcap = !md.mcap || md.mcap === "—" || md.mcap === "$0";
+  const noVol = !md.volume24h || md.volume24h === "—" || md.volume24h === "$0";
+  if (noMcap && noVol) return false;
+  // Hex-fallback symbol means Dexscreener AND GoPlus token_symbol were
+  // both empty — same partial-data signal, don't cache.
+  if (scan.symbolFallback === true) return false;
   return true;
 }
 
