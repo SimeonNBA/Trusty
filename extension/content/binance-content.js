@@ -40,6 +40,54 @@
     return Array.from(document.querySelectorAll(POST_SELECTORS.join(",")));
   }
 
+  /* ── Mention reporting helpers ──────────────────────────────
+     For each Square post containing a CA, send an anonymous mention
+     event to the worker. Worker classifies sentiment server-side and
+     aggregates per CA in a 24h window. Raw post text leaves the
+     browser only for classification; it's never persisted long-term. */
+
+  function extractPostId(postEl) {
+    // Real post IDs from anchor href: /en/square/post/<ID>
+    const link = postEl.querySelector("a[href*='/square/post/']");
+    if (link && link.href) {
+      const m = link.href.match(/\/square\/post\/([^/?#]+)/);
+      if (m && m[1]) return m[1];
+    }
+    // Fallback: stable text-content hash. Same post → same hash → dedup
+    // works even without a real ID. Worker drops duplicate post IDs.
+    const txt = (postEl.textContent || "").slice(0, 200);
+    let h = 5381;
+    for (let i = 0; i < txt.length; i++) h = ((h << 5) + h + txt.charCodeAt(i)) >>> 0;
+    return "h_" + h.toString(36);
+  }
+
+  function extractEngagement(postEl) {
+    // Best-effort: sum visible engagement counts (likes + comments + reposts).
+    // Square's DOM doesn't expose these via semantic selectors, so we
+    // approximate by collecting numbers from button-like elements with
+    // values typical of engagement counts. If we can't find them, default
+    // to 0 — the sentiment classifier doesn't strictly require engagement.
+    let total = 0;
+    const btns = postEl.querySelectorAll("button, [role='button'], [class*='engage']");
+    btns.forEach(function (btn) {
+      const txt = (btn.textContent || "").trim();
+      // Match shorthand counts like "1.2K", "523", "42"
+      const m = txt.match(/^(\d+(\.\d+)?)\s*([KM])?$/);
+      if (m) {
+        let n = parseFloat(m[1]);
+        if (m[3] === "K") n *= 1000;
+        else if (m[3] === "M") n *= 1000000;
+        if (n > 0 && n < 10000000) total += Math.floor(n);
+      }
+    });
+    return total;
+  }
+
+  function detectCAsInText(text) {
+    if (!text || !window.TrustyCA || !window.TrustyCA.findContractAddresses) return [];
+    return window.TrustyCA.findContractAddresses(text);
+  }
+
   function processPost(postEl) {
     if (!postEl) return;
     if (window.TrustyPill.isProcessed(postEl)) return;
@@ -48,6 +96,25 @@
     // a pill right after each one. Same module used on X — zero new
     // pill rendering code needed here.
     window.TrustyPill.injectInline(postEl);
+
+    // Report sentiment mention(s) for the worker to aggregate.
+    // Only fires if the post contains at least one CA — we never report
+    // CA-free posts to the worker.
+    const text = postEl.textContent || "";
+    const found = detectCAsInText(text);
+    if (!found.length) return;
+
+    const postId = extractPostId(postEl);
+    const engagement = extractEngagement(postEl);
+    const seenInThisPost = new Set(); // dedup CAs within a single post
+    for (const entry of found) {
+      const key = (entry.ca || "").toLowerCase();
+      if (!key || seenInThisPost.has(key)) continue;
+      seenInThisPost.add(key);
+      if (window.TrustyAPI && window.TrustyAPI.reportSquareMention) {
+        window.TrustyAPI.reportSquareMention(entry.ca, entry.chain, postId, text, engagement);
+      }
+    }
   }
 
   function scanAllPosts() {

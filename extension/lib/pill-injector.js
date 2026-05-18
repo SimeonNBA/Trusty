@@ -407,6 +407,13 @@
             '<div class="trusty-pp-section-title">📈 X activity</div>' +
             renderActivityBody(data.activity || {});
         }
+        const sq = stillLive.querySelector('[data-trusty-section="square"]');
+        if (sq) {
+          sq.style.display = "";
+          sq.innerHTML =
+            '<div class="trusty-pp-section-title">🟡 Binance Square activity</div>' +
+            renderSquareActivityBody(data.squareActivity || {});
+        }
       }).catch(function () {
         const k = document.getElementById(PANEL_ID)?.querySelector('[data-trusty-section="kols"]');
         if (k) {
@@ -696,6 +703,43 @@
     '</div>';
   }
 
+  // Same grid pattern as renderActivityBody — keeps the X and Square
+  // sections visually consistent. Square doesn't expose a "vs yesterday"
+  // delta yet, so we show 3 cells (mentions / sentiment / coord-shill).
+  function renderSquareActivityBody(sq) {
+    if (sq === null) {
+      return '<div class="trusty-pp-empty trusty-pp-loading-line">Loading Binance Square…</div>';
+    }
+    const mentions = sq.mentions24h || 0;
+    const sentiment = sq.sentiment || "—";
+    const coordShill = !!sq.coordShill;
+    if (mentions === 0) {
+      return '<div class="trusty-pp-empty">No Binance Square mentions for this token in the last 24h.</div>';
+    }
+    return '<div class="trusty-pp-stat-grid trusty-pp-stat-grid-3">' +
+      '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + mentions.toLocaleString() + '</div><div class="trusty-pp-stat-lbl">mentions / 24h</div></div>' +
+      '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + sentiment + '</div><div class="trusty-pp-stat-lbl">sentiment</div></div>' +
+      '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num ' + (coordShill ? 'down' : 'up') + '">' + (coordShill ? "DETECTED" : "Clean") + '</div><div class="trusty-pp-stat-lbl">coord. shill</div></div>' +
+    '</div>';
+  }
+
+  // Free-tier blurred view of Binance Square activity. Same structure
+  // as renderLockedActivityBody — keeps the visual upgrade pitch
+  // consistent between X and Square sections.
+  function renderLockedSquareBody() {
+    return '<div class="trusty-pp-locked">' +
+      '<div class="trusty-pp-stat-grid trusty-pp-stat-grid-3 trusty-pp-blurred">' +
+        '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">123</div><div class="trusty-pp-stat-lbl">mentions / 24h</div></div>' +
+        '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">Bullish</div><div class="trusty-pp-stat-lbl">sentiment</div></div>' +
+        '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num up">Clean</div><div class="trusty-pp-stat-lbl">coord. shill</div></div>' +
+      '</div>' +
+      '<div class="trusty-pp-locked-overlay">' +
+        '<div class="trusty-pp-locked-icon">🔒</div>' +
+        '<div class="trusty-pp-locked-text">Binance Square sentiment unlocked with paid tier</div>' +
+      '</div>' +
+    '</div>';
+  }
+
   function openPaidPanel(result, ca, chain, opts) {
     closePaidPanel();
     opts = opts || {};
@@ -776,6 +820,12 @@
         (blurred ? '' : ' style="display:none;"') + '>' +
         '<div class="trusty-pp-section-title">📈 X activity</div>' +
         (blurred ? renderLockedActivityBody() : renderActivityBody(null)) +
+      '</div>' +
+
+      '<div class="trusty-pp-section" data-trusty-section="square"' +
+        (blurred ? '' : ' style="display:none;"') + '>' +
+        '<div class="trusty-pp-section-title">🟡 Binance Square activity</div>' +
+        (blurred ? renderLockedSquareBody() : renderSquareActivityBody(null)) +
       '</div>' +
 
       '<div class="trusty-pp-section">' +

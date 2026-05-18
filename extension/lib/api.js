@@ -189,11 +189,34 @@
     } catch (e) { /* never block */ }
   }
 
+  // ── Binance Square mention reporting ─────────────────────────
+  // Posted by binance-content.js whenever a Square post containing a
+  // CA scrolls into view. Worker classifies sentiment server-side
+  // and aggregates per CA — raw post text is not persisted long-term,
+  // only the derived sentiment class. See /api/square-mention.
+  function reportSquareMention(ca, chain, postId, text, engagement) {
+    if (!ca || !postId) return;
+    try {
+      fetch(API_BASE + "/api/square-mention", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ca: ca,
+          chain: chain || "evm",
+          postId: postId,
+          text: text || "",
+          engagement: engagement || 0,
+        }),
+      }).catch(function () { /* swallow */ });
+    } catch (e) { /* never block */ }
+  }
+
   // Expose globally for content scripts
   window.TrustyAPI = {
     scan,
     scanKols,
     reportEvent,
+    reportSquareMention,
     shortAddr,
     verdictFromScore
   };
