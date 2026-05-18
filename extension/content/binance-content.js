@@ -1,83 +1,69 @@
 /* ================================================================
    Trusty AI — Binance Square content script
 
-   Scans Binance Square posts for contract addresses and reports them
-   to the worker so it can aggregate Square sentiment per token. That
-   sentiment is then surfaced in the X paid panel alongside X velocity.
+   Scans Binance Square pages for token mentions and reports them to
+   the worker so it can aggregate cross-platform sentiment. The
+   aggregated sentiment surfaces in the X paid panel alongside X
+   velocity (see /api/kols → squareActivity field).
 
-   NOTE — pill injection on Square pages was tried and dropped: Binance
-   ships obfuscated React class names that change between pages and
-   releases, so a stable selector set is impractical. The user value
-   (cross-platform sentiment) is fully captured by the report-only
-   path, which doesn't depend on the DOM structure at all.
+   Approach: scan document.body.innerText on every meaningful
+   mutation. Binance's React app re-mints class names on every
+   release, so we don't rely on post-container selectors anymore —
+   we just look at the text the page renders. Three detection paths
+   fire independently per page:
 
-   Square is a SPA, so we observe mutations on body to catch posts
-   added after initial render (infinite scroll, route changes).
+     1. Raw contract addresses (0x... and base58)
+     2. Cashtags ($TICKER)
+     3. Hashtags (#ticker)
+
+   For (2) and (3) the worker resolves the ticker → CA via its
+   scan-history symref table. Tickers that don't match any known
+   token (generic English hashtags like #crypto) are silently
+   ignored server-side.
+
+   Dedup: per (URL, ca-or-ticker) pair, per page session — a single
+   page-view never reports the same token twice no matter how many
+   times React re-renders. Worker has its own (postId, ca) dedup with
+   a 7-day TTL so refreshes don't double-count either.
    ================================================================ */
 
 (function () {
   "use strict";
 
   console.log(
-    "%c🛡️ Trusty AI loaded on " + location.hostname + "/square",
+    "%c🛡️ Trusty AI loaded on " + location.hostname + location.pathname,
     "background:#F0B90B;color:#0a0f1c;padding:4px 8px;border-radius:4px;font-weight:bold;"
   );
 
-  /* ── Post discovery ─────────────────────────────────────────
-     Square's DOM uses multiple class-name conventions and has changed
-     a few times. Rather than depending on one selector, we try the
-     known patterns + the semantic `article` fallback. injectInline()
-     handles deduplication so a post matched by multiple selectors
-     gets processed once. */
+  // Per-session report cache — survives mutation re-fires but resets
+  // on page navigation (see path-change handler below).
+  const reported = new Set();
 
-  const POST_SELECTORS = [
-    "article",                          // semantic HTML
-    "[role='article']",                 // ARIA fallback
-    "[class*='postCard']",              // Binance React conventions
-    "[class*='post-card']",
-    "[class*='PostCard']",
-    "[class*='feedItem']",
-    "[class*='feed-item']",
-    "[data-bn-type='post']",            // Binance internal data attribute
-    "[data-testid*='post']",            // testid pattern
-  ];
-
-  function findPostContainers() {
-    return Array.from(document.querySelectorAll(POST_SELECTORS.join(",")));
-  }
-
-  /* ── Mention reporting helpers ──────────────────────────────
-     For each Square post containing a CA, send an anonymous mention
-     event to the worker. Worker classifies sentiment server-side and
-     aggregates per CA in a 24h window. Raw post text leaves the
-     browser only for classification; it's never persisted long-term. */
-
-  function extractPostId(postEl) {
-    // Real post IDs from anchor href: /en/square/post/<ID>
-    const link = postEl.querySelector("a[href*='/square/post/']");
-    if (link && link.href) {
-      const m = link.href.match(/\/square\/post\/([^/?#]+)/);
-      if (m && m[1]) return m[1];
-    }
-    // Fallback: stable text-content hash. Same post → same hash → dedup
-    // works even without a real ID. Worker drops duplicate post IDs.
-    const txt = (postEl.textContent || "").slice(0, 200);
+  // URL-derived postId. For /square/post/<id> URLs we use the actual
+  // post id so worker-side dedup is stable across refreshes; for
+  // other Square views (feed, profile, hashtag pages) we fall back to
+  // a tiny hash of the path so each distinct page still dedups.
+  function urlAsPostId() {
+    const path = location.pathname || "";
+    const m = path.match(/\/square\/post\/([^/?#]+)/);
+    if (m && m[1]) return m[1];
     let h = 5381;
-    for (let i = 0; i < txt.length; i++) h = ((h << 5) + h + txt.charCodeAt(i)) >>> 0;
-    return "h_" + h.toString(36);
+    for (let i = 0; i < path.length; i++) {
+      h = ((h << 5) + h + path.charCodeAt(i)) >>> 0;
+    }
+    return "pg_" + h.toString(36);
   }
 
-  function extractEngagement(postEl) {
-    // Best-effort: sum visible engagement counts (likes + comments + reposts).
-    // Square's DOM doesn't expose these via semantic selectors, so we
-    // approximate by collecting numbers from button-like elements with
-    // values typical of engagement counts. If we can't find them, default
-    // to 0 — the sentiment classifier doesn't strictly require engagement.
+  // Best-effort engagement total — sums numeric labels on visible
+  // engagement buttons (likes, comments, reposts). Square doesn't
+  // expose these via semantic selectors so we approximate. Defaults
+  // to 0 if nothing matches; the worker's sentiment classifier
+  // doesn't strictly require engagement.
+  function estimateEngagement() {
     let total = 0;
-    const btns = postEl.querySelectorAll("button, [role='button'], [class*='engage']");
+    const btns = document.querySelectorAll("button, [role='button'], [class*='engage']");
     btns.forEach(function (btn) {
       const txt = (btn.textContent || "").trim();
-      // Match shorthand counts like "1.2K", "523", "42"
       const m = txt.match(/^(\d+(\.\d+)?)\s*([KM])?$/);
       if (m) {
         let n = parseFloat(m[1]);
@@ -89,88 +75,76 @@
     return total;
   }
 
-  function detectCAsInText(text) {
-    if (!text || !window.TrustyCA || !window.TrustyCA.findContractAddresses) return [];
-    return window.TrustyCA.findContractAddresses(text);
-  }
+  function scanPage() {
+    if (!window.TrustyCA || !window.TrustyAPI) return;
+    const text = (document.body && document.body.innerText) || "";
+    // Skip until the React app has actually rendered something
+    // meaningful — saves a no-op POST during the initial blank frame.
+    if (text.length < 40) return;
 
-  // Track posts we've already reported to avoid duplicate sentiment
-  // events on mutation-observer re-fires. Worker also dedups by postId,
-  // so this is just bandwidth-saving.
-  const reportedPosts = new WeakSet();
-
-  function processPost(postEl) {
-    if (!postEl) return;
-    if (reportedPosts.has(postEl)) return;
-
-    // Report sentiment mention(s) for the worker to aggregate.
-    // Two paths: explicit CAs in the post body, and ticker symbols
-    // ($SYMBOL / #symbol). The ticker path catches the majority of
-    // Square posts which mention tokens by ticker rather than CA.
-    // Worker resolves ticker → CA via scan-history symref entries.
-    const text = postEl.textContent || "";
-    const cas = detectCAsInText(text);
-    const tickers = (window.TrustyCA && window.TrustyCA.findTickerSymbols)
+    const postId = urlAsPostId();
+    const cas = window.TrustyCA.findContractAddresses(text);
+    const tickers = window.TrustyCA.findTickerSymbols
       ? window.TrustyCA.findTickerSymbols(text) : [];
 
-    if (!cas.length && !tickers.length) {
-      // Mark processed so we don't re-scan empty posts on every
-      // mutation tick.
-      reportedPosts.add(postEl);
-      return;
-    }
+    if (!cas.length && !tickers.length) return;
 
-    const postId = extractPostId(postEl);
-    const engagement = extractEngagement(postEl);
+    const engagement = estimateEngagement();
 
-    // CA path — dedup within the post
-    const seenCa = new Set();
+    // CA path
     for (const entry of cas) {
-      const key = (entry.ca || "").toLowerCase();
-      if (!key || seenCa.has(key)) continue;
-      seenCa.add(key);
-      if (window.TrustyAPI && window.TrustyAPI.reportSquareMention) {
+      const ca = (entry.ca || "").toLowerCase();
+      const key = "ca:" + postId + ":" + ca;
+      if (reported.has(key)) continue;
+      reported.add(key);
+      if (window.TrustyAPI.reportSquareMention) {
         window.TrustyAPI.reportSquareMention(entry.ca, entry.chain, postId, text, engagement);
       }
     }
 
-    // Ticker path — dedup within the post. Worker filters tickers
-    // that don't match any known token via the symref table.
-    const seenTicker = new Set();
+    // Ticker path — worker filters tickers without a symref match
     for (const sym of tickers) {
       const u = String(sym || "").toUpperCase();
-      if (!u || seenTicker.has(u)) continue;
-      seenTicker.add(u);
-      if (window.TrustyAPI && window.TrustyAPI.reportSquareTicker) {
+      if (!u) continue;
+      const key = "tk:" + postId + ":" + u;
+      if (reported.has(key)) continue;
+      reported.add(key);
+      if (window.TrustyAPI.reportSquareTicker) {
         window.TrustyAPI.reportSquareTicker(u, postId, text, engagement);
       }
     }
-
-    reportedPosts.add(postEl);
   }
 
-  function scanAllPosts() {
-    findPostContainers().forEach(processPost);
+  // SPA route change detection. Square is a client-side router so
+  // location.pathname changes without a full page load. When it does,
+  // clear the reported set so the new page can record its own mentions.
+  let lastPath = location.pathname;
+  function checkPathChange() {
+    if (location.pathname !== lastPath) {
+      lastPath = location.pathname;
+      reported.clear();
+    }
   }
 
-  /* ── Mutation observer ──────────────────────────────────────
-     Same rAF-throttled pattern as x-content.js: coalesce bursts of
-     mutations into a single scan per animation frame. Avoids
-     hammering on infinite-scroll feeds. */
-
+  // rAF-coalesced scan trigger — observer fires constantly during
+  // hydration; we collapse bursts into one scan per frame.
   let scheduled = false;
   function scheduleScan() {
     if (scheduled) return;
     scheduled = true;
     requestAnimationFrame(function () {
       scheduled = false;
-      scanAllPosts();
+      checkPathChange();
+      scanPage();
     });
   }
 
-  const observer = new MutationObserver(function () { scheduleScan(); });
-  observer.observe(document.body, { childList: true, subtree: true });
+  const observer = new MutationObserver(scheduleScan);
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
-  // Initial scan (in case some posts are present at document_idle)
-  scanAllPosts();
+  // Initial scan + a couple of delayed re-scans to catch React's
+  // first render. The MutationObserver handles everything after that.
+  scanPage();
+  setTimeout(scanPage, 800);
+  setTimeout(scanPage, 2500);
 })();
