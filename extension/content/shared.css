@@ -422,11 +422,12 @@
   flex-direction: column;
   gap: 5px;
 }
+/* Outer li is a block — the inner .trusty-tt-sub-main is the grid
+   container that places name + bar + value. (Previously the li was
+   itself a grid, which collapsed the .trusty-tt-sub-main wrapper to
+   a single 90px column and hid the bars.) */
 .trusty-tt-sub {
-  display: grid;
-  grid-template-columns: 90px 1fr 24px;
-  align-items: center;
-  gap: 8px;
+  display: block;
   font-size: 11px;
 }
 .trusty-tt-sub-name {
@@ -436,20 +437,21 @@
   text-overflow: ellipsis;
 }
 .trusty-tt-sub-bar {
-  height: 6px;
+  height: 8px;
   background: rgba(255, 255, 255, 0.06);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
+  min-width: 80px;
 }
 .trusty-tt-sub-fill {
   height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease;
+  border-radius: 4px;
+  transition: width 0.4s ease;
 }
 .trusty-tt-sub-val {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 800;
   text-align: right;
 }
 /* Color tiers */
@@ -838,30 +840,45 @@
 
 /* ── Sub-score row (click opens metric modal) ────────────────
    Whole row is the click target; tapping it opens a centered modal
-   with the website's "Think About This" content for that metric. */
+   with the website's "Think About This" content for that metric.
+   Roomier than the original tooltip row — bars are the visual
+   anchor here, so they get more horizontal real estate. */
 .trusty-tt-subs-clickable .trusty-tt-sub {
   cursor: pointer;
-  border-radius: 6px;
-  padding: 4px 6px;
-  transition: background 0.12s ease;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 2px;
+  transition: background 0.12s ease, transform 0.12s ease;
 }
 .trusty-tt-subs-clickable .trusty-tt-sub:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.045);
+  transform: translateX(1px);
 }
 .trusty-tt-sub-main {
   display: grid !important;
-  grid-template-columns: 100px 1fr 32px;
+  grid-template-columns: 112px 1fr 36px;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+}
+.trusty-tt-sub-name {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #d8dee9 !important;
 }
 .trusty-tt-sub-info {
   color: #8b95a8 !important;
-  font-size: 10px;
-  opacity: 0.55;
-  margin-left: 2px;
+  font-size: 11px;
+  opacity: 0.5;
+  margin-left: 3px;
   transition: opacity 0.12s ease;
 }
-.trusty-tt-subs-clickable .trusty-tt-sub:hover .trusty-tt-sub-info { opacity: 1; }
+.trusty-tt-subs-clickable .trusty-tt-sub:hover .trusty-tt-sub-info { opacity: 1; color: #818CF8 !important; }
+/* Paid-panel context: bigger bars, more breathing room than the
+   tooltip uses. Scoped to .trusty-pp-section so the hover-tooltip
+   keeps its compact dimensions. */
+.trusty-pp-section .trusty-tt-sub-bar { height: 12px; border-radius: 6px; }
+.trusty-pp-section .trusty-tt-sub-fill { border-radius: 6px; }
+.trusty-pp-section .trusty-tt-sub-val { font-size: 13px !important; }
 
 /* ── Metric detail modal ─────────────────────────────────────
    Mirrors the openMetricPopup UX on trustyai.tech — centered card
