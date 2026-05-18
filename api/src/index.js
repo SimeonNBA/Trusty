@@ -415,6 +415,71 @@ async function twakSecurity(chain, ca, env) {
   }
 }
 
+// Batch token prices via TWAK gateway. Returns null on any failure.
+// Accepts an array of asset IDs (up to 50 per request).
+async function twakPricesRaw(assetIds, env) {
+  if (!Array.isArray(assetIds) || !assetIds.length) return null;
+  return twakPost("/v2/market/tickers", {
+    currency: "USD",
+    assets: assetIds.slice(0, 50),
+  }, env);
+}
+
+async function twakPrices(assetIds, env) {
+  if (!twakConfigured(env)) return null;
+  // Single-token KV cache keyed by asset ID. Cheap to cache aggressively
+  // because Dexscreener has its own cache layer anyway — this only fires
+  // when Dexscreener returned nothing.
+  if (assetIds.length === 1) {
+    const cacheKey = `twak-px:v1:${assetIds[0]}`;
+    try {
+      const fresh = await twakPricesRaw(assetIds, env);
+      if (fresh && env.SCAN_KV) {
+        try {
+          await env.SCAN_KV.put(cacheKey, JSON.stringify(fresh), {
+            expirationTtl: 6 * 60 * 60, // 6h — price moves but cache prevents quota burn
+          });
+        } catch (_) {}
+      }
+      return fresh;
+    } catch (e) {
+      if (env.SCAN_KV) {
+        try {
+          const cached = await env.SCAN_KV.get(cacheKey, "json");
+          if (cached) return cached;
+        } catch (_) {}
+      }
+      return null;
+    }
+  }
+  try { return await twakPricesRaw(assetIds, env); }
+  catch (_) { return null; }
+}
+
+// Adapter — converts a single TWAK ticker entry into the same shape
+// fetchDexRaw returns. Lets the rest of the pipeline treat the data
+// identically without branching everywhere. Liquidity + pairCreatedAt
+// aren't exposed by the price endpoint, so they remain unknown (0).
+function twakPriceToDexShape(twakEntry, fallbackSymbol, fallbackName) {
+  if (!twakEntry || typeof twakEntry !== "object") return null;
+  // Try several plausible field names.
+  const price = parseFloat(twakEntry.price || twakEntry.priceUsd || twakEntry.price_usd || 0) || 0;
+  const mcap  = parseFloat(twakEntry.market_cap || twakEntry.marketCap || twakEntry.mcap || 0) || 0;
+  const vol   = parseFloat(twakEntry.volume_24h || twakEntry.volume24h || twakEntry.volume || 0) || 0;
+  const sym   = twakEntry.symbol || twakEntry.ticker || fallbackSymbol;
+  const name  = twakEntry.name || twakEntry.asset_name || fallbackName;
+  if (!price && !mcap && !vol) return null; // nothing useful
+  return {
+    symbol: sym,
+    name: name,
+    priceUsd: price,
+    mcap: mcap,
+    liquidityUsd: 0,
+    volume24h: vol,
+    pairCreatedAt: 0,
+  };
+}
+
 // Convert TWAK security response → check rows for the scan UI.
 // Brand-neutral phrasing ("independent audit") so the user doesn't
 // see a different provider name from the rest of the scan. Returns
@@ -524,8 +589,20 @@ async function scanTokenEvm(ca, chain, env) {
     fetchFourMemeOrigin(ca, resolvedChain, env),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
-  const d = dxRes.status === "fulfilled" ? dxRes.value : null;
+  let   d = dxRes.status === "fulfilled" ? dxRes.value : null;
   const fm = fmRes.status === "fulfilled" ? fmRes.value : null;
+
+  // Market-data fallback: when Dexscreener returns nothing (throttle
+  // or unindexed token) try the secondary gateway. Sequential so we
+  // don't burn the 1 req/s quota when Dex is healthy.
+  if (!d) {
+    const assetId = twakAssetId(resolvedChain, ca);
+    if (assetId) {
+      const res = await twakPrices([assetId], env);
+      const entry = res?.[0] || res?.tickers?.[0] || res?.data?.[0] || res?.assets?.[0] || null;
+      d = twakPriceToDexShape(entry);
+    }
+  }
 
   // No GoPlus data → fresh token (not yet in their safety database) OR
   // soft-throttled. Showing 5 ❌ rows + RUN/0 makes a perfectly-fine
@@ -599,8 +676,19 @@ async function scanTokenSolana(ca, chain, env) {
     fetchRugCheck(ca),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
-  const d = dxRes.status === "fulfilled" ? dxRes.value : null;
+  let   d = dxRes.status === "fulfilled" ? dxRes.value : null;
   const rc = rcRes.status === "fulfilled" ? rcRes.value : null;
+
+  // Same market-data fallback as the EVM path: when Dexscreener
+  // returns nothing for a Solana token, try the secondary gateway.
+  if (!d) {
+    const assetId = twakAssetId("solana", ca);
+    if (assetId) {
+      const res = await twakPrices([assetId], env);
+      const entry = res?.[0] || res?.tickers?.[0] || res?.data?.[0] || res?.assets?.[0] || null;
+      d = twakPriceToDexShape(entry);
+    }
+  }
 
   // PENDING state — GoPlus Solana is unreliable even for established
   // tokens (see e.g. $BULLISH at $1.1M mcap with GoPlus null). We
