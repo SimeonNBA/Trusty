@@ -843,6 +843,7 @@ async function scanTokenEvm(ca, chain, env, opts) {
     };
     if (!realSym) out.symbolFallback = true;
     if (fm && fm.launchedOn) out.launchedOn = fm.launchedOn;
+    out.subScores = computeSubScores(null, d, resolvedChain);
     return out;
   }
 
@@ -850,6 +851,7 @@ async function scanTokenEvm(ca, chain, env, opts) {
   const paidChecks = buildPaidChecks(g);
   const score = computeScore(g, checks, paidChecks, d);
   const verdict = score >= 70 ? "APE" : score >= 40 ? "CAUTION" : "RUN";
+  const subScores = computeSubScores(g, d, resolvedChain);
 
   // Track whether we have a REAL symbol from upstream sources or whether
   // we fell back to deriving one from the contract address. The hex
@@ -867,6 +869,7 @@ async function scanTokenEvm(ca, chain, env, opts) {
   // for trade-row UAI / launchpad-badge link / future logic.
   const shape = baseScanShape(ca, resolvedChain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g), fm);
   if (symbolFallback) shape.symbolFallback = true;
+  shape.subScores = subScores;
   return shape;
 }
 
@@ -926,6 +929,7 @@ async function scanTokenSolana(ca, chain, env, opts) {
       _twak: twakDiagFor(twakResult, env),
     };
     if (!realSym) out.symbolFallback = true;
+    out.subScores = computeSubScores(null, d, chain);
     return out;
   }
 
@@ -933,6 +937,7 @@ async function scanTokenSolana(ca, chain, env, opts) {
   const paidChecks = buildPaidChecksSolana(g);
   const score = computeScore(g, checks, paidChecks, d);
   const verdict = score >= 70 ? "APE" : score >= 40 ? "CAUTION" : "RUN";
+  const subScores = computeSubScores(g, d, chain);
 
   // Same symbolFallback flag as the EVM path — see scanTokenEvm comment.
   const realSym = d?.symbol || g?.metadata?.symbol;
@@ -943,6 +948,7 @@ async function scanTokenSolana(ca, chain, env, opts) {
 
   const shape = baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketDataSolana(d, g));
   if (symbolFallback) shape.symbolFallback = true;
+  shape.subScores = subScores;
   return shape;
 }
 
@@ -1608,6 +1614,107 @@ function livenessPenalty(d, g) {
   // Cap so a fully-loaded penalty can't fully erase a perfectly
   // legitimate token's safety credit.
   return Math.min(60, penalty);
+}
+
+// ── Sub-scores ── 6-category breakdown surfaced in the pill.
+// These derive from the same data the main score uses, but expose
+// it as named axes so users see WHY a token scored what it did
+// instead of just a single composite number. Each field is 0-100.
+//
+// Backward-compat: this is a new field on the response. v0.4.0 and
+// v0.5.0 extensions just ignore it — v0.5.1 will render the bars.
+function computeSubScores(g, d, chain) {
+  // Chain Reputation — base prior per chain, data-independent.
+  // ETH has the most mature security tooling and the most expensive
+  // rugs; Solana is high-meme-activity and rugs more frequently.
+  const chainKey = (chain || "").toLowerCase();
+  const CHAIN_PRIORS = {
+    ethereum: 100, eth: 100,
+    bsc: 90, bnb: 90, binance: 90,
+    base: 88,
+    arbitrum: 88, arb: 88,
+    optimism: 86, op: 86,
+    polygon: 85, matic: 85,
+    solana: 82, sol: 82,
+    avalanche: 80, avax: 80,
+    evm: 90, // generic-EVM fallback
+  };
+  const chainReputation = CHAIN_PRIORS[chainKey] != null ? CHAIN_PRIORS[chainKey] : 70;
+
+  // Age / Timing — how long has the token survived the rug window?
+  // Most rugs happen in the first 2 weeks, so age is a real safety signal.
+  let ageTiming = 30;
+  if (d && d.pairCreatedAt) {
+    const ageDays = Math.floor((Date.now() - d.pairCreatedAt) / 86400000);
+    if (ageDays >= 180) ageTiming = 95;
+    else if (ageDays >= 90) ageTiming = 85;
+    else if (ageDays >= 30) ageTiming = 70;
+    else if (ageDays >= 7) ageTiming = 50;
+    else if (ageDays >= 2) ageTiming = 35;
+    else ageTiming = 25;
+  }
+
+  // Ownership — did the dev give up admin keys?
+  let ownership;
+  if (!g) {
+    ownership = 0; // unknown
+  } else {
+    const owner = (g.owner_address || "").toLowerCase();
+    const isRenounced = !owner
+      || owner === "0x0000000000000000000000000000000000000000"
+      || owner === "0x000000000000000000000000000000000000dead";
+    ownership = isRenounced ? 100 : 30;
+  }
+
+  // Supply Safety — mint disabled + LP burned/locked.
+  let supplySafety = 0;
+  if (g) {
+    if (g.is_mintable !== "1") supplySafety += 50;
+    const holders = g.lp_holders || [];
+    let lockedShare = 0;
+    for (const h of holders) {
+      const addr = (h.address || "").toLowerCase();
+      const isBurn = addr === "0x0000000000000000000000000000000000000000"
+        || addr === "0x000000000000000000000000000000000000dead";
+      const isLocked = h.is_locked === 1 || h.is_locked === "1";
+      if (isBurn || isLocked) lockedShare += parseFloat(h.percent || "0");
+    }
+    if (lockedShare >= 0.95) supplySafety += 50;
+  }
+
+  // Narrative — how strong is the meme/story behind the token?
+  // We don't have KOL/Twitter data here (that's /api/kols, async). So
+  // we proxy from market signals: high volume = active narrative,
+  // sustained mcap = persistent story.
+  let narrative = 30;
+  if (d) {
+    const vol = d.volume24h || 0;
+    const mcap = d.mcap || 0;
+    if (vol >= 500000 && mcap >= 1000000) narrative = 85;
+    else if (vol >= 100000 && mcap >= 100000) narrative = 70;
+    else if (vol >= 10000) narrative = 55;
+    else if (vol >= 1000) narrative = 40;
+  }
+
+  // Social Presence — derived from holder count + on-chain activity.
+  // True KOL+X velocity is paid-tier data fetched separately. The
+  // public proxy here is "how many people actually hold this token".
+  let socialPresence = 25;
+  const holderCount = g?.holder_count ? parseInt(g.holder_count, 10) : 0;
+  if (holderCount >= 10000) socialPresence = 90;
+  else if (holderCount >= 5000) socialPresence = 80;
+  else if (holderCount >= 1000) socialPresence = 65;
+  else if (holderCount >= 200) socialPresence = 45;
+  else if (holderCount >= 50) socialPresence = 30;
+
+  return {
+    chainReputation,
+    narrative,
+    ownership,
+    ageTiming,
+    socialPresence,
+    supplySafety,
+  };
 }
 
 // ── market data formatting (matches mock shape) ──
