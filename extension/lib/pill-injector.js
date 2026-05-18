@@ -677,11 +677,47 @@
     var detected = (hasTw && !(isMobileDevice() && twMobile))
       ? '<div class="trusty-pp-trade-detected">✓ Trust Wallet detected · click will open Trust Wallet first</div>'
       : '';
+    // Placeholder for the lazy-fetched route hint. Hidden until populated
+    // post-render in openPaidPanel(); silently stays hidden if the quote
+    // endpoint is unavailable or returns no route.
+    var quoteSlot = '<div class="trusty-pp-trade-quote" data-trusty-quote style="display:none;"></div>';
     return '<div class="trusty-pp-section trusty-pp-trade-section">' +
       '<div class="trusty-pp-section-title">💱 Trade</div>' +
       '<div class="trusty-pp-trade-row">' + parts.join('') + '</div>' +
       detected +
+      quoteSlot +
     '</div>';
+  }
+
+  // Chain → native gas-token symbol for the quote line.
+  function nativeSymForChain(chain) {
+    var c = (chain || "").toLowerCase();
+    if (c === "bsc" || c === "bnb" || c === "binance" || c === "evm") return "BNB";
+    if (c === "ethereum" || c === "eth") return "ETH";
+    if (c === "base") return "ETH";
+    if (c === "polygon" || c === "matic") return "MATIC";
+    if (c === "arbitrum" || c === "arb") return "ETH";
+    if (c === "optimism" || c === "op") return "ETH";
+    if (c === "avalanche" || c === "avax") return "AVAX";
+    return "";
+  }
+
+  // Renders the swap-quote line. Conservative on the numeric output —
+  // raw token amounts depend on decimals (1e6 for stables, 1e18 for
+  // most) and the upstream doesn't return decimals here, so we only
+  // surface fields we can interpret unambiguously: provider, price
+  // impact, and slippage.
+  function renderQuoteLine(q, chain) {
+    if (!q || !q.ok) return "";
+    var impact = (typeof q.priceImpactPct === "number") ? q.priceImpactPct : parseFloat(q.priceImpactPct || 0);
+    if (isNaN(impact)) impact = 0;
+    var native = nativeSymForChain(chain);
+    var pieces = [];
+    if (q.provider) pieces.push("via " + escapeHtml(String(q.provider)));
+    pieces.push("~" + impact.toFixed(2) + "% impact");
+    if (q.slippage) pieces.push(escapeHtml(String(q.slippage)) + "% slippage");
+    var prefix = native ? ("Best " + native + "→token route") : "Best route";
+    return '<span class="trusty-pp-quote-prefix">' + prefix + ':</span> ' + pieces.join(" · ");
   }
 
   function renderActivityBody(act) {
@@ -934,6 +970,21 @@
     // both on initial render (none yet) and after the lazy KOL fetch.
     panel.addEventListener("mouseover", onKolRowEnter, true);
     panel.addEventListener("mouseout", onKolRowLeave, true);
+
+    // Lazy swap-quote enrichment. Read-only display — execution still
+    // happens in the user's wallet via the existing Trade buttons.
+    // Silent no-op if the endpoint is unavailable or returns no route.
+    const quoteSlot = panel.querySelector("[data-trusty-quote]");
+    if (quoteSlot && window.TrustyAPI && window.TrustyAPI.getSwapQuote) {
+      const quoteChain = result.chain || chain;
+      window.TrustyAPI.getSwapQuote(ca, quoteChain).then(function (q) {
+        if (!quoteSlot.isConnected) return;
+        const html = renderQuoteLine(q, quoteChain);
+        if (!html) return;
+        quoteSlot.innerHTML = html;
+        quoteSlot.style.display = "block";
+      }).catch(function () { /* silent */ });
+    }
 
     // ESC to close
     document.addEventListener("keydown", function escHandler(e) {

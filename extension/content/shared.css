@@ -690,6 +690,22 @@
   letter-spacing: 0.4px;
   text-align: center;
 }
+.trusty-pp-trade-quote {
+  margin-top: 6px;
+  padding: 6px 10px;
+  font-size: 11px !important;
+  color: #c4cad6 !important;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace !important;
+  letter-spacing: 0.3px;
+  text-align: center;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid #1d2738;
+  border-radius: 6px;
+}
+.trusty-pp-trade-quote .trusty-pp-quote-prefix {
+  color: #8aa0c2 !important;
+  margin-right: 4px;
+}
 
 /* ── Locked KOL rows / X activity (free-tier inline upsell) ── */
 .trusty-pp-kol-row.trusty-pp-kol-locked {
