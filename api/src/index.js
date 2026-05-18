@@ -517,14 +517,25 @@ function twakAssetId(chain, ca) {
 // Security check via TWAK gateway. Null on any failure (rate limit,
 // unsupported chain, network). Cached 24h since safety flags are
 // immutable per CA.
+//
+// Tries the documented path with no query params first — the
+// include_* params from the older Express reference appear to break
+// the live gateway (500 Internal Server Error). If that fails we
+// fall back to the param-laden form for shape-discovery diagnostics.
 async function twakSecurityRaw(chain, ca, env) {
   const assetId = twakAssetId(chain, ca);
   if (!assetId) return null;
-  return twakGet(`/v2/coinstatus/${assetId}`, {
-    version: "2",
-    include_security_info: "true",
-    include_solana_security_info: "true",
-  }, env);
+  // Primary: bare path, no query params.
+  try {
+    return await twakGet(`/v2/coinstatus/${assetId}`, null, env);
+  } catch (e1) {
+    // Fallback: include security-info hints. The error message from
+    // the bare call is captured upstream via the twakSecurity wrapper.
+    return await twakGet(`/v2/coinstatus/${assetId}`, {
+      include_security_info: "true",
+      include_solana_security_info: "true",
+    }, env);
+  }
 }
 
 // Returns { data, error, assetId } — error is null on success, a
