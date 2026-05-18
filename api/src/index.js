@@ -514,8 +514,13 @@ async function twakSecurityRaw(chain, ca, env) {
   }, env);
 }
 
+// Returns { data, error, assetId } — error is null on success, a
+// short string on failure. We surface error via twakDiagFor so the
+// scan response carries enough info to diagnose without server logs.
 async function twakSecurity(chain, ca, env) {
-  if (!twakConfigured(env)) return null;
+  if (!twakConfigured(env)) return { data: null, error: "not_configured", assetId: null };
+  const assetId = twakAssetId(chain, ca);
+  if (!assetId) return { data: null, error: "unsupported_chain", assetId: null };
   const cacheKey = `twak-sec:v1:${chain}:${ca}`;
   try {
     const fresh = await twakSecurityRaw(chain, ca, env);
@@ -526,15 +531,15 @@ async function twakSecurity(chain, ca, env) {
         });
       } catch (_) {}
     }
-    return fresh;
+    return { data: fresh, error: null, assetId };
   } catch (e) {
     if (env.SCAN_KV) {
       try {
         const cached = await env.SCAN_KV.get(cacheKey, "json");
-        if (cached) return cached;
+        if (cached) return { data: cached, error: null, assetId };
       } catch (_) {}
     }
-    return null;
+    return { data: null, error: String(e && e.message || e).slice(0, 200), assetId };
   }
 }
 
@@ -603,20 +608,25 @@ function twakPriceToDexShape(twakEntry, fallbackSymbol, fallbackName) {
   };
 }
 
-// Compact diagnostic flag describing what happened with the TWAK
-// security call on this scan. Surfaced as `_twak` in PENDING responses
-// so we can debug fallback behaviour from the client without poking
-// the gateway directly. Cheap and non-identifying.
-function twakDiagFor(twakRes, env) {
-  if (!twakConfigured(env)) return "not_configured";
-  if (twakRes == null) return "no_data_or_error";
-  if (typeof twakRes !== "object") return "unexpected_shape";
-  const keys = Object.keys(twakRes);
-  if (!keys.length) return "empty_response";
-  const hasSec = !!(twakRes.security_info || twakRes.securityInfo
-    || twakRes.solana_security_info || twakRes.solanaSecurityInfo
-    || twakRes?.data?.security_info || twakRes?.data?.solana_security_info);
-  return hasSec ? "ok_with_security" : "ok_no_security_block";
+// Diagnostic blob describing what happened with the TWAK security
+// call on this scan. Surfaced as `_twak` in PENDING responses so we
+// can debug fallback behaviour from the client without poking the
+// gateway directly. Carries: status (compact code), assetId (what
+// we actually queried), and error (the upstream message verbatim
+// when it failed) so a single curl reveals the root cause.
+function twakDiagFor(twakResult, env) {
+  if (!twakConfigured(env)) return { status: "not_configured" };
+  if (!twakResult) return { status: "no_result" };
+  const { data, error, assetId } = twakResult;
+  if (error) return { status: "error", assetId, error };
+  if (data == null) return { status: "null_data", assetId };
+  if (typeof data !== "object") return { status: "unexpected_shape", assetId };
+  const keys = Object.keys(data);
+  if (!keys.length) return { status: "empty_response", assetId };
+  const hasSec = !!(data.security_info || data.securityInfo
+    || data.solana_security_info || data.solanaSecurityInfo
+    || data?.data?.security_info || data?.data?.solana_security_info);
+  return { status: hasSec ? "ok_with_security" : "ok_no_security_block", assetId, keys };
 }
 
 // Convert TWAK security response → check rows for the scan UI.
@@ -781,8 +791,8 @@ async function scanTokenEvm(ca, chain, env) {
     // Secondary safety signal: try TWAK now that GoPlus is missing.
     // Sequential (not parallel with GoPlus) to avoid burning the 1 req/s
     // TWAK quota when GoPlus is healthy.
-    const twakRes = await twakSecurity(resolvedChain, ca, env);
-    const twakChecks = twakSecurityToChecks(twakRes, resolvedChain);
+    const twakResult = await twakSecurity(resolvedChain, ca, env);
+    const twakChecks = twakSecurityToChecks(twakResult.data, resolvedChain);
     const out = {
       ca,
       chain: resolvedChain,
@@ -799,7 +809,7 @@ async function scanTokenEvm(ca, chain, env) {
       kols: [],
       activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
       marketData: marketData(d, null),
-      _twak: twakDiagFor(twakRes, env),
+      _twak: twakDiagFor(twakResult, env),
     };
     if (!realSym) out.symbolFallback = true;
     if (fm && fm.launchedOn) out.launchedOn = fm.launchedOn;
@@ -865,8 +875,8 @@ async function scanTokenSolana(ca, chain, env) {
     const substitutes = buildSubstituteChecks(d, rc);
     // Secondary safety signal: try TWAK now that GoPlus Solana is missing.
     // Sequential to keep TWAK's 1 req/s quota for the failure path only.
-    const twakRes = await twakSecurity("solana", ca, env);
-    const twakChecks = twakSecurityToChecks(twakRes, "solana");
+    const twakResult = await twakSecurity("solana", ca, env);
+    const twakChecks = twakSecurityToChecks(twakResult.data, "solana");
     const out = {
       ca,
       chain,
@@ -883,7 +893,7 @@ async function scanTokenSolana(ca, chain, env) {
       kols: [],
       activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
       marketData: marketDataSolana(d, null),
-      _twak: twakDiagFor(twakRes, env),
+      _twak: twakDiagFor(twakResult, env),
     };
     if (!realSym) out.symbolFallback = true;
     return out;
