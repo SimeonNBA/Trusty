@@ -277,7 +277,13 @@ async function handleSwapQuote(url, env) {
     }
     return json(out);
   } catch (e) {
-    return json({ ok: false, error: String(e && e.message || e) }, 502);
+    // 200 + ok:false rather than 502: from the caller's POV the
+    // worker did its job (asked the upstream, got "no route" or
+    // "unsupported asset"). 502 falsely implies our gateway is
+    // broken and creates noisy red errors in browser consoles +
+    // Cloudflare monitoring for what's really a normal "this token
+    // isn't indexed by TWAK's swap router" case.
+    return json({ ok: false, error: String(e && e.message || e) });
   }
 }
 
