@@ -111,10 +111,45 @@ export default {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       return handleTrending(url, env);
     }
+    // Debug-only: returns the raw gateway response for a CA so we can
+    // verify HMAC signing works + inspect actual response shapes before
+    // wiring parsers more deeply. Admin-secret protected — not public.
+    if (url.pathname === "/api/twak-test") {
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      return handleTwakTest(url, request, env);
+    }
 
     return json({ error: "not found" }, 404);
   },
 };
+
+// Debug endpoint — protected by ADMIN_SECRET header. Lets the operator
+// inspect what TWAK actually returns for known CAs, so parsers can be
+// adjusted to match observed field names. Strip after launch if desired.
+async function handleTwakTest(url, request, env) {
+  const provided = request.headers.get("X-Admin-Secret") || url.searchParams.get("admin");
+  if (!env.ADMIN_SECRET || provided !== env.ADMIN_SECRET) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  if (!twakConfigured(env)) {
+    return json({ error: "twak not configured — set TWAK_ACCESS_ID and TWAK_HMAC_SECRET" }, 503);
+  }
+  const ca = (url.searchParams.get("ca") || "").trim();
+  const chain = (url.searchParams.get("chain") || "bsc").trim();
+  const assetId = ca ? twakAssetId(chain, ca) : `c${twakChainCoinId(chain) || 714}`;
+  if (!assetId) return json({ error: "unsupported chain for twak" }, 400);
+
+  try {
+    const data = await twakGet(`/v2/coinstatus/${assetId}`, {
+      version: "2",
+      include_security_info: "true",
+      include_solana_security_info: "true",
+    }, env);
+    return json({ ok: true, assetId, chain, response: data });
+  } catch (e) {
+    return json({ ok: false, assetId, chain, error: String(e && e.message || e) }, 502);
+  }
+}
 
 function parseCaAndChain(url) {
   const rawCa = url.searchParams.get("ca") || "";
@@ -343,6 +378,85 @@ function twakAssetId(chain, ca) {
   return `c${coinId}_t${ca}`;
 }
 
+// Security check via TWAK gateway. Null on any failure (rate limit,
+// unsupported chain, network). Cached 24h since safety flags are
+// immutable per CA.
+async function twakSecurityRaw(chain, ca, env) {
+  const assetId = twakAssetId(chain, ca);
+  if (!assetId) return null;
+  return twakGet(`/v2/coinstatus/${assetId}`, {
+    version: "2",
+    include_security_info: "true",
+    include_solana_security_info: "true",
+  }, env);
+}
+
+async function twakSecurity(chain, ca, env) {
+  if (!twakConfigured(env)) return null;
+  const cacheKey = `twak-sec:v1:${chain}:${ca}`;
+  try {
+    const fresh = await twakSecurityRaw(chain, ca, env);
+    if (fresh && env.SCAN_KV) {
+      try {
+        await env.SCAN_KV.put(cacheKey, JSON.stringify(fresh), {
+          expirationTtl: TWAK_CACHE_TTL,
+        });
+      } catch (_) {}
+    }
+    return fresh;
+  } catch (e) {
+    if (env.SCAN_KV) {
+      try {
+        const cached = await env.SCAN_KV.get(cacheKey, "json");
+        if (cached) return cached;
+      } catch (_) {}
+    }
+    return null;
+  }
+}
+
+// Convert TWAK security response → check rows for the scan UI.
+// Brand-neutral phrasing ("independent audit") so the user doesn't
+// see a different provider name from the rest of the scan. Returns
+// [] if the response shape is unrecognised — defensive because the
+// upstream docs don't pin the exact field names.
+function twakSecurityToChecks(twakRes, chain) {
+  if (!twakRes || typeof twakRes !== "object") return [];
+  const isSol = (chain || "").toLowerCase() === "solana" || (chain || "").toLowerCase() === "sol";
+  const sec = isSol
+    ? (twakRes.solana_security_info || twakRes.solanaSecurityInfo || twakRes.security_info || twakRes.securityInfo || null)
+    : (twakRes.security_info || twakRes.securityInfo || null);
+  if (!sec || typeof sec !== "object") return [];
+
+  const out = [];
+  if (isSol) {
+    const freezeOn = !!(sec.freeze_authority || sec.freezeAuthority);
+    const mintOn   = !!(sec.mint_authority   || sec.mintAuthority);
+    if (freezeOn) out.push({ ok: false, label: "Token freezable by authority (independent audit)" });
+    if (mintOn)   out.push({ ok: false, label: "Mint authority active — supply inflatable" });
+    if (!freezeOn && !mintOn) {
+      out.push({ ok: true, label: "No critical mint/freeze flags (independent audit)" });
+    }
+  } else {
+    const isHp    = sec.is_honeypot === true || sec.is_honeypot === "1" || sec.isHoneypot === true;
+    const notOpen = sec.is_open_source === false || sec.is_open_source === "0" || sec.isOpenSource === false;
+    const canMint = sec.is_mintable === true || sec.is_mintable === "1" || sec.isMintable === true;
+    if (isHp) {
+      out.push({ ok: false, label: "Honeypot detected (independent audit)" });
+    } else {
+      const issues = [];
+      if (notOpen) issues.push("not open-source");
+      if (canMint) issues.push("supply mintable");
+      if (issues.length) {
+        out.push({ ok: false, label: "Audit flags: " + issues.join(", ") });
+      } else {
+        out.push({ ok: true, label: "No critical security flags (independent audit)" });
+      }
+    }
+  }
+  return out;
+}
+
 // When chain is generic "evm", quickly sniff which EVM chain the
 // token actually lives on by looking at Dexscreener's pair distribution.
 // Returns the canonical chain key (e.g. "ethereum") with the highest
@@ -427,6 +541,11 @@ async function scanTokenEvm(ca, chain, env) {
     // Pull in inferred-from-market signals. Stops the pill from showing
     // 5 ❌ rows for legit tokens just because GoPlus is missing data.
     const substitutes = buildSubstituteChecks(d, null);
+    // Secondary safety signal: try TWAK now that GoPlus is missing.
+    // Sequential (not parallel with GoPlus) to avoid burning the 1 req/s
+    // TWAK quota when GoPlus is healthy.
+    const twakRes = await twakSecurity(resolvedChain, ca, env);
+    const twakChecks = twakSecurityToChecks(twakRes, resolvedChain);
     const out = {
       ca,
       chain: resolvedChain,
@@ -436,6 +555,7 @@ async function scanTokenEvm(ca, chain, env) {
       name: namePending,
       checks: [
         ...substitutes,
+        ...twakChecks,
         { ok: false, label: "Some safety checks pending — refresh for full scan" }
       ],
       paidChecks: [],
@@ -494,6 +614,10 @@ async function scanTokenSolana(ca, chain, env) {
     const symbolPending = "$" + (realSym || ca.slice(0, 4)).replace(/^\$/, "").toUpperCase();
     const namePending = d?.name || "Token " + shortAddrSol(ca);
     const substitutes = buildSubstituteChecks(d, rc);
+    // Secondary safety signal: try TWAK now that GoPlus Solana is missing.
+    // Sequential to keep TWAK's 1 req/s quota for the failure path only.
+    const twakRes = await twakSecurity("solana", ca, env);
+    const twakChecks = twakSecurityToChecks(twakRes, "solana");
     const out = {
       ca,
       chain,
@@ -503,6 +627,7 @@ async function scanTokenSolana(ca, chain, env) {
       name: namePending,
       checks: [
         ...substitutes,
+        ...twakChecks,
         { ok: false, label: "Some safety checks pending — refresh for full scan" }
       ],
       paidChecks: [],
