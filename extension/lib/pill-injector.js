@@ -108,6 +108,16 @@
     // Delegated click handler for the per-check info icons. Click toggles
     // an inline explanation for that row.
     tooltipEl.addEventListener("click", function (e) {
+      // Sub-score row → whole row is the click target (matches the
+      // website pattern). Check this first so the sub-score click
+      // doesn't fall through to the safety-check info handler below.
+      const subRow = e.target.closest && e.target.closest('[data-trusty-sub-row="1"]');
+      if (subRow) {
+        e.preventDefault();
+        e.stopPropagation();
+        subRow.classList.toggle("trusty-tt-sub-open");
+        return;
+      }
       const btn = e.target.closest && e.target.closest(".trusty-tt-info");
       if (!btn) return;
       e.preventDefault();
@@ -167,25 +177,28 @@
     );
   }
 
-  // Sub-score breakdown — same 6 categories the tooltip shows, but
-  // wrapped in a panel section block. Returns empty when the worker
-  // didn't send subScores (older worker version → silent no-op).
-  function renderPanelSubScores(subScores) {
-    if (!subScores || typeof subScores !== "object") return "";
-    const labels = [
-      ["chainReputation", "Chain Reputation", "How much trust the underlying chain carries. Ethereum highest, BSC moderate, fresh chains lowest. A safe contract on a sketchy chain still inherits chain risk."],
-      ["narrative", "Narrative", "Whether the token rides a known meta (dogs / cats / AI / mascots) vs a random launch with no story. Tokens with a narrative survive drawdowns better."],
-      ["ownership", "Ownership", "Renounced contracts (owner = 0x0) score high — nobody can flip rules mid-game. Active owner wallets are a kill switch."],
-      ["ageTiming", "Age / Timing", "How long the token has survived. Most rugs happen in week 1; old-and-alive is a quiet positive signal."],
-      ["socialPresence", "Social Presence", "X and Binance Square mentions and velocity. Zero attention = zombie token. Spikes = real interest (or coordinated shilling — check the coord-shill row)."],
-      ["supplySafety", "Supply Safety", "LP locked + mint disabled + healthy wallet distribution. Determines whether the floor can vanish overnight."],
-    ];
-    const rows = labels.map(function (pair) {
-      const v = Number(subScores[pair[0]]) || 0;
-      const cls = v >= 70 ? "ok" : v >= 40 ? "warn" : "bad";
-      const pct = Math.max(0, Math.min(100, v));
-      return (
-        '<li class="trusty-tt-sub" title="' + escapeAttr(pair[2]) + '">' +
+  // Shared labels for the 6-category sub-score breakdown. Used in both
+  // the hover tooltip and the paid panel so the wording matches.
+  const SUB_SCORE_LABELS = [
+    ["chainReputation", "Chain Reputation", "How much trust the underlying chain carries. Ethereum highest, BSC moderate, fresh chains lowest. A safe contract on a sketchy chain still inherits chain risk."],
+    ["narrative", "Narrative", "Whether the token rides a known meta (dogs / cats / AI / mascots) vs a random launch with no story. Tokens with a narrative survive drawdowns better."],
+    ["ownership", "Ownership", "Renounced contracts (owner = 0x0) score high — nobody can flip rules mid-game. Active owner wallets are a kill switch."],
+    ["ageTiming", "Age / Timing", "How long the token has survived. Most rugs happen in week 1; old-and-alive is a quiet positive signal."],
+    ["socialPresence", "Social Presence", "X and Binance Square mentions and velocity. Zero attention = zombie token. Spikes = real interest (or coordinated shilling — check the coord-shill row)."],
+    ["supplySafety", "Supply Safety", "LP locked + mint disabled + healthy wallet distribution. Determines whether the floor can vanish overnight."],
+  ];
+
+  // Render one sub-score row with an inline expandable explanation.
+  // The whole row is the click target (matches the website pattern) —
+  // delegated click handlers on the parent toggle .trusty-tt-sub-open
+  // which CSS uses to reveal the explanation block underneath.
+  function renderSubScoreRow(pair, value) {
+    const v = Number(value) || 0;
+    const cls = v >= 70 ? "ok" : v >= 40 ? "warn" : "bad";
+    const pct = Math.max(0, Math.min(100, v));
+    return (
+      '<li class="trusty-tt-sub" data-trusty-sub-row="1">' +
+        '<div class="trusty-tt-sub-main">' +
           '<span class="trusty-tt-sub-name">' + pair[1] +
             ' <span class="trusty-tt-sub-info" aria-hidden="true">ⓘ</span>' +
           '</span>' +
@@ -193,13 +206,34 @@
             '<div class="trusty-tt-sub-fill trusty-tt-sub-' + cls + '" style="width:' + pct + '%"></div>' +
           '</div>' +
           '<span class="trusty-tt-sub-val trusty-tt-sub-' + cls + '">' + v + '</span>' +
-        '</li>'
-      );
+        '</div>' +
+        '<div class="trusty-tt-sub-explain">' + escapeAttr(pair[2]) + '</div>' +
+      '</li>'
+    );
+  }
+
+  // Delegated click handler — toggles .trusty-tt-sub-open on a row
+  // when the user taps anywhere inside it. Used on both the tooltip
+  // and the paid panel.
+  function onSubRowClick(e) {
+    const row = e.target.closest && e.target.closest('[data-trusty-sub-row="1"]');
+    if (!row) return;
+    e.preventDefault();
+    e.stopPropagation();
+    row.classList.toggle("trusty-tt-sub-open");
+  }
+
+  // Sub-score breakdown for the paid panel. Returns empty when the
+  // worker didn't send subScores (older worker version → silent no-op).
+  function renderPanelSubScores(subScores) {
+    if (!subScores || typeof subScores !== "object") return "";
+    const rows = SUB_SCORE_LABELS.map(function (pair) {
+      return renderSubScoreRow(pair, subScores[pair[0]]);
     }).join("");
     return (
       '<div class="trusty-pp-section">' +
         '<div class="trusty-pp-section-title">📊 Detailed breakdown</div>' +
-        '<ul class="trusty-tt-subs-list">' + rows + '</ul>' +
+        '<ul class="trusty-tt-subs-list trusty-tt-subs-clickable">' + rows + '</ul>' +
       '</div>'
     );
   }
@@ -241,35 +275,13 @@
     // doesn't send subScores (older worker version → no section rendered).
     let subScoresHtml = "";
     if (result.subScores && typeof result.subScores === "object") {
-      const labels = [
-        ["chainReputation", "Chain Reputation", "How much trust the underlying chain carries. Ethereum highest, BSC moderate, fresh chains lowest. A safe contract on a sketchy chain still inherits chain risk."],
-        ["narrative", "Narrative", "Whether the token rides a known meta (dogs / cats / AI / mascots) vs a random launch with no story. Tokens with a narrative survive drawdowns better."],
-        ["ownership", "Ownership", "Renounced contracts (owner = 0x0) score high — nobody can flip rules mid-game. Active owner wallets are a kill switch."],
-        ["ageTiming", "Age / Timing", "How long the token has survived. Most rugs happen in week 1; old-and-alive is a quiet positive signal."],
-        ["socialPresence", "Social Presence", "X and Binance Square mentions and velocity. Zero attention = zombie token. Spikes = real interest (or coordinated shilling — check the coord-shill row)."],
-        ["supplySafety", "Supply Safety", "LP locked + mint disabled + healthy wallet distribution. Determines whether the floor can vanish overnight."],
-      ];
-      const rows = labels.map(function (pair) {
-        const v = Number(result.subScores[pair[0]]) || 0;
-        const cls = v >= 70 ? "ok" : v >= 40 ? "warn" : "bad";
-        const pct = Math.max(0, Math.min(100, v));
-        const tipAttr = ' title="' + escapeAttr(pair[2]) + '"';
-        return (
-          '<li class="trusty-tt-sub"' + tipAttr + '>' +
-            '<span class="trusty-tt-sub-name">' + pair[1] +
-              ' <span class="trusty-tt-sub-info" aria-hidden="true">ⓘ</span>' +
-            '</span>' +
-            '<div class="trusty-tt-sub-bar">' +
-              '<div class="trusty-tt-sub-fill trusty-tt-sub-' + cls + '" style="width:' + pct + '%"></div>' +
-            '</div>' +
-            '<span class="trusty-tt-sub-val trusty-tt-sub-' + cls + '">' + v + '</span>' +
-          '</li>'
-        );
+      const rows = SUB_SCORE_LABELS.map(function (pair) {
+        return renderSubScoreRow(pair, result.subScores[pair[0]]);
       }).join("");
       subScoresHtml = (
         '<div class="trusty-tt-subs">' +
           '<div class="trusty-tt-subs-title">📊 Detailed breakdown</div>' +
-          '<ul class="trusty-tt-subs-list">' + rows + '</ul>' +
+          '<ul class="trusty-tt-subs-list trusty-tt-subs-clickable">' + rows + '</ul>' +
         '</div>'
       );
     }
@@ -1089,6 +1101,11 @@
     // both on initial render (none yet) and after the lazy KOL fetch.
     panel.addEventListener("mouseover", onKolRowEnter, true);
     panel.addEventListener("mouseout", onKolRowLeave, true);
+
+    // Click anywhere on a sub-score row to expand its explanation
+    // inline (matches the website's Learn pattern). Delegated so it
+    // works regardless of when the row was rendered.
+    panel.addEventListener("click", onSubRowClick);
 
     // Lazy swap-quote enrichment. Read-only display — execution still
     // happens in the user's wallet via the existing Trade buttons.

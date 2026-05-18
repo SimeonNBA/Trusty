@@ -836,15 +836,55 @@
   font-weight: 700 !important;
 }
 
-/* ── Sub-score ⓘ info hint ─────────────────────────────────── */
+/* ── Sub-score row: click-to-expand explanation ──────────────
+   Matches the website's Learn pattern — whole row is the click
+   target. The ⓘ icon is a visual cue, but tapping anywhere on
+   the row toggles the explanation block underneath. */
+.trusty-tt-subs-clickable .trusty-tt-sub {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px 6px;
+  transition: background 0.12s ease;
+}
+.trusty-tt-subs-clickable .trusty-tt-sub:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.trusty-tt-sub-main {
+  display: grid !important;
+  grid-template-columns: 100px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+}
 .trusty-tt-sub-info {
   color: #8b95a8 !important;
   font-size: 10px;
-  opacity: 0.6;
+  opacity: 0.55;
   margin-left: 2px;
-  cursor: help;
+  transition: opacity 0.12s ease;
 }
-.trusty-tt-sub[title]:hover .trusty-tt-sub-info { opacity: 1; }
+.trusty-tt-subs-clickable .trusty-tt-sub:hover .trusty-tt-sub-info { opacity: 1; }
+.trusty-tt-sub-explain {
+  display: none;
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: rgba(99, 102, 241, 0.06);
+  border-left: 2px solid rgba(99, 102, 241, 0.5);
+  border-radius: 4px;
+  font-size: 11px !important;
+  line-height: 1.55 !important;
+  color: #cbd5e1 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+.trusty-tt-sub.trusty-tt-sub-open .trusty-tt-sub-explain {
+  display: block;
+}
+.trusty-tt-sub.trusty-tt-sub-open {
+  background: rgba(99, 102, 241, 0.05);
+}
+.trusty-tt-sub.trusty-tt-sub-open .trusty-tt-sub-info {
+  opacity: 1;
+  color: #818CF8 !important;
+}
 
 /* ── Locked KOL rows / X activity (free-tier inline upsell) ── */
 .trusty-pp-kol-row.trusty-pp-kol-locked {
