@@ -603,44 +603,81 @@ function twakPriceToDexShape(twakEntry, fallbackSymbol, fallbackName) {
   };
 }
 
+// Compact diagnostic flag describing what happened with the TWAK
+// security call on this scan. Surfaced as `_twak` in PENDING responses
+// so we can debug fallback behaviour from the client without poking
+// the gateway directly. Cheap and non-identifying.
+function twakDiagFor(twakRes, env) {
+  if (!twakConfigured(env)) return "not_configured";
+  if (twakRes == null) return "no_data_or_error";
+  if (typeof twakRes !== "object") return "unexpected_shape";
+  const keys = Object.keys(twakRes);
+  if (!keys.length) return "empty_response";
+  const hasSec = !!(twakRes.security_info || twakRes.securityInfo
+    || twakRes.solana_security_info || twakRes.solanaSecurityInfo
+    || twakRes?.data?.security_info || twakRes?.data?.solana_security_info);
+  return hasSec ? "ok_with_security" : "ok_no_security_block";
+}
+
 // Convert TWAK security response → check rows for the scan UI.
 // Brand-neutral phrasing ("independent audit") so the user doesn't
-// see a different provider name from the rest of the scan. Returns
-// [] if the response shape is unrecognised — defensive because the
-// upstream docs don't pin the exact field names.
+// see a different provider name from the rest of the scan.
+//
+// Tiered shape detection:
+//   1. If `security_info` (EVM) / `solana_security_info` (SOL) is
+//      present → extract specific flags.
+//   2. If the response is non-empty but lacks the expected security
+//      block → at minimum surface "Listed in independent registry"
+//      so the user sees we corroborated the token's existence.
+//   3. Empty response or non-object → [].
 function twakSecurityToChecks(twakRes, chain) {
   if (!twakRes || typeof twakRes !== "object") return [];
   const isSol = (chain || "").toLowerCase() === "solana" || (chain || "").toLowerCase() === "sol";
+  // Probe several plausible nesting points — upstream docs don't pin
+  // the exact key names; we've seen both snake_case and camelCase.
   const sec = isSol
-    ? (twakRes.solana_security_info || twakRes.solanaSecurityInfo || twakRes.security_info || twakRes.securityInfo || null)
-    : (twakRes.security_info || twakRes.securityInfo || null);
-  if (!sec || typeof sec !== "object") return [];
+    ? (twakRes.solana_security_info || twakRes.solanaSecurityInfo || twakRes.security_info || twakRes.securityInfo
+       || twakRes?.data?.solana_security_info || twakRes?.data?.security_info || null)
+    : (twakRes.security_info || twakRes.securityInfo
+       || twakRes?.data?.security_info || twakRes?.data?.securityInfo || null);
 
   const out = [];
-  if (isSol) {
-    const freezeOn = !!(sec.freeze_authority || sec.freezeAuthority);
-    const mintOn   = !!(sec.mint_authority   || sec.mintAuthority);
-    if (freezeOn) out.push({ ok: false, label: "Token freezable by authority (independent audit)" });
-    if (mintOn)   out.push({ ok: false, label: "Mint authority active — supply inflatable" });
-    if (!freezeOn && !mintOn) {
-      out.push({ ok: true, label: "No critical mint/freeze flags (independent audit)" });
-    }
-  } else {
-    const isHp    = sec.is_honeypot === true || sec.is_honeypot === "1" || sec.isHoneypot === true;
-    const notOpen = sec.is_open_source === false || sec.is_open_source === "0" || sec.isOpenSource === false;
-    const canMint = sec.is_mintable === true || sec.is_mintable === "1" || sec.isMintable === true;
-    if (isHp) {
-      out.push({ ok: false, label: "Honeypot detected (independent audit)" });
+
+  if (sec && typeof sec === "object") {
+    if (isSol) {
+      const freezeOn = !!(sec.freeze_authority || sec.freezeAuthority);
+      const mintOn   = !!(sec.mint_authority   || sec.mintAuthority);
+      if (freezeOn) out.push({ ok: false, label: "Token freezable by authority (independent audit)" });
+      if (mintOn)   out.push({ ok: false, label: "Mint authority active — supply inflatable" });
+      if (!freezeOn && !mintOn) {
+        out.push({ ok: true, label: "No critical mint/freeze flags (independent audit)" });
+      }
     } else {
-      const issues = [];
-      if (notOpen) issues.push("not open-source");
-      if (canMint) issues.push("supply mintable");
-      if (issues.length) {
-        out.push({ ok: false, label: "Audit flags: " + issues.join(", ") });
+      const isHp    = sec.is_honeypot === true || sec.is_honeypot === "1" || sec.isHoneypot === true;
+      const notOpen = sec.is_open_source === false || sec.is_open_source === "0" || sec.isOpenSource === false;
+      const canMint = sec.is_mintable === true || sec.is_mintable === "1" || sec.isMintable === true;
+      if (isHp) {
+        out.push({ ok: false, label: "Honeypot detected (independent audit)" });
       } else {
-        out.push({ ok: true, label: "No critical security flags (independent audit)" });
+        const issues = [];
+        if (notOpen) issues.push("not open-source");
+        if (canMint) issues.push("supply mintable");
+        if (issues.length) {
+          out.push({ ok: false, label: "Audit flags: " + issues.join(", ") });
+        } else {
+          out.push({ ok: true, label: "No critical security flags (independent audit)" });
+        }
       }
     }
+    return out;
+  }
+
+  // Fallback — TWAK returned a non-empty response but no recognised
+  // security block. Worth surfacing a positive row anyway: it tells
+  // the user the token at least exists in an independent registry,
+  // which is a weak-but-real signal vs unindexed tokens.
+  if (Object.keys(twakRes).length > 0) {
+    out.push({ ok: true, label: "Listed in independent token registry" });
   }
   return out;
 }
@@ -762,6 +799,7 @@ async function scanTokenEvm(ca, chain, env) {
       kols: [],
       activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
       marketData: marketData(d, null),
+      _twak: twakDiagFor(twakRes, env),
     };
     if (!realSym) out.symbolFallback = true;
     if (fm && fm.launchedOn) out.launchedOn = fm.launchedOn;
@@ -845,6 +883,7 @@ async function scanTokenSolana(ca, chain, env) {
       kols: [],
       activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
       marketData: marketDataSolana(d, null),
+      _twak: twakDiagFor(twakRes, env),
     };
     if (!realSym) out.symbolFallback = true;
     return out;

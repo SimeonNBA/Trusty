@@ -65,6 +65,13 @@
     "Adequate liquidity": "Enough liquidity in the pools to enter and exit retail-size positions without major slippage.",
     "Some safety checks pending": "Safety APIs don't have data for this token yet — usually because it's fresh. Refresh in a few minutes or check the full report.",
     "Safety data unavailable": "We couldn't fetch safety data for this token right now. Try again in a few minutes.",
+    "Listed in independent token registry": "A second independent registry recognises this token (separate from our primary safety source). Weak-but-positive signal vs unindexed tokens that nobody tracks.",
+    "No critical security flags (independent audit)": "Independent registry checked the contract and found no honeypot, no mintable supply, no abandoned-but-recoverable ownership.",
+    "No critical mint/freeze flags (independent audit)": "Independent registry confirmed mint and freeze authorities are renounced — supply is fixed and the token can't be frozen.",
+    "Honeypot detected (independent audit)": "Independent registry flagged this contract as a honeypot — buyers can't sell. Do not trade.",
+    "Audit flags": "Independent registry surfaced specific risks (e.g. mintable supply, closed-source contract). Treat as cautionary.",
+    "Token freezable by authority": "Solana mint still has an active freeze authority — the issuer can disable transfers on any wallet. Major centralisation risk.",
+    "Mint authority active": "Token's mint authority is still live — supply can be inflated arbitrarily. Major dilution risk.",
   };
 
   function explanationFor(label) {
