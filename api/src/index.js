@@ -107,6 +107,12 @@ export default {
       if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
       return handleEvent(request, env);
     }
+    if (url.pathname === "/api/square-mention") {
+      // Anonymous Square post → classified sentiment aggregated per CA.
+      // Posted by the extension's binance-content.js content script.
+      if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
+      return handleSquareMention(request, env);
+    }
     if (url.pathname === "/api/trending") {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       return handleTrending(url, env);
@@ -171,20 +177,26 @@ async function handleKols(ca, chain, env, symbol) {
   // again whenever sentiment / activity logic changes server-side.
   const sk = symbol ? "+" + symbol.toLowerCase() : "";
   const cacheKey = `kols:v2:${chain}:${ca}${sk}`;
+  let result = null;
   if (env.SCAN_KV) {
-    const cached = await env.SCAN_KV.get(cacheKey, "json");
-    if (cached) return json(cached);
+    result = await env.SCAN_KV.get(cacheKey, "json");
   }
 
-  const result = await fetchKols(ca, chain, env, symbol);
-
-  if (env.SCAN_KV) {
-    try {
-      await env.SCAN_KV.put(cacheKey, JSON.stringify(result), {
-        expirationTtl: 21600, // 6 hours
-      });
-    } catch (_) {}
+  if (!result) {
+    result = await fetchKols(ca, chain, env, symbol);
+    if (env.SCAN_KV) {
+      try {
+        await env.SCAN_KV.put(cacheKey, JSON.stringify(result), {
+          expirationTtl: 21600, // 6 hours
+        });
+      } catch (_) {}
+    }
   }
+
+  // Square activity is read fresh on every call (not cached with KOLs)
+  // because Square mention counts change faster than X velocity does.
+  // The cost is one extra KV read per /api/kols call — negligible.
+  result.squareActivity = await readSquareActivity(ca, chain, env);
 
   return json(result);
 }
@@ -2357,6 +2369,158 @@ async function handleEvent(request, env) {
   } catch (_) {}
 
   return json({ ok: true });
+}
+
+/* ================================================================
+   Square sentiment — anonymous post mentions, classified server-side.
+
+   Extension's binance-content.js POSTs each post containing a CA to
+   /api/square-mention with its text + engagement. We classify
+   sentiment via keyword matching, dedup by post-id, aggregate per
+   CA into a rolling 24h window. Raw post text is NOT persisted —
+   only the derived sentiment class is stored long-term.
+
+   Exposed to paid users via /api/kols → `squareActivity` field.
+   ================================================================ */
+
+const SQUARE_BULL_KEYWORDS = [
+  "moon", "pump", "ape", "lfg", "send", "send it", "x100", "100x", "gem",
+  "alpha", "hot", "bullish", "bull", "to the moon", "buying", "buy",
+  "loaded", "loading up", "accumulating", "long", "based", "wagmi",
+  "let's go", "goated", "fire", "🔥", "🚀", "💎", "🟢", "📈", "↗️",
+];
+const SQUARE_BEAR_KEYWORDS = [
+  "rug", "scam", "honeypot", "dump", "dumped", "sold", "selling out",
+  "exit", "exiting", "fade", "bearish", "bear", "down bad", "rip", "dead",
+  "abandoned", "rugged", "🔴", "📉", "↘️", "💩",
+];
+
+function classifySquareSentiment(text) {
+  const lower = String(text || "").toLowerCase();
+  let bull = 0, bear = 0;
+  for (const k of SQUARE_BULL_KEYWORDS) if (lower.indexOf(k) >= 0) bull++;
+  for (const k of SQUARE_BEAR_KEYWORDS) if (lower.indexOf(k) >= 0) bear++;
+  if (bull > bear) return "bull";
+  if (bear > bull) return "bear";
+  return "neutral";
+}
+
+// Tiny non-cryptographic hash used to detect coord-shill: same text
+// posted by multiple users in a short window. Normalizes whitespace
+// + lowercases first to catch trivial paraphrases.
+function squareTextHash(text) {
+  const norm = String(text || "").toLowerCase().replace(/\s+/g, " ").trim().slice(0, 120);
+  let h = 5381;
+  for (let i = 0; i < norm.length; i++) {
+    h = ((h << 5) + h + norm.charCodeAt(i)) >>> 0;
+  }
+  return h.toString(36);
+}
+
+async function handleSquareMention(request, env) {
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "bad json" }, 400); }
+
+  const rawCa = String(body?.ca || "").trim();
+  const chain = String(body?.chain || "bsc").toLowerCase();
+  const isSol = isSolana(chain);
+  const ca = isSol ? rawCa : rawCa.toLowerCase();
+  if (!isValidCa(ca, chain)) return json({ error: "invalid ca" }, 400);
+
+  const postId = String(body?.postId || "").slice(0, 64);
+  if (!postId) return json({ error: "missing postId" }, 400);
+
+  const text = String(body?.text || "").slice(0, 4000); // cap input size
+  const engagement = parseInt(body?.engagement || "0", 10) || 0;
+
+  if (!env.SCAN_KV) return json({ ok: true, recorded: false });
+
+  // Dedup: same post can't be counted twice. KV check-then-write
+  // (race-tolerant; double-counting is acceptable, just not common).
+  const dedupKey = `sqm:post:${postId}:${ca}`;
+  try {
+    const seen = await env.SCAN_KV.get(dedupKey);
+    if (seen) return json({ ok: true, dedup: true });
+    await env.SCAN_KV.put(dedupKey, "1", { expirationTtl: 25 * 3600 });
+  } catch (_) {}
+
+  // Classify sentiment from text. Raw text is NOT persisted past
+  // this function — only the derived class + the dedup marker live in KV.
+  const sentiment = classifySquareSentiment(text);
+  const textHash = squareTextHash(text);
+
+  // Append to per-CA rolling aggregate. Race-tolerant: if two writes
+  // collide, one mention may be lost — acceptable at our scale.
+  const aggKey = `sqm:agg:${chain}:${ca}`;
+  let agg = null;
+  try {
+    agg = await env.SCAN_KV.get(aggKey, "json");
+  } catch (_) {}
+  if (!agg || !Array.isArray(agg.mentions)) {
+    agg = { ca, chain, mentions: [], updatedAt: 0 };
+  }
+
+  const now = Date.now();
+  agg.mentions.push({ ts: now, sentiment, engagement, textHash });
+
+  // Trim to last 24h to keep object size bounded.
+  const cutoff = now - 24 * 3600 * 1000;
+  agg.mentions = agg.mentions.filter(function (m) { return m.ts >= cutoff; });
+  // Hard cap on stored mentions (cost guardrail).
+  if (agg.mentions.length > 500) {
+    agg.mentions = agg.mentions.slice(-500);
+  }
+  agg.updatedAt = now;
+
+  try {
+    await env.SCAN_KV.put(aggKey, JSON.stringify(agg), {
+      expirationTtl: 25 * 3600,
+    });
+  } catch (_) {}
+
+  return json({ ok: true });
+}
+
+// Read-only summary used by /api/kols (paid panel). Returns the same
+// shape the X `activity` field uses, so the frontend can render both
+// side by side without special-casing.
+async function readSquareActivity(ca, chain, env) {
+  const empty = { mentions24h: 0, sentiment: "—", coordShill: false, source: "binance-square" };
+  if (!env.SCAN_KV) return empty;
+  const aggKey = `sqm:agg:${chain}:${ca}`;
+  let agg = null;
+  try {
+    agg = await env.SCAN_KV.get(aggKey, "json");
+  } catch (_) {}
+  if (!agg || !Array.isArray(agg.mentions) || !agg.mentions.length) return empty;
+
+  const now = Date.now();
+  const cutoff = now - 24 * 3600 * 1000;
+  const recent = agg.mentions.filter(function (m) { return m.ts >= cutoff; });
+  if (!recent.length) return empty;
+
+  let bull = 0, bear = 0;
+  const hashCounts = {};
+  for (const m of recent) {
+    if (m.sentiment === "bull") bull++;
+    else if (m.sentiment === "bear") bear++;
+    if (m.textHash) hashCounts[m.textHash] = (hashCounts[m.textHash] || 0) + 1;
+  }
+  const total = recent.length;
+  const sentimentLabel =
+    bull > bear * 1.3 ? "Bullish" :
+    bear > bull * 1.3 ? "Bearish" : "Neutral";
+  // Coord-shill: 3+ posts within 24h sharing the same text hash.
+  let coordShill = false;
+  for (const k in hashCounts) {
+    if (hashCounts[k] >= 3) { coordShill = true; break; }
+  }
+  return {
+    mentions24h: total,
+    sentiment: sentimentLabel,
+    coordShill: coordShill,
+    source: "binance-square",
+  };
 }
 
 async function handleTrending(url, env) {
