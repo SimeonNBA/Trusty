@@ -211,10 +211,53 @@
     } catch (e) { /* never block */ }
   }
 
+  // ── Swap-quote enrichment for the paid-panel Trade row ─────
+  // Read-only — fetches an indicative quote (expected output, price
+  // impact, provider) for "native → token" on the resolved chain.
+  // The actual swap still executes in the user's wallet UI; we never
+  // sign or broadcast. Silent null return on any failure so the
+  // Trade button keeps working without the enrichment.
+  async function getSwapQuoteRemote(ca, chain) {
+    if (!ca) return null;
+    const url =
+      API_BASE +
+      "/api/swap-quote?ca=" +
+      encodeURIComponent(ca) +
+      "&chain=" +
+      encodeURIComponent(chain || "bsc");
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const r = await fetch(url, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        signal: ctrl.signal,
+      });
+      if (!r.ok) return null;
+      const data = await r.json();
+      if (!data || data.ok !== true) return null;
+      return data;
+    } catch (_) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  const quoteCache = new Map();
+  function getSwapQuote(ca, chain) {
+    const key = (ca + ":" + (chain || "evm")).toLowerCase();
+    if (quoteCache.has(key)) return quoteCache.get(key);
+    const promise = getSwapQuoteRemote(ca, chain);
+    quoteCache.set(key, promise);
+    return promise;
+  }
+
   // Expose globally for content scripts
   window.TrustyAPI = {
     scan,
     scanKols,
+    getSwapQuote,
     reportEvent,
     reportSquareMention,
     shortAddr,
