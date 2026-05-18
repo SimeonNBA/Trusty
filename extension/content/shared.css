@@ -298,11 +298,18 @@
 }
 
 .trusty-tt-check {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Row: ✅/❌ icon + label + (ⓘ) info button.
+   Display-flex stays on the inner row so the check-explain div below
+   can expand to full width when toggled. */
+.trusty-tt-check-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  line-height: 1.4;
 }
 
 .trusty-tt-check-icon {
@@ -318,6 +325,42 @@
 
 .trusty-tt-check-bad .trusty-tt-check-label { color: #FCA5A5; }
 .trusty-tt-check-ok  .trusty-tt-check-label { color: #f5f5f7; }
+
+/* Info icon — click to toggle inline explanation. Subtle by default,
+   accentuated on hover to invite clicks without dominating the row. */
+.trusty-tt-info {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  color: #6b7888;
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px 4px;
+  margin-left: auto;
+  cursor: pointer;
+  border-radius: 4px;
+  font-family: inherit;
+  transition: color 0.15s, background 0.15s;
+}
+.trusty-tt-info:hover {
+  color: #F3BA2F;
+  background: rgba(243, 186, 47, 0.10);
+}
+.trusty-tt-info:focus { outline: none; color: #F3BA2F; }
+
+/* Expanded explanation — hidden by default, slides into view on click. */
+.trusty-tt-check-explain {
+  display: none;
+  margin: 4px 0 4px 19px;   /* indent under the row's icon */
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 2px solid rgba(243, 186, 47, 0.35);
+  border-radius: 0 6px 6px 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+.trusty-tt-check-explain.show { display: block; }
 
 /* Tease line — what's behind the paid wall */
 .trusty-tt-tease {

@@ -44,12 +44,71 @@
   let activePill = null;
   let hideTimer = null;
 
+  // Per-check explanations. Matched by label PREFIX so variable-content
+  // labels (e.g. "Tax 5% / 5%") still resolve. Returns null if no match.
+  const CHECK_EXPLANATIONS = {
+    "Not a honeypot": "Contract allows selling. Honeypots block the sell transaction, trapping buyers.",
+    "Tax": "Buy/sell tax rates encoded in the contract. >5% means the contract takes a cut on every trade — common in scam tokens.",
+    "Transfer fee": "Solana equivalent of tax. Empty = no fee. Non-empty = fee taken on every transfer.",
+    "Transfer fee data unavailable": "GoPlus couldn't read the token's transfer fee setting. Try again in a few minutes.",
+    "Tax data unavailable": "GoPlus couldn't read the tax setting. Try again in a few minutes.",
+    "LP locked": "Liquidity-pool tokens are burned or locked, so nobody can pull liquidity and rug. Verified on-chain.",
+    "Mint disabled": "Contract can't print new supply. If enabled, devs could dilute holders to zero.",
+    "Contract renounced": "Owner gave up admin keys (sent to null address). No central party can change rules.",
+    "Authorities renounced": "Solana mint + freeze authorities transferred to null. Token is immutable.",
+    "Top 5 wallets hold": "Wallet concentration. >20% means whales can crash the price by selling out at once.",
+    "Top wallets": "Wallet concentration data. Required to detect whale-risk.",
+    "Dev wallet": "Token creator's wallet. Recent rug history at this address is a strong warning.",
+    "Snipers": "Wallets that bought in the first blocks. >5% of supply held by snipers is risky — they often dump fast.",
+    "Token actively trades": "Real buy/sell activity in the last 24h. Indirect proof the token isn't a honeypot (you can't trade out of one).",
+    "Established": "Token has age and market cap depth. Rugs usually happen in the first weeks, so survival is a positive signal.",
+    "Adequate liquidity": "Enough liquidity in the pools to enter and exit retail-size positions without major slippage.",
+    "Some safety checks pending": "Safety APIs don't have data for this token yet — usually because it's fresh. Refresh in a few minutes or check the full report.",
+    "Safety data unavailable": "We couldn't fetch safety data for this token right now. Try again in a few minutes.",
+  };
+
+  function explanationFor(label) {
+    if (!label) return null;
+    for (const key in CHECK_EXPLANATIONS) {
+      if (label.indexOf(key) === 0) return CHECK_EXPLANATIONS[key];
+    }
+    return null;
+  }
+
+  function escapeAttr(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
   function ensureTooltip() {
     if (tooltipEl && document.body.contains(tooltipEl)) return tooltipEl;
     tooltipEl = document.createElement("div");
     tooltipEl.id = TOOLTIP_ID;
     tooltipEl.className = "trusty-tooltip";
     tooltipEl.setAttribute("role", "tooltip");
+    // Keep the tooltip open while the user hovers it (so they can click
+    // info icons or read explanations without the tooltip vanishing).
+    tooltipEl.addEventListener("mouseenter", function () {
+      if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    });
+    tooltipEl.addEventListener("mouseleave", function () {
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(function () {
+        if (!activePill) hideTooltip();
+      }, 120);
+    });
+    // Delegated click handler for the per-check info icons. Click toggles
+    // an inline explanation for that row.
+    tooltipEl.addEventListener("click", function (e) {
+      const btn = e.target.closest && e.target.closest(".trusty-tt-info");
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const row = btn.closest(".trusty-tt-check");
+      const expl = row && row.querySelector(".trusty-tt-check-explain");
+      if (expl) expl.classList.toggle("show");
+    });
     document.body.appendChild(tooltipEl);
     return tooltipEl;
   }
@@ -63,10 +122,21 @@
     const checksHtml = result.checks.map(function (c) {
       const icon = c.ok ? "✅" : "❌";
       const cls = c.ok ? "trusty-tt-check-ok" : "trusty-tt-check-bad";
+      const explanation = explanationFor(c.label);
+      const infoBtn = explanation
+        ? '<button class="trusty-tt-info" type="button" aria-label="What does this mean?" title="What does this mean?">ⓘ</button>'
+        : '';
+      const explDiv = explanation
+        ? '<div class="trusty-tt-check-explain">' + escapeAttr(explanation) + '</div>'
+        : '';
       return (
         '<li class="trusty-tt-check ' + cls + '">' +
-          '<span class="trusty-tt-check-icon">' + icon + '</span>' +
-          '<span class="trusty-tt-check-label">' + c.label + '</span>' +
+          '<div class="trusty-tt-check-row">' +
+            '<span class="trusty-tt-check-icon">' + icon + '</span>' +
+            '<span class="trusty-tt-check-label">' + c.label + '</span>' +
+            infoBtn +
+          '</div>' +
+          explDiv +
         '</li>'
       );
     }).join("");
