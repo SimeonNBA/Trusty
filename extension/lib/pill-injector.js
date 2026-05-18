@@ -724,6 +724,7 @@
                   sentiment: sentiment,
                   coordShill: false,
                   source: "binance-square",
+                  postIds: Array.isArray(resp.postIds) ? resp.postIds : [],
                 });
             }
           }
@@ -1130,23 +1131,46 @@
   // sections visually consistent. Square uses a 7-day window (vs X's
   // 24h) because Square posts at a slower cadence; a daily window
   // would leave most tokens at zero.
+  //
+  // sq.postIds (optional) — when present (proxy-fetch path), render a
+  // small list of clickable post links below the aggregate so the
+  // user can read the actual posts on Square. Worker-aggregate path
+  // doesn't include postIds yet, so the list is gracefully skipped.
   function renderSquareActivityBody(sq) {
     if (sq === null) {
       return '<div class="trusty-pp-empty trusty-pp-loading-line">Loading Binance Square…</div>';
     }
-    // Fall through to legacy mentions24h field too, in case a cached
-    // response from before the field rename is in flight.
     const mentions = sq.mentions7d || sq.mentions24h || 0;
     const sentiment = sq.sentiment || "—";
     const coordShill = !!sq.coordShill;
     if (mentions === 0) {
       return '<div class="trusty-pp-empty">No Binance Square mentions for this token in the last 7 days.</div>';
     }
-    return '<div class="trusty-pp-stat-grid trusty-pp-stat-grid-3">' +
+    let out = '<div class="trusty-pp-stat-grid trusty-pp-stat-grid-3">' +
       '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + mentions.toLocaleString() + '</div><div class="trusty-pp-stat-lbl">mentions / 7d</div></div>' +
       '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + sentiment + '</div><div class="trusty-pp-stat-lbl">sentiment</div></div>' +
       '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num ' + (coordShill ? 'down' : 'up') + '">' + (coordShill ? "DETECTED" : "Clean") + '</div><div class="trusty-pp-stat-lbl">coord. shill</div></div>' +
     '</div>';
+
+    // Recent post links — only render when proxy fetch supplied them.
+    if (Array.isArray(sq.postIds) && sq.postIds.length) {
+      const top = sq.postIds.slice(0, 5);
+      const rows = top.map(function (pid, i) {
+        const safeId = String(pid).replace(/[^a-zA-Z0-9_-]/g, "");
+        if (!safeId) return "";
+        const href = "https://www.binance.com/en/square/post/" + encodeURIComponent(safeId);
+        return '<a class="trusty-pp-square-post" href="' + href + '" target="_blank" rel="noopener">' +
+                 '<span class="trusty-pp-square-post-num">#' + (i + 1) + '</span>' +
+                 '<span class="trusty-pp-square-post-label">View post on Binance Square</span>' +
+                 '<span class="trusty-pp-square-post-arrow">↗</span>' +
+               '</a>';
+      }).join("");
+      out += '<div class="trusty-pp-square-posts">' +
+               '<div class="trusty-pp-square-posts-title">Recent posts (top ' + top.length + ')</div>' +
+               rows +
+             '</div>';
+    }
+    return out;
   }
 
   // Free-tier blurred view of Binance Square activity. Same structure
