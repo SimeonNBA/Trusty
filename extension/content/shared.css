@@ -362,6 +362,70 @@
 }
 .trusty-tt-check-explain.show { display: block; }
 
+/* ── Sub-score bars ── 6-category detailed breakdown
+   Compact horizontal bars: name on left, filled bar, score on right.
+   Color tier: ≥70 green, 40-69 amber, <40 red — matches verdict colors. */
+.trusty-tt-subs {
+  margin-bottom: 12px;
+  padding: 10px 11px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+}
+.trusty-tt-subs-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #8b95a8;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.trusty-tt-subs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.trusty-tt-sub {
+  display: grid;
+  grid-template-columns: 90px 1fr 24px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.trusty-tt-sub-name {
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trusty-tt-sub-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.trusty-tt-sub-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.trusty-tt-sub-val {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+}
+/* Color tiers */
+.trusty-tt-sub-fill.trusty-tt-sub-ok   { background: linear-gradient(90deg, #22C55E, #15803D); }
+.trusty-tt-sub-fill.trusty-tt-sub-warn { background: linear-gradient(90deg, #F59E0B, #B45309); }
+.trusty-tt-sub-fill.trusty-tt-sub-bad  { background: linear-gradient(90deg, #EF4444, #B91C1C); }
+.trusty-tt-sub-val.trusty-tt-sub-ok   { color: #22C55E; }
+.trusty-tt-sub-val.trusty-tt-sub-warn { color: #F59E0B; }
+.trusty-tt-sub-val.trusty-tt-sub-bad  { color: #EF4444; }
+
 /* Tease line — what's behind the paid wall */
 .trusty-tt-tease {
   display: flex;

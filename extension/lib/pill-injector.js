@@ -146,6 +146,40 @@
     const mcap = md.mcap || "—";
     const vol = md.volume24h || "—";
 
+    // 6-category sub-score breakdown. Degrades cleanly if the worker
+    // doesn't send subScores (older worker version → no section rendered).
+    let subScoresHtml = "";
+    if (result.subScores && typeof result.subScores === "object") {
+      const labels = [
+        ["chainReputation", "Chain Reputation"],
+        ["narrative", "Narrative"],
+        ["ownership", "Ownership"],
+        ["ageTiming", "Age / Timing"],
+        ["socialPresence", "Social Presence"],
+        ["supplySafety", "Supply Safety"],
+      ];
+      const rows = labels.map(function (pair) {
+        const v = Number(result.subScores[pair[0]]) || 0;
+        const cls = v >= 70 ? "ok" : v >= 40 ? "warn" : "bad";
+        const pct = Math.max(0, Math.min(100, v));
+        return (
+          '<li class="trusty-tt-sub">' +
+            '<span class="trusty-tt-sub-name">' + pair[1] + '</span>' +
+            '<div class="trusty-tt-sub-bar">' +
+              '<div class="trusty-tt-sub-fill trusty-tt-sub-' + cls + '" style="width:' + pct + '%"></div>' +
+            '</div>' +
+            '<span class="trusty-tt-sub-val trusty-tt-sub-' + cls + '">' + v + '</span>' +
+          '</li>'
+        );
+      }).join("");
+      subScoresHtml = (
+        '<div class="trusty-tt-subs">' +
+          '<div class="trusty-tt-subs-title">📊 Detailed breakdown</div>' +
+          '<ul class="trusty-tt-subs-list">' + rows + '</ul>' +
+        '</div>'
+      );
+    }
+
     return (
       '<div class="trusty-tt-header ' + verdictClass + '">' +
         '<div class="trusty-tt-verdict">' + verdictEmoji + " " + result.verdict + '</div>' +
@@ -166,6 +200,7 @@
           '<div class="trusty-tt-market-lbl">Vol 24h</div>' +
         '</div>' +
       '</div>' +
+      subScoresHtml +
       '<ul class="trusty-tt-checks">' + checksHtml + '</ul>' +
       '<div class="trusty-tt-tease">' +
         '<span class="trusty-tt-tease-icon">🐦</span>' +
