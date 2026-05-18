@@ -118,6 +118,15 @@ export default {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       return handleTwakTest(url, request, env);
     }
+    // Swap-quote enrichment for the paid-panel Trade row. Read-only —
+    // returns expected output amount, price impact, and provider name
+    // so the user sees what they'd get before they click through to
+    // execute. We never sign or broadcast anything; the actual swap
+    // still happens in the user's wallet UI after redirect.
+    if (url.pathname === "/api/swap-quote") {
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      return handleSwapQuote(url, env);
+    }
 
     return json({ error: "not found" }, 404);
   },
@@ -148,6 +157,110 @@ async function handleTwakTest(url, request, env) {
     return json({ ok: true, assetId, chain, response: data });
   } catch (e) {
     return json({ ok: false, assetId, chain, error: String(e && e.message || e) }, 502);
+  }
+}
+
+// Chain key → EVM numerical chain ID for the swap route endpoint.
+// Solana not yet supported here (different asset-ID format); deferred.
+function swapDomainForChain(chain) {
+  const c = (chain || "").toLowerCase();
+  if (c === "bsc" || c === "bnb" || c === "binance" || c === "evm") return 56;
+  if (c === "eth" || c === "ethereum") return 1;
+  if (c === "base") return 8453;
+  if (c === "polygon" || c === "matic") return 137;
+  if (c === "arbitrum" || c === "arb") return 42161;
+  if (c === "optimism" || c === "op") return 10;
+  if (c === "avalanche" || c === "avax") return 43114;
+  return null;
+}
+
+// Returns a display-friendly swap quote. Read-only — no signing, no
+// broadcast. We use the DEAD address as `fromAddress` since we don't
+// hold user wallets; the upstream just needs a syntactically-valid
+// EVM address to compute a route. If the upstream rejects DEAD we
+// degrade silently — the existing Trade button still works without
+// the quote enrichment.
+async function handleSwapQuote(url, env) {
+  const chain = (url.searchParams.get("chain") || "bsc").trim();
+  const ca = (url.searchParams.get("ca") || "").trim().toLowerCase();
+  const slippage = (url.searchParams.get("slippage") || "1").trim();
+  const amountIn = (url.searchParams.get("amount") || "").trim();
+
+  if (!twakConfigured(env)) return json({ ok: false, error: "quote unavailable" }, 503);
+  if (!isValidCa(ca, chain)) return json({ ok: false, error: "invalid ca" }, 400);
+
+  const domain = swapDomainForChain(chain);
+  if (domain == null) return json({ ok: false, error: "unsupported chain" }, 400);
+
+  // Default to 0.1 of native (1e17 wei) so we get a meaningful quote
+  // even when the extension doesn't pass an amount. Users see this as
+  // an indicative rate; they choose their own amount in their wallet.
+  const amount = amountIn || "100000000000000000";
+
+  // Native EVM marker per upstream conventions (per swap-quote.md).
+  const NATIVE_EVM = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+
+  // KV cache 30s — quotes go stale fast, but caching deduplicates when
+  // multiple users open the same paid panel and protects the 1 req/s
+  // quota under load.
+  const cacheKey = `swap-q:v1:${chain}:${ca}:${amount}:${slippage}`;
+  if (env.SCAN_KV) {
+    try {
+      const cached = await env.SCAN_KV.get(cacheKey, "json");
+      if (cached) return json(cached);
+    } catch (_) {}
+  }
+
+  try {
+    const data = await twakPost("/amber-api/v1/route", {
+      fromAsset: NATIVE_EVM,
+      toAsset: ca,
+      fromAddress: DEAD,
+      toAddress: DEAD,
+      fromDomain: domain,
+      toDomain: domain,
+      amount: amount,
+      slippage: slippage,
+      contractCall: false,
+      sortBy: "outcome",
+    }, env);
+
+    const route = data?.routes?.[0] || null;
+    if (!route || !Array.isArray(route.steps) || !route.steps.length) {
+      const out = { ok: false, error: "no route" };
+      return json(out);
+    }
+
+    const last = route.steps[route.steps.length - 1];
+    const first = route.steps[0];
+    let totalImpact = 0;
+    for (const s of route.steps) {
+      const imp = parseFloat(s.priceImpact || 0);
+      if (!isNaN(imp)) totalImpact += imp;
+    }
+
+    const out = {
+      ok: true,
+      chain: chain,
+      ca: ca,
+      fromAmount: amount,
+      toAmount: last?.to?.amount || null,
+      minOut: last?.to?.minAmountOut || null,
+      priceImpactPct: totalImpact,
+      provider: first?.provider?.name || first?.provider?.id || null,
+      slippage: slippage,
+      expiresAt: route.expirationDate || null,
+      steps: route.steps.length,
+    };
+
+    if (env.SCAN_KV) {
+      try {
+        await env.SCAN_KV.put(cacheKey, JSON.stringify(out), { expirationTtl: 30 });
+      } catch (_) {}
+    }
+    return json(out);
+  } catch (e) {
+    return json({ ok: false, error: String(e && e.message || e) }, 502);
   }
 }
 
