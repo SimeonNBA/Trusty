@@ -47,7 +47,7 @@ export default {
     // CA-based endpoints
     if (url.pathname === "/api/scan" || url.pathname === "/api/kols") {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
-      const { ca, chain, error } = parseCaAndChain(url);
+      const { ca, chain, caOriginal, error } = parseCaAndChain(url);
       if (error) return json({ error }, 400);
       if (url.pathname === "/api/scan") {
         // _diag_force_pending=1 bypasses GoPlus to deterministically
@@ -55,7 +55,7 @@ export default {
         // security signal). Used during integration to verify the
         // fallback path without waiting for natural GoPlus throttle.
         const forcePending = url.searchParams.get("_diag_force_pending") === "1";
-        return handleScan(ca, chain, env, { forcePending });
+        return handleScan(ca, chain, env, { forcePending, caOriginal });
       }
       const symbol = (url.searchParams.get("symbol") || "").replace(/^\$/, "").trim();
       return handleKols(ca, chain, env, symbol);
@@ -276,14 +276,17 @@ async function handleSwapQuote(url, env) {
 }
 
 function parseCaAndChain(url) {
-  const rawCa = url.searchParams.get("ca") || "";
+  const rawCa = (url.searchParams.get("ca") || "").trim();
   const chain = (url.searchParams.get("chain") || "bsc").toLowerCase();
   const isSolanaChain = chain === "solana" || chain === "sol";
   // CAs are case-sensitive on Solana, case-insensitive on EVM. We
   // lowercase EVM for cache stability; preserve case for Solana.
   const ca = isSolanaChain ? rawCa : rawCa.toLowerCase();
   if (!isValidCa(ca, chain)) return { error: "invalid ca" };
-  return { ca, chain };
+  // caOriginal: case-preserved for APIs that require EIP-55 checksum
+  // (e.g. TWAK security lookup). Falls back to `ca` when caller didn't
+  // pass a checksummed form.
+  return { ca, chain, caOriginal: rawCa };
 }
 
 /* ── /api/scan ── token security + market data, 5min cache ── */
@@ -774,9 +777,12 @@ async function scanTokenEvm(ca, chain, env, opts) {
 
   // Market-data fallback: when Dexscreener returns nothing (throttle
   // or unindexed token) try the secondary gateway. Sequential so we
-  // don't burn the 1 req/s quota when Dex is healthy.
+  // don't burn the 1 req/s quota when Dex is healthy. Use the case-
+  // preserved CA so EIP-55 checksums survive — same reason as TWAK
+  // security below.
   if (!d) {
-    const assetId = twakAssetId(resolvedChain, ca);
+    const twakCaForPrice = (opts && opts.caOriginal) || ca;
+    const assetId = twakAssetId(resolvedChain, twakCaForPrice);
     if (assetId) {
       const res = await twakPrices([assetId], env);
       const entry = res?.[0] || res?.tickers?.[0] || res?.data?.[0] || res?.assets?.[0] || null;
@@ -800,8 +806,11 @@ async function scanTokenEvm(ca, chain, env, opts) {
     const substitutes = buildSubstituteChecks(d, null);
     // Secondary safety signal: try TWAK now that GoPlus is missing.
     // Sequential (not parallel with GoPlus) to avoid burning the 1 req/s
-    // TWAK quota when GoPlus is healthy.
-    const twakResult = await twakSecurity(resolvedChain, ca, env);
+    // TWAK quota when GoPlus is healthy. Pass caOriginal (case-preserved
+    // from URL) so EIP-55 checksums survive the lowercase normalisation
+    // we apply for internal cache stability — TWAK's lookup is strict.
+    const twakCa = (opts && opts.caOriginal) || ca;
+    const twakResult = await twakSecurity(resolvedChain, twakCa, env);
     const twakChecks = twakSecurityToChecks(twakResult.data, resolvedChain);
     const out = {
       ca,
