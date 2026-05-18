@@ -56,14 +56,22 @@ Supported sites today:
   background service worker fetches the public Binance Square
   hashtag page for that token symbol (the same page anyone can
   view at `https://www.binance.com/en/square/hashtag/{symbol}`).
-  The fetch is sent with `credentials: omit` — it does NOT send
-  your Binance session cookies, so the request is identical to an
-  anonymous visitor's. We parse the returned HTML for public post
-  IDs and Binance's own bullish/bearish label counts. No post body
+  The fetch is sent with `credentials: include` — your browser
+  attaches your existing binance.com cookies to the outbound
+  request, the same way it does when you navigate to Square
+  yourself. Without this, Binance's anti-bot system returns a
+  challenge page instead of real content. **Our code never reads,
+  stores, or transmits any cookies** — the browser handles the
+  cookie attachment for the binance.com host, and only binance.com
+  receives them. We parse the returned HTML for public post IDs
+  and Binance's own bullish/bearish label counts. No post body
   text is read, stored, or transmitted from this fetch. Per-post
   IDs are forwarded to our server purely as integer references for
   cross-user aggregation. Cached 10 minutes per symbol locally to
-  avoid duplicate requests when the same panel reopens.
+  avoid duplicate requests when the same panel reopens. You can
+  disable this feature by removing the host permission for
+  `www.binance.com` in `chrome://extensions` (will also disable
+  Square pill detection — both depend on the same permission).
 
 **For X (Twitter):** we still never read tweet text. X sentiment is
 sourced from a separate third-party API (Sorsa) on our backend, not

@@ -48,9 +48,13 @@ async function fetchSquareHashtag(rawSymbol) {
   try {
     const url = "https://www.binance.com/en/square/hashtag/" + encodeURIComponent(sym);
     const r = await fetch(url, {
-      // Browser context — Binance sees the user's normal IP/cookies/UA,
-      // serves the real server-rendered HTML.
-      credentials: "omit", // don't leak the user's Binance session
+      // include cookies — without them AWS WAF 202s us with a
+      // challenge stub even from a residential IP. The cookies are
+      // scoped to binance.com (where the user already sends them on
+      // every Square visit). Our code never reads or stores any
+      // cookies; the browser just attaches them to the outbound
+      // request like it would for any normal Square navigation.
+      credentials: "include",
       headers: {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
         "Accept-Language": "en-US,en;q=0.9",
