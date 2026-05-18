@@ -1,9 +1,15 @@
 /* ================================================================
    Trusty AI — Binance Square content script
 
-   Detects contract addresses inside Binance Square posts and injects
-   a Trusty score pill next to each one. Mirrors x-content.js — only
-   the DOM selectors differ.
+   Scans Binance Square posts for contract addresses and reports them
+   to the worker so it can aggregate Square sentiment per token. That
+   sentiment is then surfaced in the X paid panel alongside X velocity.
+
+   NOTE — pill injection on Square pages was tried and dropped: Binance
+   ships obfuscated React class names that change between pages and
+   releases, so a stable selector set is impractical. The user value
+   (cross-platform sentiment) is fully captured by the report-only
+   path, which doesn't depend on the DOM structure at all.
 
    Square is a SPA, so we observe mutations on body to catch posts
    added after initial render (infinite scroll, route changes).
@@ -88,21 +94,26 @@
     return window.TrustyCA.findContractAddresses(text);
   }
 
+  // Track posts we've already reported to avoid duplicate sentiment
+  // events on mutation-observer re-fires. Worker also dedups by postId,
+  // so this is just bandwidth-saving.
+  const reportedPosts = new WeakSet();
+
   function processPost(postEl) {
     if (!postEl) return;
-    if (window.TrustyPill.isProcessed(postEl)) return;
-    window.TrustyPill.markProcessed(postEl);
-    // injectInline walks the post's text nodes, finds CAs, and inserts
-    // a pill right after each one. Same module used on X — zero new
-    // pill rendering code needed here.
-    window.TrustyPill.injectInline(postEl);
+    if (reportedPosts.has(postEl)) return;
 
     // Report sentiment mention(s) for the worker to aggregate.
     // Only fires if the post contains at least one CA — we never report
     // CA-free posts to the worker.
     const text = postEl.textContent || "";
     const found = detectCAsInText(text);
-    if (!found.length) return;
+    if (!found.length) {
+      // Mark it processed anyway so we don't re-scan empty posts on
+      // every mutation tick.
+      reportedPosts.add(postEl);
+      return;
+    }
 
     const postId = extractPostId(postEl);
     const engagement = extractEngagement(postEl);
@@ -115,6 +126,7 @@
         window.TrustyAPI.reportSquareMention(entry.ca, entry.chain, postId, text, engagement);
       }
     }
+    reportedPosts.add(postEl);
   }
 
   function scanAllPosts() {
