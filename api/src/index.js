@@ -3171,37 +3171,48 @@ async function writeSymref(chain, ca, symbol, env) {
 async function fetchSquareForSymbol(symbol, env) {
   const sym = String(symbol || "").trim().replace(/^[\$#]/, "").toLowerCase();
   if (!sym || !/^[a-z0-9]{2,12}$/.test(sym)) {
-    return null;
+    return { mentions7d: 0, sentiment: "—", coordShill: false, source: "binance-square", windowDays: 7, serverFetched: true, fetchStatus: "bad_symbol" };
   }
 
   const cacheKey = `sqfetch:v1:${sym}`;
+  // Only consult cache if we have a CACHED HIT (mentions7d > 0).
+  // Empty results aren't cached, so this read is a fast path for
+  // tokens we've already successfully scraped.
   if (env.SCAN_KV) {
     try {
       const cached = await env.SCAN_KV.get(cacheKey, "json");
-      if (cached) return cached;
+      if (cached && cached.mentions7d > 0) return cached;
     } catch (_) {}
   }
 
   let html = "";
+  let httpStatus = 0;
   try {
     const url = "https://www.binance.com/en/square/hashtag/" + encodeURIComponent(sym);
     const r = await fetch(url, {
       headers: {
-        // Identify ourselves honestly. Binance allows public page
-        // fetches; the UA tells their ops who we are if they ever
-        // need to throttle.
-        "User-Agent": "TrustyAI/0.5.1 (+https://trustyai.tech)",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
-        "Accept-Language": "en-US,en;q=0.8",
+        // Pose as a real browser — Cloudflare Worker IPs serving a
+        // bot-shaped UA get a stripped HTML page from Binance that
+        // omits the post listings. A normal browser UA gets the full
+        // server-rendered content we verified via WebFetch.
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
       },
     });
-    if (!r.ok) return null;
+    httpStatus = r.status;
+    if (!r.ok) {
+      return { mentions7d: 0, sentiment: "—", coordShill: false, source: "binance-square", windowDays: 7, serverFetched: true, fetchStatus: "http_" + httpStatus };
+    }
     html = await r.text();
-  } catch (_) {
-    return null;
+  } catch (e) {
+    return { mentions7d: 0, sentiment: "—", coordShill: false, source: "binance-square", windowDays: 7, serverFetched: true, fetchStatus: "fetch_error", fetchError: String(e && e.message || e).slice(0, 120) };
   }
 
-  if (!html || html.length < 500) return null;
+  if (!html || html.length < 500) {
+    return { mentions7d: 0, sentiment: "—", coordShill: false, source: "binance-square", windowDays: 7, serverFetched: true, fetchStatus: "short_html", htmlLength: html ? html.length : 0 };
+  }
 
   // Extract unique post IDs from URL patterns. Each unique post
   // about this hashtag = one mention. Cap at 500 for safety.
@@ -3213,10 +3224,6 @@ async function fetchSquareForSymbol(symbol, env) {
     if (postIds.size >= 500) break;
   }
 
-  // Use Binance's own sentiment labels (they tag posts as Bullish /
-  // Bearish in the UI). Plain-text count of label markers is a
-  // best-effort proxy — accurate when Binance keeps a simple HTML
-  // structure, degrades to 0/0 (Neutral) if the markup changes.
   const bullish = (html.match(/>Bullish</gi) || []).length;
   const bearish = (html.match(/>Bearish</gi) || []).length;
 
@@ -3231,14 +3238,18 @@ async function fetchSquareForSymbol(symbol, env) {
   const result = {
     mentions7d: total,
     sentiment: sentiment,
-    coordShill: false, // detection requires post text — extension
-                       // path catches this when a user is on Square
+    coordShill: false,
     source: "binance-square",
     windowDays: 7,
     serverFetched: true,
+    fetchStatus: total > 0 ? "ok" : "no_posts_in_html",
+    htmlLength: html.length,
+    httpStatus: httpStatus,
   };
 
-  if (env.SCAN_KV) {
+  // Only cache when we actually found something — don't poison the
+  // cache with transient failures. Next call will re-try.
+  if (env.SCAN_KV && total > 0) {
     try {
       await env.SCAN_KV.put(cacheKey, JSON.stringify(result), {
         expirationTtl: 24 * 3600,
@@ -3265,11 +3276,13 @@ async function readSquareActivity(ca, chain, env, symbol) {
     : [];
 
   // Fallback to server-side scrape when extension users haven't
-  // reported anything for this token yet.
+  // reported anything for this token yet. Returns the scrape's
+  // diagnostic blob verbatim (mentions7d may be 0 with fetchStatus
+  // populated so the operator can see why it didn't find anything).
   if (!recent.length) {
     if (symbol) {
       const fetched = await fetchSquareForSymbol(symbol, env);
-      if (fetched && fetched.mentions7d > 0) return fetched;
+      if (fetched) return fetched;
     }
     return empty;
   }
