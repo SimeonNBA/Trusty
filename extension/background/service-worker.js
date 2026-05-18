@@ -103,9 +103,16 @@ async function fetchSquareHashtag(rawSymbol) {
   return result;
 }
 
+console.log("🛡️ Trusty SW: top-level loaded");
+
 chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
+  console.log("🛡️ Trusty SW: message received:", msg, "from:", sender.tab && sender.tab.url);
   if (msg && msg.action === "fetchSquareHashtag") {
-    fetchSquareHashtag(msg.symbol).then(sendResponse).catch(function (err) {
+    fetchSquareHashtag(msg.symbol).then(function (result) {
+      console.log("🛡️ Trusty SW: fetch result for", msg.symbol, "→", result);
+      sendResponse(result);
+    }).catch(function (err) {
+      console.error("🛡️ Trusty SW: fetch error:", err);
       sendResponse({ ok: false, reason: "handler_error", error: String(err && err.message || err) });
     });
     return true; // keep the message channel open for the async response

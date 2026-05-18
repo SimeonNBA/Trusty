@@ -657,33 +657,67 @@
   // both (1) render the aggregate directly into this panel and (2)
   // POST each post ID to the worker so the result is cached + visible
   // to other users on subsequent scans.
+  //
+  // Loud console.log here intentional — Square has been the hardest
+  // path to debug because it spans content script + background SW +
+  // network + worker. Logs let users / us see exactly where it stops.
   function proxyFetchSquareForPanel(ca, chain, symbol) {
-    if (!symbol || typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.sendMessage) return;
+    console.log("[Trusty Square] proxyFetchSquareForPanel:", { ca, chain, symbol });
+    if (!symbol) { console.warn("[Trusty Square] no symbol — aborting"); return; }
+    if (typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.sendMessage) {
+      console.warn("[Trusty Square] chrome.runtime not available"); return;
+    }
+
+    // Render a "Loading…" placeholder so we can see the proxy path
+    // actually fired even before the response comes back.
+    const live = document.getElementById(PANEL_ID);
+    if (live) {
+      const sq = live.querySelector('[data-trusty-section="square"]');
+      if (sq) {
+        sq.style.display = "";
+        sq.innerHTML =
+          '<div class="trusty-pp-section-title">🟡 Binance Square activity</div>' +
+          '<div class="trusty-pp-empty trusty-pp-loading-line">Fetching Square mentions…</div>';
+      }
+    }
+
     try {
       chrome.runtime.sendMessage(
         { action: "fetchSquareHashtag", symbol: symbol },
         function (resp) {
-          if (chrome.runtime.lastError) return; // background not available
-          if (!resp || !resp.ok || !resp.mentions7d) return;
+          if (chrome.runtime.lastError) {
+            console.error("[Trusty Square] sendMessage error:", chrome.runtime.lastError.message);
+            renderSquareError("Background worker error: " + chrome.runtime.lastError.message);
+            return;
+          }
+          console.log("[Trusty Square] background returned:", resp);
 
-          // Pick sentiment label from Binance's own bull/bear counts
-          // on the page. Same thresholds the worker uses.
+          if (!resp) {
+            renderSquareError("No response from background worker");
+            return;
+          }
+          if (!resp.ok) {
+            renderSquareError("Fetch failed (" + (resp.reason || "unknown") + ")");
+            return;
+          }
+          if (!resp.mentions7d) {
+            renderSquareEmpty("No #" + symbol + " mentions found on Binance Square");
+            return;
+          }
+
           var sentiment = "—";
           var b = resp.bullish || 0;
           var r = resp.bearish || 0;
-          if (resp.mentions7d > 0) {
-            if (b > r * 1.3) sentiment = "Bullish";
-            else if (r > b * 1.3) sentiment = "Bearish";
-            else sentiment = "Neutral";
-          }
+          if (b > r * 1.3) sentiment = "Bullish";
+          else if (r > b * 1.3) sentiment = "Bearish";
+          else sentiment = "Neutral";
 
-          // Render directly into the panel if still open
-          const live = document.getElementById(PANEL_ID);
-          if (live) {
-            const sq = live.querySelector('[data-trusty-section="square"]');
-            if (sq) {
-              sq.style.display = "";
-              sq.innerHTML =
+          const live2 = document.getElementById(PANEL_ID);
+          if (live2) {
+            const sq2 = live2.querySelector('[data-trusty-section="square"]');
+            if (sq2) {
+              sq2.style.display = "";
+              sq2.innerHTML =
                 '<div class="trusty-pp-section-title">🟡 Binance Square activity</div>' +
                 renderSquareActivityBody({
                   mentions7d: resp.mentions7d,
@@ -696,9 +730,8 @@
 
           // Cross-user persistence: report each post ID once so the
           // worker's aggregate fills up too. Worker dedups on
-          // (postId, ca) so re-reports are cheap. Text is empty
-          // because we're not sending the body text from the
-          // extension (privacy — see PRIVACY.md update).
+          // (postId, ca). Text empty per PRIVACY.md (we don't send
+          // body text from the proxy path).
           if (window.TrustyAPI && window.TrustyAPI.reportSquareMention && Array.isArray(resp.postIds)) {
             for (const postId of resp.postIds.slice(0, 50)) {
               window.TrustyAPI.reportSquareMention(ca, chain, postId, "", 0);
@@ -706,7 +739,32 @@
           }
         }
       );
-    } catch (_) { /* extension context not available — silent */ }
+    } catch (e) {
+      console.error("[Trusty Square] sendMessage threw:", e);
+      renderSquareError("Couldn't reach background worker");
+    }
+  }
+
+  // Helpers for the diagnostic-friendly placeholder states.
+  function renderSquareError(msg) {
+    const live = document.getElementById(PANEL_ID);
+    if (!live) return;
+    const sq = live.querySelector('[data-trusty-section="square"]');
+    if (!sq) return;
+    sq.style.display = "";
+    sq.innerHTML =
+      '<div class="trusty-pp-section-title">🟡 Binance Square activity</div>' +
+      '<div class="trusty-pp-empty">' + escapeAttr(msg) + '</div>';
+  }
+  function renderSquareEmpty(msg) {
+    const live = document.getElementById(PANEL_ID);
+    if (!live) return;
+    const sq = live.querySelector('[data-trusty-section="square"]');
+    if (!sq) return;
+    sq.style.display = "";
+    sq.innerHTML =
+      '<div class="trusty-pp-section-title">🟡 Binance Square activity</div>' +
+      '<div class="trusty-pp-empty">' + escapeAttr(msg) + '</div>';
   }
 
   function revealKols(ca, chain, symbol) {
