@@ -2966,11 +2966,13 @@ async function handleSquareMention(request, env) {
 
   // Dedup: same post can't be counted twice. KV check-then-write
   // (race-tolerant; double-counting is acceptable, just not common).
+  // TTL matches the 7-day Square aggregation window — a post stays
+  // dedup-protected for as long as it can influence the sentiment.
   const dedupKey = `sqm:post:${postId}:${ca}`;
   try {
     const seen = await env.SCAN_KV.get(dedupKey);
     if (seen) return json({ ok: true, dedup: true });
-    await env.SCAN_KV.put(dedupKey, "1", { expirationTtl: 25 * 3600 });
+    await env.SCAN_KV.put(dedupKey, "1", { expirationTtl: 8 * 24 * 3600 });
   } catch (_) {}
 
   // Classify sentiment from text. Raw text is NOT persisted past
@@ -2992,8 +2994,8 @@ async function handleSquareMention(request, env) {
   const now = Date.now();
   agg.mentions.push({ ts: now, sentiment, engagement, textHash });
 
-  // Trim to last 24h to keep object size bounded.
-  const cutoff = now - 24 * 3600 * 1000;
+  // Trim to last 7 days to keep object size bounded.
+  const cutoff = now - 7 * 24 * 3600 * 1000;
   agg.mentions = agg.mentions.filter(function (m) { return m.ts >= cutoff; });
   // Hard cap on stored mentions (cost guardrail).
   if (agg.mentions.length > 500) {
@@ -3003,7 +3005,7 @@ async function handleSquareMention(request, env) {
 
   try {
     await env.SCAN_KV.put(aggKey, JSON.stringify(agg), {
-      expirationTtl: 25 * 3600,
+      expirationTtl: 8 * 24 * 3600, // 8 days, slightly past the 7-day read window
     });
   } catch (_) {}
 
@@ -3013,8 +3015,13 @@ async function handleSquareMention(request, env) {
 // Read-only summary used by /api/kols (paid panel). Returns the same
 // shape the X `activity` field uses, so the frontend can render both
 // side by side without special-casing.
+//
+// Window is 7 days for Square (vs 24h for X). Rationale: Square posts
+// at a much slower cadence than X, so a daily window leaves most
+// tokens at zero. A weekly window gives a more useful sentiment
+// signal without sacrificing recency.
 async function readSquareActivity(ca, chain, env) {
-  const empty = { mentions24h: 0, sentiment: "—", coordShill: false, source: "binance-square" };
+  const empty = { mentions7d: 0, sentiment: "—", coordShill: false, source: "binance-square", windowDays: 7 };
   if (!env.SCAN_KV) return empty;
   const aggKey = `sqm:agg:${chain}:${ca}`;
   let agg = null;
@@ -3024,7 +3031,7 @@ async function readSquareActivity(ca, chain, env) {
   if (!agg || !Array.isArray(agg.mentions) || !agg.mentions.length) return empty;
 
   const now = Date.now();
-  const cutoff = now - 24 * 3600 * 1000;
+  const cutoff = now - 7 * 24 * 3600 * 1000;
   const recent = agg.mentions.filter(function (m) { return m.ts >= cutoff; });
   if (!recent.length) return empty;
 
@@ -3039,16 +3046,20 @@ async function readSquareActivity(ca, chain, env) {
   const sentimentLabel =
     bull > bear * 1.3 ? "Bullish" :
     bear > bull * 1.3 ? "Bearish" : "Neutral";
-  // Coord-shill: 3+ posts within 24h sharing the same text hash.
+  // Coord-shill: 5+ posts sharing the same text hash inside the 7-day
+  // window. Threshold scaled vs the prior 24h/3-post rule — a weekly
+  // window naturally has more posts, so the bar to flag coordination
+  // is higher to keep the false-positive rate steady.
   let coordShill = false;
   for (const k in hashCounts) {
-    if (hashCounts[k] >= 3) { coordShill = true; break; }
+    if (hashCounts[k] >= 5) { coordShill = true; break; }
   }
   return {
-    mentions24h: total,
+    mentions7d: total,
     sentiment: sentimentLabel,
     coordShill: coordShill,
     source: "binance-square",
+    windowDays: 7,
   };
 }
 

@@ -836,10 +836,9 @@
   font-weight: 700 !important;
 }
 
-/* ── Sub-score row: click-to-expand explanation ──────────────
-   Matches the website's Learn pattern — whole row is the click
-   target. The ⓘ icon is a visual cue, but tapping anywhere on
-   the row toggles the explanation block underneath. */
+/* ── Sub-score row (click opens metric modal) ────────────────
+   Whole row is the click target; tapping it opens a centered modal
+   with the website's "Think About This" content for that metric. */
 .trusty-tt-subs-clickable .trusty-tt-sub {
   cursor: pointer;
   border-radius: 6px;
@@ -847,7 +846,7 @@
   transition: background 0.12s ease;
 }
 .trusty-tt-subs-clickable .trusty-tt-sub:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.04);
 }
 .trusty-tt-sub-main {
   display: grid !important;
@@ -863,27 +862,158 @@
   transition: opacity 0.12s ease;
 }
 .trusty-tt-subs-clickable .trusty-tt-sub:hover .trusty-tt-sub-info { opacity: 1; }
-.trusty-tt-sub-explain {
+
+/* ── Metric detail modal ─────────────────────────────────────
+   Mirrors the openMetricPopup UX on trustyai.tech — centered card
+   with eyebrow, big title, score bar, "what is this" copy, and
+   three "think about this" prompts. Lives at the document root so
+   it floats above the paid panel and tooltip. */
+.trusty-metric-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 9, 18, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 2147483647; /* one above the paid panel */
   display: none;
-  margin-top: 6px;
-  padding: 8px 10px;
-  background: rgba(99, 102, 241, 0.06);
-  border-left: 2px solid rgba(99, 102, 241, 0.5);
-  border-radius: 4px;
-  font-size: 11px !important;
-  line-height: 1.55 !important;
-  color: #cbd5e1 !important;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
-.trusty-tt-sub.trusty-tt-sub-open .trusty-tt-sub-explain {
-  display: block;
+.trusty-metric-overlay.trusty-metric-overlay-open { display: flex; }
+.trusty-metric-card {
+  position: relative;
+  max-width: 480px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: #0a0f1c;
+  border: 1px solid #233247;
+  border-radius: 18px;
+  padding: 26px 24px 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  color: #f5f5f7;
 }
-.trusty-tt-sub.trusty-tt-sub-open {
-  background: rgba(99, 102, 241, 0.05);
+.trusty-metric-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #1d2738;
+  background: rgba(255, 255, 255, 0.04);
+  color: #8b95a8;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
 }
-.trusty-tt-sub.trusty-tt-sub-open .trusty-tt-sub-info {
-  opacity: 1;
+.trusty-metric-close:hover {
+  color: #f5f5f7;
+  border-color: #2e3d56;
+  background: rgba(255, 255, 255, 0.07);
+}
+.trusty-metric-eyebrow {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 2px;
+  color: #8b95a8 !important;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.trusty-metric-title {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.6px;
+  color: #f5f5f7 !important;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.trusty-metric-score-row {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #1d2738;
+}
+.trusty-metric-score-val {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  min-width: 78px;
+}
+.trusty-metric-score-ok   { color: #22C55E !important; }
+.trusty-metric-score-warn { color: #FBBF24 !important; }
+.trusty-metric-score-bad  { color: #EF4444 !important; }
+.trusty-metric-score-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.trusty-metric-score-fill {
+  height: 100%;
+  border-radius: 999px;
+  width: 0%;
+  transition: width 0.5s ease;
+}
+.trusty-metric-score-fill-ok   { background: linear-gradient(90deg, #16A34A, #22C55E); }
+.trusty-metric-score-fill-warn { background: linear-gradient(90deg, #D97706, #FBBF24); }
+.trusty-metric-score-fill-bad  { background: linear-gradient(90deg, #DC2626, #EF4444); }
+.trusty-metric-what {
+  padding: 14px;
+  border-radius: 10px;
+  border-left: 3px solid rgba(99, 102, 241, 0.55);
+  background: rgba(99, 102, 241, 0.06);
+  color: #cbd5e1 !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  margin-bottom: 20px;
+}
+.trusty-metric-think-label {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 2px;
+  color: #FBBF24 !important;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.trusty-metric-questions {
+  display: flex !important;
+  flex-direction: column;
+  gap: 10px;
+}
+.trusty-metric-q {
+  display: grid !important;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid #1d2738;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.trusty-metric-q-num {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
   color: #818CF8 !important;
+  line-height: 1.4;
+}
+.trusty-metric-q-text {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: #f5f5f7 !important;
 }
 
 /* ── Locked KOL rows / X activity (free-tier inline upsell) ── */

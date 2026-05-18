@@ -179,27 +179,100 @@
 
   // Shared labels for the 6-category sub-score breakdown. Used in both
   // the hover tooltip and the paid panel so the wording matches.
+  // Tuple: [worker subScore key, display name, website metric key
+  // (links into METRIC_DATA below for the modal content)].
   const SUB_SCORE_LABELS = [
-    ["chainReputation", "Chain Reputation", "How much trust the underlying chain carries. Ethereum highest, BSC moderate, fresh chains lowest. A safe contract on a sketchy chain still inherits chain risk."],
-    ["narrative", "Narrative", "Whether the token rides a known meta (dogs / cats / AI / mascots) vs a random launch with no story. Tokens with a narrative survive drawdowns better."],
-    ["ownership", "Ownership", "Renounced contracts (owner = 0x0) score high — nobody can flip rules mid-game. Active owner wallets are a kill switch."],
-    ["ageTiming", "Age / Timing", "How long the token has survived. Most rugs happen in week 1; old-and-alive is a quiet positive signal."],
-    ["socialPresence", "Social Presence", "X and Binance Square mentions and velocity. Zero attention = zombie token. Spikes = real interest (or coordinated shilling — check the coord-shill row)."],
-    ["supplySafety", "Supply Safety", "LP locked + mint disabled + healthy wallet distribution. Determines whether the floor can vanish overnight."],
+    ["chainReputation", "Chain Reputation", "chain"],
+    ["narrative",       "Narrative",        "narr"],
+    ["ownership",       "Ownership",        "own"],
+    ["ageTiming",       "Age / Timing",     "age"],
+    ["socialPresence",  "Social Presence",  "soc"],
+    ["supplySafety",    "Supply Safety",    "sup"],
   ];
 
-  // Render one sub-score row with an inline expandable explanation.
-  // The whole row is the click target (matches the website pattern) —
-  // delegated click handlers on the parent toggle .trusty-tt-sub-open
-  // which CSS uses to reveal the explanation block underneath.
-  function renderSubScoreRow(pair, value) {
+  // Rich per-metric content mirrored from the website (index.html,
+  // metricData object). Shown in a centered modal when the user
+  // clicks a sub-score row in the panel — matches the website's
+  // openMetricPopup UX so users get the same "Think About This"
+  // framing on both surfaces.
+  const METRIC_DATA = {
+    chain: {
+      title: "Chain Safety",
+      eyebrow: "METRIC — CHAIN",
+      what: "The chain a coin lives on determines fees, speed, rug risk, and degen culture. Solana and Base attract the most activity right now. BNB has cleaned up. ETH is slow and expensive for small caps. Tron is... Tron.",
+      questions: [
+        "Can you actually use this chain? Do you have a wallet set up for it, and do you understand the fees?",
+        "Is this chain where the momentum is RIGHT NOW — or is it a ghost town compared to where degens are active?",
+        "If liquidity is thin on this chain, can you realistically exit your position without getting wrecked by slippage?"
+      ]
+    },
+    narr: {
+      title: "Narrative",
+      eyebrow: "METRIC — NARRATIVE",
+      what: "Narrative is everything in meme coin land. A coin with a weak or no narrative has to rely purely on speculation to pump. A coin riding a trending meta (AI, animals, political cycle) gets organic attention for free.",
+      questions: [
+        "Is this narrative actually trending RIGHT NOW — or is it yesterday's meta that already peaked?",
+        "Can you explain this coin's narrative to a normie in one sentence? If you can't, the market won't understand it either.",
+        "Who are the natural buyers for this narrative? Is there a whole community of people who would organically care about this?"
+      ]
+    },
+    own: {
+      title: "Ownership",
+      eyebrow: "METRIC — OWNERSHIP",
+      what: "Dev project means the original team is still in control — they can build but also dump on you. CTO means the community took over after the dev left — higher volatility, but no single actor can rug the treasury.",
+      questions: [
+        "If this is a dev project — have you checked the deployer wallet? Are they holding a massive bag they can dump anytime?",
+        "If this is a CTO — is the community actually organised and building, or is it chaos with no direction?",
+        "Who is accountable if something goes wrong? Is there anyone you can hold responsible or is this fully anonymous?"
+      ]
+    },
+    age: {
+      title: "Age / Timing",
+      eyebrow: "METRIC — AGE",
+      what: "Age tells you how many paper hands have already been shaken out. A fresh coin is maximum volatility — could 100x or die today. An OG coin has proven it can survive, but the biggest gains are usually already gone.",
+      questions: [
+        "Are you early enough that there's still meaningful upside, or are you the exit liquidity for people who got in at a fraction of the current price?",
+        "Has this coin survived at least one major market dip? If not, you don't know how the community responds under pressure.",
+        "What's the catalyst for it to move from here? Age alone doesn't make a coin pump — what's the next narrative driver?"
+      ]
+    },
+    soc: {
+      title: "Social Presence",
+      eyebrow: "METRIC — SOCIALS",
+      what: "Socials are the hype infrastructure. Twitter drives awareness, Telegram drives community. TikTok means normies are incoming. But quantity means nothing — ghost accounts and bot followers are worse than no socials because they create false confidence.",
+      questions: [
+        "Have you actually VISITED the Twitter and Telegram — not just checked they exist? Is the engagement real or does it smell like bots?",
+        'Is the content being produced organic memes and genuine discussion, or is it all just price spam and "wen moon" messages?',
+        "If a KOL tweeted about this tomorrow, is there enough infrastructure to actually capture and convert that attention into buyers?"
+      ]
+    },
+    sup: {
+      title: "Supply Safety",
+      eyebrow: "METRIC — SUPPLY",
+      what: "Supply control is the single most common way retail gets rekt. LP not burned means the dev can drain the pool. Whale wallets mean a few people control your exit. Unknown supply means you're flying blind.",
+      questions: [
+        "Have you VERIFIED the LP status on-chain — not just taken the project's word for it? RugCheck or BubbleMaps, not Telegram.",
+        "Do you know who the top 10 wallet holders are? Have they been accumulating or slowly distributing?",
+        "If the biggest wallet decided to sell 20% of their position tomorrow, what would that do to the price and your position?"
+      ]
+    }
+  };
+
+  // Render one sub-score row. data-trusty-metric-key links the row
+  // to METRIC_DATA so the click handler can open the right modal.
+  // data-trusty-sub-value carries the numeric score so the modal
+  // header can display it without re-reading the parent panel.
+  function renderSubScoreRow(label, value) {
     const v = Number(value) || 0;
     const cls = v >= 70 ? "ok" : v >= 40 ? "warn" : "bad";
     const pct = Math.max(0, Math.min(100, v));
+    const metricKey = label[2] || "";
     return (
-      '<li class="trusty-tt-sub" data-trusty-sub-row="1">' +
+      '<li class="trusty-tt-sub" data-trusty-sub-row="1" ' +
+          'data-trusty-metric-key="' + escapeAttr(metricKey) + '" ' +
+          'data-trusty-sub-value="' + v + '">' +
         '<div class="trusty-tt-sub-main">' +
-          '<span class="trusty-tt-sub-name">' + pair[1] +
+          '<span class="trusty-tt-sub-name">' + label[1] +
             ' <span class="trusty-tt-sub-info" aria-hidden="true">ⓘ</span>' +
           '</span>' +
           '<div class="trusty-tt-sub-bar">' +
@@ -207,21 +280,102 @@
           '</div>' +
           '<span class="trusty-tt-sub-val trusty-tt-sub-' + cls + '">' + v + '</span>' +
         '</div>' +
-        '<div class="trusty-tt-sub-explain">' + escapeAttr(pair[2]) + '</div>' +
       '</li>'
     );
   }
 
-  // Delegated click handler — toggles .trusty-tt-sub-open on a row
-  // when the user taps anywhere inside it. Used on both the tooltip
-  // and the paid panel.
+  // Centered modal overlay shown when a sub-score row is clicked.
+  // Mirrors the website's openMetricPopup UX — eyebrow, big title,
+  // animated score bar, "what is this" description, three "think
+  // about this" questions. One modal element shared across panel
+  // and tooltip — created lazily, reused after first open.
+  let _metricModalEl = null;
+  function ensureMetricModal() {
+    if (_metricModalEl) return _metricModalEl;
+    const el = document.createElement("div");
+    el.className = "trusty-metric-overlay";
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML =
+      '<div class="trusty-metric-card" role="dialog" aria-modal="true">' +
+        '<button class="trusty-metric-close" type="button" aria-label="Close">✕</button>' +
+        '<div class="trusty-metric-eyebrow" data-trusty-mp-eyebrow></div>' +
+        '<div class="trusty-metric-title" data-trusty-mp-title></div>' +
+        '<div class="trusty-metric-score-row">' +
+          '<span class="trusty-metric-score-val" data-trusty-mp-score></span>' +
+          '<div class="trusty-metric-score-bar">' +
+            '<div class="trusty-metric-score-fill" data-trusty-mp-fill></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="trusty-metric-what" data-trusty-mp-what></div>' +
+        '<div class="trusty-metric-think-label">💭 THINK ABOUT THIS</div>' +
+        '<div class="trusty-metric-questions" data-trusty-mp-questions></div>' +
+      '</div>';
+    el.addEventListener("click", function (e) {
+      // Click the dim background OR the X button = close.
+      if (e.target === el || (e.target.closest && e.target.closest(".trusty-metric-close"))) {
+        closeMetricModal();
+      }
+    });
+    document.body.appendChild(el);
+    _metricModalEl = el;
+    return el;
+  }
+
+  function openMetricModal(metricKey, score) {
+    const data = METRIC_DATA[metricKey];
+    if (!data) return;
+    const el = ensureMetricModal();
+    const s = Number(score) || 0;
+    const scoreCls = s >= 70 ? "ok" : s >= 40 ? "warn" : "bad";
+    el.querySelector("[data-trusty-mp-eyebrow]").textContent = data.eyebrow;
+    el.querySelector("[data-trusty-mp-title]").textContent = data.title;
+    const scoreEl = el.querySelector("[data-trusty-mp-score]");
+    scoreEl.textContent = s + "/100";
+    scoreEl.className = "trusty-metric-score-val trusty-metric-score-" + scoreCls;
+    const fill = el.querySelector("[data-trusty-mp-fill]");
+    fill.className = "trusty-metric-score-fill trusty-metric-score-fill-" + scoreCls;
+    fill.style.width = "0%";
+    setTimeout(function () { fill.style.width = Math.max(0, Math.min(100, s)) + "%"; }, 60);
+    el.querySelector("[data-trusty-mp-what]").textContent = data.what;
+    const qHtml = data.questions.map(function (q, i) {
+      return '<div class="trusty-metric-q">' +
+               '<div class="trusty-metric-q-num">' + (i + 1) + '</div>' +
+               '<div class="trusty-metric-q-text">' + escapeAttr(q) + '</div>' +
+             '</div>';
+    }).join("");
+    el.querySelector("[data-trusty-mp-questions]").innerHTML = qHtml;
+    el.classList.add("trusty-metric-overlay-open");
+    el.setAttribute("aria-hidden", "false");
+  }
+
+  function closeMetricModal() {
+    if (_metricModalEl) {
+      _metricModalEl.classList.remove("trusty-metric-overlay-open");
+      _metricModalEl.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  // Delegated click handler — opens the metric modal for the clicked
+  // row's category. Used on both the hover tooltip and the paid panel.
   function onSubRowClick(e) {
     const row = e.target.closest && e.target.closest('[data-trusty-sub-row="1"]');
     if (!row) return;
     e.preventDefault();
     e.stopPropagation();
-    row.classList.toggle("trusty-tt-sub-open");
+    const key = row.getAttribute("data-trusty-metric-key");
+    const val = parseInt(row.getAttribute("data-trusty-sub-value") || "0", 10);
+    if (key) openMetricModal(key, val);
   }
+
+  // ESC closes the metric modal — wired once at script load so it
+  // works regardless of when the modal was created.
+  try {
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && _metricModalEl && _metricModalEl.classList.contains("trusty-metric-overlay-open")) {
+        closeMetricModal();
+      }
+    });
+  } catch (_) {}
 
   // Sub-score breakdown for the paid panel. Returns empty when the
   // worker didn't send subScores (older worker version → silent no-op).
@@ -856,20 +1010,23 @@
   }
 
   // Same grid pattern as renderActivityBody — keeps the X and Square
-  // sections visually consistent. Square doesn't expose a "vs yesterday"
-  // delta yet, so we show 3 cells (mentions / sentiment / coord-shill).
+  // sections visually consistent. Square uses a 7-day window (vs X's
+  // 24h) because Square posts at a slower cadence; a daily window
+  // would leave most tokens at zero.
   function renderSquareActivityBody(sq) {
     if (sq === null) {
       return '<div class="trusty-pp-empty trusty-pp-loading-line">Loading Binance Square…</div>';
     }
-    const mentions = sq.mentions24h || 0;
+    // Fall through to legacy mentions24h field too, in case a cached
+    // response from before the field rename is in flight.
+    const mentions = sq.mentions7d || sq.mentions24h || 0;
     const sentiment = sq.sentiment || "—";
     const coordShill = !!sq.coordShill;
     if (mentions === 0) {
-      return '<div class="trusty-pp-empty">No Binance Square mentions for this token in the last 24h.</div>';
+      return '<div class="trusty-pp-empty">No Binance Square mentions for this token in the last 7 days.</div>';
     }
     return '<div class="trusty-pp-stat-grid trusty-pp-stat-grid-3">' +
-      '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + mentions.toLocaleString() + '</div><div class="trusty-pp-stat-lbl">mentions / 24h</div></div>' +
+      '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + mentions.toLocaleString() + '</div><div class="trusty-pp-stat-lbl">mentions / 7d</div></div>' +
       '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + sentiment + '</div><div class="trusty-pp-stat-lbl">sentiment</div></div>' +
       '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num ' + (coordShill ? 'down' : 'up') + '">' + (coordShill ? "DETECTED" : "Clean") + '</div><div class="trusty-pp-stat-lbl">coord. shill</div></div>' +
     '</div>';
@@ -881,7 +1038,7 @@
   function renderLockedSquareBody() {
     return '<div class="trusty-pp-locked">' +
       '<div class="trusty-pp-stat-grid trusty-pp-stat-grid-3 trusty-pp-blurred">' +
-        '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">123</div><div class="trusty-pp-stat-lbl">mentions / 24h</div></div>' +
+        '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">428</div><div class="trusty-pp-stat-lbl">mentions / 7d</div></div>' +
         '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">Bullish</div><div class="trusty-pp-stat-lbl">sentiment</div></div>' +
         '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num up">Clean</div><div class="trusty-pp-stat-lbl">coord. shill</div></div>' +
       '</div>' +
