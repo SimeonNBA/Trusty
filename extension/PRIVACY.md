@@ -1,6 +1,6 @@
 # Trusty AI — Privacy Policy
 
-_Last updated: 2026-05-09_
+_Last updated: 2026-05-16_
 
 The Trusty AI Chrome extension is a browser-based tool that helps users
 identify risky contract addresses on the websites they already visit.
@@ -20,6 +20,7 @@ trustyai.tech for the full report (free users).
 Supported sites today:
 
 - `x.com` and `twitter.com`
+- `www.binance.com/*/square` (Binance Square)
 
 ## What we collect
 
@@ -40,19 +41,27 @@ Supported sites today:
   the optional paid subscription with your install and to sync your
   watchlist across the extension and trustyai.tech)
 - Standard HTTP headers your browser automatically sends to any website
+- **On Binance Square pages only:** when a Square post containing a
+  contract address scrolls into view, the post's visible text and
+  engagement counts are sent to our server for sentiment classification.
+  The text is used to classify the post as bullish / bearish / neutral
+  and to detect coordinated shilling; only the resulting sentiment
+  category is persisted long-term, not the raw text.
 
-**That's it.** We do not send the page URL, tweet content, your X
-account, your IP-derived identity, your wallet address, or any other
-identifying data. The contract address you scan is public on-chain
-information.
+**For X (Twitter):** we still never read tweet text. X sentiment is
+sourced from a separate third-party API (Sorsa) on our backend, not
+from anything the extension reads in your browser.
 
 ## What we do not collect
 
 - We do not collect your X/Twitter account, posts, follows, DMs, or
   profile data.
-- We do not read or transmit any text other than the contract address
-  you scanned.
-- We do not track which sites you visit or how long you spend on them.
+- We do not read or transmit X tweet content (X sentiment uses
+  third-party data, not browser content).
+- We do not read text from any page other than supported sites
+  (x.com, twitter.com, www.binance.com/square).
+- We do not track which sites you visit beyond the supported sites or
+  how long you spend on them.
 - We do not use cookies, fingerprinting, or third-party analytics
   services from inside the extension.
 - We do not sell, share, or rent any data to anyone.
@@ -92,6 +101,9 @@ identifying information.
   and the subscription endpoint.
 - `content_scripts: x.com, twitter.com` —
   to detect contract addresses on the pages you visit.
+- `content_scripts: www.binance.com/*/square*` — to detect contract
+  addresses in Binance Square posts and (for paid features) to read
+  post text for sentiment classification.
 
 The extension does not have access to the rest of the web. It cannot
 read your other tabs, your bookmarks, your downloads, or any site that

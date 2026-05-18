@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Trusty AI",
   "short_name": "Trusty AI",
-  "version": "0.4.0",
-  "description": "AI-powered safety verdict for crypto contract addresses on X. Don't ape blind.",
+  "version": "0.5.1",
+  "description": "AI-powered safety verdict for crypto contract addresses on X and Binance Square. Don't ape blind.",
 
   "icons": {
     "16": "assets/icon-16.png",

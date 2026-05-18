@@ -33,19 +33,18 @@ AI-powered safety verdict for any contract address you see on X. Don't ape blind
 
 Every time you see a contract address on Crypto Twitter, Trusty shows you a one-click safety verdict before you ape — APE, CAUTION, or RUN — sourced from the AI scanner at trustyai.tech.
 
-No more tab-hopping between DexScreener, GoPlus, and Honeypot.is. No more aping into a 99% sell-tax honeypot you could've caught in 5 seconds. The verdict comes to you, in the feed, in plain English, before you click buy.
+No more tab-hopping between five different safety scanners. No more aping into a 99% sell-tax honeypot you could've caught in 5 seconds. The verdict comes to you, in the feed, in plain English, before you click buy.
 
 ✦ HOW IT WORKS
 
-→ Scrolling X and you spot a contract address? A small Trusty pill appears right next to it.
-→ Hover the pill and you see a quick verdict + 5 plain-English safety checks: honeypot, sell tax, LP lock, mint authority, contract renounced.
+→ Scrolling X or Binance Square and you spot a contract address? A small Trusty pill appears right next to it.
+→ Hover the pill and you see a quick verdict + plain-English safety checks: honeypot, sell tax, LP lock, mint authority, contract renounced.
 → Click the pill and you get the full report — either inline (paid) or on trustyai.tech (free).
 
-✦ SUPPORTED SITES (TODAY)
+✦ SUPPORTED SITES
 
 • x.com / twitter.com — pills on every CA in tweets, replies, quoted posts
-
-More platforms coming: Reddit, Telegram Web, Discord, Farcaster.
+• www.binance.com/square — pills on every CA in Binance Square posts; paid users see Square sentiment alongside X velocity
 
 ✦ FREE TIER (NO ACCOUNT, NO LIMITS BEYOND DAILY)
 
@@ -69,7 +68,7 @@ To unlock: open the extension popup → choose Monthly ($5) or Yearly ($50) → 
 
 ✦ PRIVACY
 
-We do not read your tweets, your DMs, or any text on a page other than the contract addresses themselves. We do not collect your X account, your IP address, your wallet's seed phrase or signatures. We do not use cookies, analytics, or third-party trackers. The contract address you scan is public on-chain information — that's all we ever send anywhere.
+We do not read your tweets, your DMs, or any X content. On Binance Square pages, we read the text of posts that contain a contract address so we can classify the post's sentiment — the raw text is sent to our backend for classification and is not persisted long-term, only the resulting sentiment label is kept. We do not collect your X account, your Binance account, your IP address, your wallet's seed phrase or signatures. We do not use cookies, analytics, or third-party trackers. The contract address you scan is public on-chain information.
 
 Full privacy policy: trustyai.tech/privacy
 
@@ -141,7 +140,17 @@ host_permissions (trustyai.tech, api.trustyai.tech):
 content_scripts (x.com, twitter.com):
   Required to detect contract addresses on the pages where users
   encounter them. The script reads page text only to find contract
-  addresses; it does not read or transmit any other text content.
+  addresses; it does not read or transmit any tweet text.
+
+content_scripts (www.binance.com/*/square*):
+  Required to detect contract addresses in Binance Square posts and
+  (for paid users) to classify the sentiment of posts that contain a
+  CA. The script reads the visible post text and sends it to our
+  backend for sentiment classification. Only the resulting sentiment
+  category (bullish / bearish / neutral) is persisted, not the raw
+  text. Users opt into this paid feature by subscribing — free users
+  still benefit from the pill injection without any paid-tier data
+  flow.
 ```
 
 ---
@@ -152,6 +161,33 @@ content_scripts (x.com, twitter.com):
 Trusty AI's single purpose is to display a safety verdict for any
 cryptocurrency contract address detected on supported web pages,
 helping users avoid risky tokens before transacting.
+```
+
+---
+
+## What's new — v0.5.1
+
+(Paste into the "What's new in this version?" field on the v0.5.1
+submission.)
+
+```
+v0.5.1 — Binance Square support, info icons, detailed safety breakdown.
+
+• Pill injection now works on Binance Square in addition to X / Twitter.
+  Every contract address you see in a Square post gets a Trusty safety
+  pill with the same hover-for-verdict, click-for-full-report flow.
+• Detailed safety breakdown: every pill now shows a 6-category
+  sub-score view (Chain Reputation, Narrative, Ownership, Age/Timing,
+  Social Presence, Supply Safety) so users see WHY a token scored
+  what it did, not just the composite number.
+• Info icons (ⓘ) on every safety check — click any check to see a
+  plain-English explanation of what it means.
+• Binance Square sentiment for paid users: mentions per 24h, sentiment
+  classification, coordinated-shilling detection — same shape as the
+  existing X velocity panel.
+• Privacy posture: on Binance Square pages we now read post text for
+  paid sentiment classification (disclosed in the privacy policy).
+  X / Twitter behavior is unchanged — we still never read tweet text.
 ```
 
 ---
