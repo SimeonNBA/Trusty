@@ -160,17 +160,21 @@ async function handleTwakTest(url, request, env) {
   }
 }
 
-// Chain key → EVM numerical chain ID for the swap route endpoint.
-// Solana not yet supported here (different asset-ID format); deferred.
+// Admin-protected probe of arbitrary upstream paths. Used during
+// initial TWAK integration to learn the actual response shapes and
+// valid IDs. Remove or restrict further before launch.
+// Chain key → upstream amber-api domain ID. Discovered empirically
+// from GET /amber-api/v1/domains — the upstream uses string slugs
+// (e.g. "smartchain" for BNB), not numeric EVM chain IDs.
 function swapDomainForChain(chain) {
   const c = (chain || "").toLowerCase();
-  if (c === "bsc" || c === "bnb" || c === "binance" || c === "evm") return 56;
-  if (c === "eth" || c === "ethereum") return 1;
-  if (c === "base") return 8453;
-  if (c === "polygon" || c === "matic") return 137;
-  if (c === "arbitrum" || c === "arb") return 42161;
-  if (c === "optimism" || c === "op") return 10;
-  if (c === "avalanche" || c === "avax") return 43114;
+  if (c === "bsc" || c === "bnb" || c === "binance" || c === "evm") return "smartchain";
+  if (c === "eth" || c === "ethereum") return "ethereum";
+  if (c === "base") return "base";
+  if (c === "polygon" || c === "matic") return "polygon";
+  if (c === "arbitrum" || c === "arb") return "arbitrum";
+  if (c === "optimism" || c === "op") return "optimism";
+  if (c === "avalanche" || c === "avax") return "avalanche";
   return null;
 }
 
@@ -190,7 +194,7 @@ async function handleSwapQuote(url, env) {
   if (!isValidCa(ca, chain)) return json({ ok: false, error: "invalid ca" }, 400);
 
   const domain = swapDomainForChain(chain);
-  if (domain == null) return json({ ok: false, error: "unsupported chain" }, 400);
+  if (!domain) return json({ ok: false, error: "unsupported chain" }, 400);
 
   // Default to 0.1 of native (1e17 wei) so we get a meaningful quote
   // even when the extension doesn't pass an amount. Users see this as
@@ -455,7 +459,10 @@ async function twakGet(path, query, env) {
     ? "?" + Object.keys(query).map((k) => `${k}=${encodeURIComponent(query[k])}`).join("&")
     : "";
   const r = await fetch(TWAK_BASE + path + qs, { headers });
-  if (!r.ok) throw new Error(`twak ${path} ${r.status}`);
+  if (!r.ok) {
+    const body = await r.text().catch(() => "");
+    throw new Error(`twak ${path} ${r.status}: ${body.slice(0, 300)}`);
+  }
   return r.json();
 }
 
@@ -467,7 +474,10 @@ async function twakPost(path, body, env) {
     headers,
     body: JSON.stringify(body || {}),
   });
-  if (!r.ok) throw new Error(`twak ${path} ${r.status}`);
+  if (!r.ok) {
+    const respBody = await r.text().catch(() => "");
+    throw new Error(`twak ${path} ${r.status}: ${respBody.slice(0, 300)}`);
+  }
   return r.json();
 }
 
