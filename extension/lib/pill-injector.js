@@ -120,6 +120,90 @@
     return tooltipEl;
   }
 
+  // Build the Narrative section for the paid panel — matches the
+  // scanned token's symbol/name against the 7 narrative buckets and
+  // renders the matched bucket's risk profile + condensed playbook.
+  // Returns empty string when there's no match so unclassified
+  // tokens don't get a misleading category.
+  function renderNarrativeSection(symbol, name) {
+    if (!window.TrustyNarratives || !window.TrustyNarratives.classify) return "";
+    const n = window.TrustyNarratives.classify(symbol, name);
+    if (!n) return "";
+    const tokenChips = (n.tokens || []).slice(0, 6).map(function (t) {
+      return '<span class="trusty-pp-narr-chip">$' + escapeAttr(t) + '</span>';
+    }).join("");
+    return (
+      '<div class="trusty-pp-section trusty-pp-narr-section">' +
+        '<div class="trusty-pp-section-title">🎬 Narrative</div>' +
+        '<div class="trusty-pp-narr-head">' +
+          '<span class="trusty-pp-narr-emoji">' + n.emoji + '</span>' +
+          '<span class="trusty-pp-narr-name">' + escapeAttr(n.name) + '</span>' +
+          '<span class="trusty-pp-narr-sub">— ' + escapeAttr(n.subtitle) + '</span>' +
+          '<span class="trusty-pp-narr-risk trusty-pp-narr-risk-' + n.riskColor + '">' + escapeAttr(n.risk) + '</span>' +
+        '</div>' +
+        '<div class="trusty-pp-narr-stats">' +
+          '<span><strong>Avg</strong> ' + escapeAttr(n.avgReturn) + '</span>' +
+          '<span><strong>Rug</strong> ' + escapeAttr(n.rugRate) + '</span>' +
+          '<span><strong>Lifespan</strong> ' + escapeAttr(n.lifespan) + '</span>' +
+        '</div>' +
+        '<div class="trusty-pp-narr-row">' +
+          '<span class="trusty-pp-narr-label good">✅ When to ape</span>' +
+          '<span class="trusty-pp-narr-text">' + escapeAttr(n.whenToApe) + '</span>' +
+        '</div>' +
+        '<div class="trusty-pp-narr-row">' +
+          '<span class="trusty-pp-narr-label bad">🚨 When to avoid</span>' +
+          '<span class="trusty-pp-narr-text">' + escapeAttr(n.whenToAvoid) + '</span>' +
+        '</div>' +
+        '<div class="trusty-pp-narr-row">' +
+          '<span class="trusty-pp-narr-label signal">⚡ Key signal</span>' +
+          '<span class="trusty-pp-narr-text">' + escapeAttr(n.keySignal) + '</span>' +
+        '</div>' +
+        '<div class="trusty-pp-narr-row">' +
+          '<span class="trusty-pp-narr-label entry">🎯 Best entry</span>' +
+          '<span class="trusty-pp-narr-text">' + escapeAttr(n.bestEntry) + '</span>' +
+        '</div>' +
+        (tokenChips ? '<div class="trusty-pp-narr-tokens"><span class="trusty-pp-narr-tokens-lbl">Related:</span> ' + tokenChips + '</div>' : '') +
+      '</div>'
+    );
+  }
+
+  // Sub-score breakdown — same 6 categories the tooltip shows, but
+  // wrapped in a panel section block. Returns empty when the worker
+  // didn't send subScores (older worker version → silent no-op).
+  function renderPanelSubScores(subScores) {
+    if (!subScores || typeof subScores !== "object") return "";
+    const labels = [
+      ["chainReputation", "Chain Reputation", "How much trust the underlying chain carries. Ethereum highest, BSC moderate, fresh chains lowest. A safe contract on a sketchy chain still inherits chain risk."],
+      ["narrative", "Narrative", "Whether the token rides a known meta (dogs / cats / AI / mascots) vs a random launch with no story. Tokens with a narrative survive drawdowns better."],
+      ["ownership", "Ownership", "Renounced contracts (owner = 0x0) score high — nobody can flip rules mid-game. Active owner wallets are a kill switch."],
+      ["ageTiming", "Age / Timing", "How long the token has survived. Most rugs happen in week 1; old-and-alive is a quiet positive signal."],
+      ["socialPresence", "Social Presence", "X and Binance Square mentions and velocity. Zero attention = zombie token. Spikes = real interest (or coordinated shilling — check the coord-shill row)."],
+      ["supplySafety", "Supply Safety", "LP locked + mint disabled + healthy wallet distribution. Determines whether the floor can vanish overnight."],
+    ];
+    const rows = labels.map(function (pair) {
+      const v = Number(subScores[pair[0]]) || 0;
+      const cls = v >= 70 ? "ok" : v >= 40 ? "warn" : "bad";
+      const pct = Math.max(0, Math.min(100, v));
+      return (
+        '<li class="trusty-tt-sub" title="' + escapeAttr(pair[2]) + '">' +
+          '<span class="trusty-tt-sub-name">' + pair[1] +
+            ' <span class="trusty-tt-sub-info" aria-hidden="true">ⓘ</span>' +
+          '</span>' +
+          '<div class="trusty-tt-sub-bar">' +
+            '<div class="trusty-tt-sub-fill trusty-tt-sub-' + cls + '" style="width:' + pct + '%"></div>' +
+          '</div>' +
+          '<span class="trusty-tt-sub-val trusty-tt-sub-' + cls + '">' + v + '</span>' +
+        '</li>'
+      );
+    }).join("");
+    return (
+      '<div class="trusty-pp-section">' +
+        '<div class="trusty-pp-section-title">📊 Detailed breakdown</div>' +
+        '<ul class="trusty-tt-subs-list">' + rows + '</ul>' +
+      '</div>'
+    );
+  }
+
   function renderTooltipHtml(result) {
     const verdictClass = "trusty-tt-verdict-" + result.verdict.toLowerCase();
     const verdictEmoji =
@@ -158,20 +242,23 @@
     let subScoresHtml = "";
     if (result.subScores && typeof result.subScores === "object") {
       const labels = [
-        ["chainReputation", "Chain Reputation"],
-        ["narrative", "Narrative"],
-        ["ownership", "Ownership"],
-        ["ageTiming", "Age / Timing"],
-        ["socialPresence", "Social Presence"],
-        ["supplySafety", "Supply Safety"],
+        ["chainReputation", "Chain Reputation", "How much trust the underlying chain carries. Ethereum highest, BSC moderate, fresh chains lowest. A safe contract on a sketchy chain still inherits chain risk."],
+        ["narrative", "Narrative", "Whether the token rides a known meta (dogs / cats / AI / mascots) vs a random launch with no story. Tokens with a narrative survive drawdowns better."],
+        ["ownership", "Ownership", "Renounced contracts (owner = 0x0) score high — nobody can flip rules mid-game. Active owner wallets are a kill switch."],
+        ["ageTiming", "Age / Timing", "How long the token has survived. Most rugs happen in week 1; old-and-alive is a quiet positive signal."],
+        ["socialPresence", "Social Presence", "X and Binance Square mentions and velocity. Zero attention = zombie token. Spikes = real interest (or coordinated shilling — check the coord-shill row)."],
+        ["supplySafety", "Supply Safety", "LP locked + mint disabled + healthy wallet distribution. Determines whether the floor can vanish overnight."],
       ];
       const rows = labels.map(function (pair) {
         const v = Number(result.subScores[pair[0]]) || 0;
         const cls = v >= 70 ? "ok" : v >= 40 ? "warn" : "bad";
         const pct = Math.max(0, Math.min(100, v));
+        const tipAttr = ' title="' + escapeAttr(pair[2]) + '"';
         return (
-          '<li class="trusty-tt-sub">' +
-            '<span class="trusty-tt-sub-name">' + pair[1] + '</span>' +
+          '<li class="trusty-tt-sub"' + tipAttr + '>' +
+            '<span class="trusty-tt-sub-name">' + pair[1] +
+              ' <span class="trusty-tt-sub-info" aria-hidden="true">ⓘ</span>' +
+            '</span>' +
             '<div class="trusty-tt-sub-bar">' +
               '<div class="trusty-tt-sub-fill trusty-tt-sub-' + cls + '" style="width:' + pct + '%"></div>' +
             '</div>' +
@@ -837,6 +924,17 @@
 
     const md = result.marketData || {};
 
+    // Narrative classification — matches symbol/name against the
+    // 7 narrative buckets from the website's Degen Academy. Renders
+    // the matched bucket's risk profile + playbook inline. Returns
+    // empty string if no match (token is unclassified).
+    const narrativeHtml = renderNarrativeSection(result.symbol, result.name);
+
+    // Sub-score breakdown (same 6 categories as the hover tooltip)
+    // — surfaced in the panel too so users get the visual on the
+    // surface they spend most time on. Reuses the same data shape.
+    const panelSubScoresHtml = renderPanelSubScores(result.subScores);
+
     panel.innerHTML =
       '<button class="trusty-pp-close" aria-label="Close">✕</button>' +
       '<button class="trusty-pp-star" type="button" aria-label="Save to watchlist" title="Save to watchlist">☆</button>' +
@@ -859,10 +957,14 @@
           '</a>'
         : '') +
 
+      narrativeHtml +
+
       '<div class="trusty-pp-section">' +
         '<div class="trusty-pp-section-title">🛡️ Safety</div>' +
         '<ul class="trusty-tt-checks">' + checksHtml + '</ul>' +
       '</div>' +
+
+      panelSubScoresHtml +
 
       '<div class="trusty-pp-section" data-trusty-section="kols">' +
         '<div class="trusty-pp-section-title">🐦 Top KOL mentions</div>' +

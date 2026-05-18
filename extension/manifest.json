@@ -35,6 +35,7 @@
         "lib/ca-detector.js",
         "lib/api.js",
         "lib/tier.js",
+        "lib/narratives.js",
         "lib/pill-injector.js",
         "content/x-content.js"
       ],
@@ -52,6 +53,7 @@
         "lib/ca-detector.js",
         "lib/api.js",
         "lib/tier.js",
+        "lib/narratives.js",
         "lib/pill-injector.js",
         "content/binance-content.js"
       ],
