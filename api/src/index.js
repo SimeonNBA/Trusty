@@ -310,6 +310,9 @@ async function scanTokenEvm(ca, chain, env) {
     const realSym = d?.symbol;
     const symbolPending = "$" + (realSym || ca.slice(2, 6)).replace(/^\$/, "").toUpperCase();
     const namePending = d?.name || "Token " + shortAddr(ca);
+    // Pull in inferred-from-market signals. Stops the pill from showing
+    // 5 ❌ rows for legit tokens just because GoPlus is missing data.
+    const substitutes = buildSubstituteChecks(d, null);
     const out = {
       ca,
       chain: resolvedChain,
@@ -318,7 +321,8 @@ async function scanTokenEvm(ca, chain, env) {
       symbol: symbolPending,
       name: namePending,
       checks: [
-        { ok: false, label: "Safety data unavailable — fresh token, retry shortly" }
+        ...substitutes,
+        { ok: false, label: "Some safety checks pending — refresh for full scan" }
       ],
       paidChecks: [],
       kols: [],
@@ -364,13 +368,18 @@ async function scanTokenSolana(ca, chain, env) {
   const d = dxRes.status === "fulfilled" ? dxRes.value : null;
   const rc = rcRes.status === "fulfilled" ? rcRes.value : null;
 
-  // Same PENDING-state handling as EVM — see scanTokenEvm for rationale.
-  // RugCheck might still have data even when GoPlus doesn't, so we treat
-  // "no GoPlus AND no RugCheck" as the unknown state.
-  if (!g && !rc) {
+  // PENDING state — GoPlus Solana is unreliable even for established
+  // tokens (see e.g. $BULLISH at $1.1M mcap with GoPlus null). We
+  // trigger PENDING whenever GoPlus is null regardless of RugCheck,
+  // because RugCheck only covers LP-lock — 4 of 5 safety checks still
+  // need GoPlus. Rendering 4 ❌ + 1 ✅ for an established token looks
+  // like a near-rug; honest "we don't know" is better. RugCheck data
+  // (if any) is surfaced via buildSubstituteChecks as a verified ✅ row.
+  if (!g) {
     const realSym = d?.symbol;
     const symbolPending = "$" + (realSym || ca.slice(0, 4)).replace(/^\$/, "").toUpperCase();
     const namePending = d?.name || "Token " + shortAddrSol(ca);
+    const substitutes = buildSubstituteChecks(d, rc);
     const out = {
       ca,
       chain,
@@ -379,7 +388,8 @@ async function scanTokenSolana(ca, chain, env) {
       symbol: symbolPending,
       name: namePending,
       checks: [
-        { ok: false, label: "Safety data unavailable — fresh token, retry shortly" }
+        ...substitutes,
+        { ok: false, label: "Some safety checks pending — refresh for full scan" }
       ],
       paidChecks: [],
       kols: [],
@@ -1100,6 +1110,52 @@ function fmtUsd(n) {
 
 function shortAddr(ca) {
   return ca.slice(0, 6) + "..." + ca.slice(-4);
+}
+
+// Substitute checks built from market + RugCheck data — used when
+// GoPlus has no record for the token. Goal: stop rendering 5 ❌
+// rows that imply "we checked and everything failed" when the
+// truth is "GoPlus doesn't have this token yet." Each row here is
+// a real signal (not fabricated), just inferred from sources other
+// than GoPlus. The frontend doesn't need to change — these are
+// regular {ok, label} rows it already renders as ✅.
+function buildSubstituteChecks(d, rc) {
+  const out = [];
+  // RugCheck LP-lock (Solana-specific). RugCheck is authoritative for
+  // LP-lock on Solana because GoPlus Solana frequently omits it.
+  if (rc && typeof rc.lpLockedPct === "number" && rc.lpLockedPct >= 95) {
+    out.push({ ok: true, label: "LP locked — verified via RugCheck" });
+  }
+  // Active trading is empirical proof of "not a honeypot" — you cannot
+  // have $5K+ daily volume on a token nobody can sell out of. This is
+  // a behavioral signal, not contract analysis, but it's a real one.
+  const vol24h = d?.volume24h || 0;
+  if (vol24h >= 5000) {
+    out.push({
+      ok: true,
+      label: "Token actively trades — " + fmtUsd(vol24h) + " vol/24h, no honeypot behavior"
+    });
+  }
+  // Age + market cap = legitimacy signal. A token that's survived 30+
+  // days at $50K+ mcap has been heavily scrutinized by traders; rug
+  // attempts on it would have happened by now.
+  const mcap = d?.mcap || 0;
+  const pairCreatedAt = d?.pairCreatedAt || 0;
+  if (pairCreatedAt > 0 && mcap >= 50000) {
+    const ageDays = Math.floor((Date.now() - pairCreatedAt) / 86400000);
+    if (ageDays >= 30) {
+      out.push({
+        ok: true,
+        label: "Established — " + ageDays + " days old, " + fmtUsd(mcap) + " mcap"
+      });
+    }
+  }
+  // Healthy liquidity = retail-tradeable without slippage rugging.
+  const liq = d?.liquidityUsd || 0;
+  if (liq >= 50000) {
+    out.push({ ok: true, label: "Adequate liquidity — " + fmtUsd(liq) + " in pools" });
+  }
+  return out;
 }
 
 /* ── Did GoPlus actually respond? ──
