@@ -49,7 +49,14 @@ export default {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       const { ca, chain, error } = parseCaAndChain(url);
       if (error) return json({ error }, 400);
-      if (url.pathname === "/api/scan") return handleScan(ca, chain, env);
+      if (url.pathname === "/api/scan") {
+        // _diag_force_pending=1 bypasses GoPlus to deterministically
+        // exercise the PENDING fallback (substitute checks + TWAK
+        // security signal). Used during integration to verify the
+        // fallback path without waiting for natural GoPlus throttle.
+        const forcePending = url.searchParams.get("_diag_force_pending") === "1";
+        return handleScan(ca, chain, env, { forcePending });
+      }
       const symbol = (url.searchParams.get("symbol") || "").replace(/^\$/, "").trim();
       return handleKols(ca, chain, env, symbol);
     }
@@ -280,18 +287,21 @@ function parseCaAndChain(url) {
 }
 
 /* ── /api/scan ── token security + market data, 5min cache ── */
-async function handleScan(ca, chain, env) {
+async function handleScan(ca, chain, env, opts) {
+  const forcePending = !!(opts && opts.forcePending);
   // v2: invalidates pre-2026-05-09 cached scans so the new
   // liveness-penalty scoring (volume/liquidity/holders/age) takes
   // effect on every token immediately. Old cached entries had
   // dead tokens at 85/100; the v2 prefix flushes those.
   const cacheKey = `scan:v2:${chain}:${ca}`;
-  if (env.SCAN_KV) {
+  // Skip cache when force-pending — we always want a fresh PENDING
+  // path execution so the operator sees current TWAK behaviour.
+  if (env.SCAN_KV && !forcePending) {
     const cached = await env.SCAN_KV.get(cacheKey, "json");
     if (cached) return json(cached);
   }
 
-  const result = await scanToken(ca, chain, env);
+  const result = await scanToken(ca, chain, env, opts);
 
   // Only cache when GoPlus actually responded. The "Tax data
   // unavailable" / "Transfer fee data unavailable" labels only appear
@@ -733,12 +743,12 @@ function isValidCa(ca, chain) {
   return EVM_CA.test(ca);
 }
 
-async function scanToken(ca, chain, env) {
-  if (isSolana(chain)) return scanTokenSolana(ca, chain, env);
-  return scanTokenEvm(ca, chain, env);
+async function scanToken(ca, chain, env, opts) {
+  if (isSolana(chain)) return scanTokenSolana(ca, chain, env, opts);
+  return scanTokenEvm(ca, chain, env, opts);
 }
 
-async function scanTokenEvm(ca, chain, env) {
+async function scanTokenEvm(ca, chain, env, opts) {
   // The extension's CA detector tags every 0x… address as generic
   // "evm" because it can't tell BSC from ETH from Base from a regex.
   // For generic-evm scans we sniff the actual chain from Dexscreener's
@@ -751,7 +761,7 @@ async function scanTokenEvm(ca, chain, env) {
   }
 
   const [gpRes, dxRes, fmRes] = await Promise.allSettled([
-    fetchGoPlus(chainId(resolvedChain), ca, env),
+    (opts && opts.forcePending) ? Promise.resolve(null) : fetchGoPlus(chainId(resolvedChain), ca, env),
     fetchDex(ca, resolvedChain === "ethereum" ? "ethereum"
                 : resolvedChain === "base"    ? "base"
                 : resolvedChain === "polygon" ? "polygon"
@@ -840,9 +850,9 @@ async function scanTokenEvm(ca, chain, env) {
   return shape;
 }
 
-async function scanTokenSolana(ca, chain, env) {
+async function scanTokenSolana(ca, chain, env, opts) {
   const [gpRes, dxRes, rcRes] = await Promise.allSettled([
-    fetchGoPlusSolana(ca, env),
+    (opts && opts.forcePending) ? Promise.resolve(null) : fetchGoPlusSolana(ca, env),
     fetchDex(ca, "solana", env),
     fetchRugCheck(ca),
   ]);
