@@ -25,16 +25,37 @@ first; don't compound errors.
 That's it. The current Claude will pick up where we left off without
 re-suggesting completed work.
 
-## Live production state
+## Live production state (as of 2026-05-16)
 
 | Surface | Status |
 |---|---|
-| `api.trustyai.tech` | 11 endpoints live: scan, kols, subscribe, nowpayments-webhook, subscription, watchlist, event, trending, redeem-code, admin/mint-code, admin/stats |
-| `trustyai.tech/` | Homepage with BNB-niche hero, Free/Paid value cards, auto-scan from `?ca=`, trending feed (auto-hides Featured at ≥3 items) |
-| `trustyai.tech/privacy/` | Live |
-| `trustyai.tech/watchlist/` | Live (reads subId from URL hash) |
-| `trustyai.tech/admin/` | Live (password-protected via `ADMIN_SECRET`) — stats + code minting |
-| Extension | **v0.3.0 in Web Store review** (Unlisted). Many changes since 0.3.0 — re-zip as 0.4.0 when 0.3.0 lands. X-only pill injection. |
+| `api.trustyai.tech` | Deployed from `main` with all v0.5.1 worker code. 13 endpoints: scan, kols, subscribe, nowpayments-webhook, subscription, watchlist, event, trending, redeem-code, admin/mint-code, admin/stats, admin/warm-goplus, **square-mention** (new). /api/scan now emits `subScores` field. /api/kols now includes `squareActivity` field. |
+| `trustyai.tech/` | Homepage with BNB-niche hero, Free/Paid value cards, auto-scan from `?ca=`, Hot Tokens trending with chain dropdown, Install CTA |
+| `trustyai.tech/privacy/` | Updated 2026-05-16 — discloses Binance Square text reading for sentiment classification |
+| `trustyai.tech/watchlist/` | Live |
+| `trustyai.tech/admin/` | Live |
+| **Extension v0.5.0** | LIVE on Chrome Web Store — public. Mock-fallback hide + trending tab + chain dropdown. |
+| **Extension v0.5.1** | ⚠️ Zip BUILT at `D:/Trusty-AI/frontend/trusty-ai-v0.5.1.zip` — **NOT YET SUBMITTED** to Chrome Web Store. User wants to add Trust Wallet API integration (market data + swaps) before submitting. |
+
+## v0.5.1 pending features before submission (USER DIRECTION)
+
+User wants to integrate Trust Wallet Agent SDK before submitting v0.5.1:
+- **`get_swap_quote` / `get_swap_route_step`** — enrich the "Trade in Trust Wallet" CTA in paid panel with expected swap rate + route
+- **`get_token_prices` / `get_asset_details`** — market data (could supplement Dexscreener for redundancy)
+- (Optional, separate effort) **`check_token_security`** — backup to GoPlus when it fails
+
+Source: https://developer.trustwallet.com/developer/agent-sdk
+API gateway docs: https://developer.trustwallet.com/developer/mcp/api-gateway.md
+Auth model: HMAC-SHA256, API keys at portal.trustwallet.com (user needs to register)
+Brand-association sensitivity: **v0.4.0 listing was rejected for keyword stuffing including Trust Wallet brand mentions. Be CAREFUL not to re-introduce brand association in user-facing copy when integrating their API.**
+
+## v0.5.1 features already done (in the zip, in `v0.5.1` branch)
+
+- Tooltips (ⓘ click-to-expand on every safety check)
+- 6-category sub-score bars (Chain Reputation, Narrative, Ownership, Age/Timing, Social Presence, Supply Safety)
+- Binance Square pill injection (`www.binance.com/*/square*` content script)
+- Binance Square sentiment classification (paid feature, surfaces in paid panel)
+- Manifest 0.4.0 → 0.5.1, privacy policy + listing copy updated to disclose Square text reading
 
 ## Backend data sources
 
