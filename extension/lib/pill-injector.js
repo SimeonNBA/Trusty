@@ -650,6 +650,65 @@
     );
   }
 
+  // Background-SW-proxied Square fetch. The user's browser hits the
+  // public Binance Square hashtag page (already challenge-cleared by
+  // their normal Binance browsing), background parses the HTML for
+  // post IDs + sentiment label markers, returns the aggregate. We
+  // both (1) render the aggregate directly into this panel and (2)
+  // POST each post ID to the worker so the result is cached + visible
+  // to other users on subsequent scans.
+  function proxyFetchSquareForPanel(ca, chain, symbol) {
+    if (!symbol || typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.sendMessage) return;
+    try {
+      chrome.runtime.sendMessage(
+        { action: "fetchSquareHashtag", symbol: symbol },
+        function (resp) {
+          if (chrome.runtime.lastError) return; // background not available
+          if (!resp || !resp.ok || !resp.mentions7d) return;
+
+          // Pick sentiment label from Binance's own bull/bear counts
+          // on the page. Same thresholds the worker uses.
+          var sentiment = "—";
+          var b = resp.bullish || 0;
+          var r = resp.bearish || 0;
+          if (resp.mentions7d > 0) {
+            if (b > r * 1.3) sentiment = "Bullish";
+            else if (r > b * 1.3) sentiment = "Bearish";
+            else sentiment = "Neutral";
+          }
+
+          // Render directly into the panel if still open
+          const live = document.getElementById(PANEL_ID);
+          if (live) {
+            const sq = live.querySelector('[data-trusty-section="square"]');
+            if (sq) {
+              sq.style.display = "";
+              sq.innerHTML =
+                '<div class="trusty-pp-section-title">🟡 Binance Square activity</div>' +
+                renderSquareActivityBody({
+                  mentions7d: resp.mentions7d,
+                  sentiment: sentiment,
+                  coordShill: false,
+                  source: "binance-square",
+                });
+            }
+          }
+
+          // Cross-user persistence: report each post ID once so the
+          // worker's aggregate fills up too. Worker dedups on
+          // (postId, ca) so re-reports are cheap. Text is empty
+          // because we're not sending the body text from the
+          // extension (privacy — see PRIVACY.md update).
+          if (window.TrustyAPI && window.TrustyAPI.reportSquareMention && Array.isArray(resp.postIds)) {
+            for (const postId of resp.postIds.slice(0, 50)) {
+              window.TrustyAPI.reportSquareMention(ca, chain, postId, "", 0);
+            }
+          }
+        }
+      );
+    } catch (_) { /* extension context not available — silent */ }
+  }
+
   function revealKols(ca, chain, symbol) {
     const live = document.getElementById(PANEL_ID);
     if (!live) return;
@@ -1263,6 +1322,15 @@
     // explicitly trigger KOLs.
     if (!blurred) {
       revealKols(ca, chain, symbol);
+      // Square hashtag scrape — proxied through the background SW so
+      // it goes out from the user's residential IP. Binance fronts
+      // Square with AWS WAF that 202s Cloudflare datacenter IPs, but
+      // serves real HTML to regular browsers. Result is rendered into
+      // the panel's Square section + the per-post mentions are
+      // reported back to the worker for cross-user aggregation.
+      if (symbol) {
+        proxyFetchSquareForPanel(ca, chain, symbol);
+      }
     }
 
     // Tweet-preview popover on KOL row hover. Delegated so it works
