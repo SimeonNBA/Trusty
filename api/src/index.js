@@ -376,7 +376,10 @@ async function handleKols(ca, chain, env, symbol) {
   // Square activity is read fresh on every call (not cached with KOLs)
   // because Square mention counts change faster than X velocity does.
   // The cost is one extra KV read per /api/kols call — negligible.
-  result.squareActivity = await readSquareActivity(ca, chain, env);
+  // Symbol is passed through so the read can fall back to a server-
+  // side scrape of Binance Square's hashtag page when our user-
+  // reported aggregate is empty.
+  result.squareActivity = await readSquareActivity(ca, chain, env, symbol || result.symbol);
 
   return json(result);
 }
@@ -3140,7 +3143,113 @@ async function writeSymref(chain, ca, symbol, env) {
 // at a much slower cadence than X, so a daily window leaves most
 // tokens at zero. A weekly window gives a more useful sentiment
 // signal without sacrificing recency.
-async function readSquareActivity(ca, chain, env) {
+//
+// Data sources, in priority order:
+//   1. User-reported mentions (extension users browsing Square fire
+//      /api/square-mention which writes into sqm:agg:{chain}:{ca}).
+//      Highest fidelity — real post-by-post sentiment classification.
+//   2. Server-side scrape of Binance Square's hashtag page for the
+//      token's symbol. Only triggers when #1 is empty. Solves the
+//      chicken-and-egg of "no users have walked past a Square post
+//      about this token yet". Cached 24h per symbol.
+// Server-side fetch of Binance Square's public hashtag page for a
+// token symbol. The page is server-rendered with post bodies + URLs
+// + Binance's own sentiment labels (Bullish / Bearish), so we can
+// extract real sentiment data without depending on extension users
+// to walk past a Square post.
+//
+// Cached 24h per symbol — Binance is fine with infrequent public
+// page fetches, but we don't want to hammer them. Cache miss = one
+// fetch on the slow path (added to the existing /api/kols latency),
+// cache hit = ~20ms KV read.
+//
+// Failure modes (all return empty so the panel just shows "no
+// mentions yet" instead of breaking):
+//   - Binance changes their HTML format → our regex misses → empty
+//   - Network error / 5xx → empty
+//   - Symbol contains unsafe chars / too long → skipped
+async function fetchSquareForSymbol(symbol, env) {
+  const sym = String(symbol || "").trim().replace(/^[\$#]/, "").toLowerCase();
+  if (!sym || !/^[a-z0-9]{2,12}$/.test(sym)) {
+    return null;
+  }
+
+  const cacheKey = `sqfetch:v1:${sym}`;
+  if (env.SCAN_KV) {
+    try {
+      const cached = await env.SCAN_KV.get(cacheKey, "json");
+      if (cached) return cached;
+    } catch (_) {}
+  }
+
+  let html = "";
+  try {
+    const url = "https://www.binance.com/en/square/hashtag/" + encodeURIComponent(sym);
+    const r = await fetch(url, {
+      headers: {
+        // Identify ourselves honestly. Binance allows public page
+        // fetches; the UA tells their ops who we are if they ever
+        // need to throttle.
+        "User-Agent": "TrustyAI/0.5.1 (+https://trustyai.tech)",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9",
+        "Accept-Language": "en-US,en;q=0.8",
+      },
+    });
+    if (!r.ok) return null;
+    html = await r.text();
+  } catch (_) {
+    return null;
+  }
+
+  if (!html || html.length < 500) return null;
+
+  // Extract unique post IDs from URL patterns. Each unique post
+  // about this hashtag = one mention. Cap at 500 for safety.
+  const postIds = new Set();
+  const urlRe = /\/[a-z]{2}\/square\/post\/(\d+)/g;
+  let m;
+  while ((m = urlRe.exec(html)) !== null) {
+    postIds.add(m[1]);
+    if (postIds.size >= 500) break;
+  }
+
+  // Use Binance's own sentiment labels (they tag posts as Bullish /
+  // Bearish in the UI). Plain-text count of label markers is a
+  // best-effort proxy — accurate when Binance keeps a simple HTML
+  // structure, degrades to 0/0 (Neutral) if the markup changes.
+  const bullish = (html.match(/>Bullish</gi) || []).length;
+  const bearish = (html.match(/>Bearish</gi) || []).length;
+
+  const total = postIds.size;
+  let sentiment = "—";
+  if (total > 0) {
+    if (bullish > bearish * 1.3) sentiment = "Bullish";
+    else if (bearish > bullish * 1.3) sentiment = "Bearish";
+    else sentiment = "Neutral";
+  }
+
+  const result = {
+    mentions7d: total,
+    sentiment: sentiment,
+    coordShill: false, // detection requires post text — extension
+                       // path catches this when a user is on Square
+    source: "binance-square",
+    windowDays: 7,
+    serverFetched: true,
+  };
+
+  if (env.SCAN_KV) {
+    try {
+      await env.SCAN_KV.put(cacheKey, JSON.stringify(result), {
+        expirationTtl: 24 * 3600,
+      });
+    } catch (_) {}
+  }
+
+  return result;
+}
+
+async function readSquareActivity(ca, chain, env, symbol) {
   const empty = { mentions7d: 0, sentiment: "—", coordShill: false, source: "binance-square", windowDays: 7 };
   if (!env.SCAN_KV) return empty;
   const aggKey = `sqm:agg:${chain}:${ca}`;
@@ -3148,12 +3257,22 @@ async function readSquareActivity(ca, chain, env) {
   try {
     agg = await env.SCAN_KV.get(aggKey, "json");
   } catch (_) {}
-  if (!agg || !Array.isArray(agg.mentions) || !agg.mentions.length) return empty;
 
   const now = Date.now();
   const cutoff = now - 7 * 24 * 3600 * 1000;
-  const recent = agg.mentions.filter(function (m) { return m.ts >= cutoff; });
-  if (!recent.length) return empty;
+  const recent = (agg && Array.isArray(agg.mentions))
+    ? agg.mentions.filter(function (m) { return m.ts >= cutoff; })
+    : [];
+
+  // Fallback to server-side scrape when extension users haven't
+  // reported anything for this token yet.
+  if (!recent.length) {
+    if (symbol) {
+      const fetched = await fetchSquareForSymbol(symbol, env);
+      if (fetched && fetched.mentions7d > 0) return fetched;
+    }
+    return empty;
+  }
 
   let bull = 0, bear = 0;
   const hashCounts = {};

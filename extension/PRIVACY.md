@@ -51,6 +51,15 @@ Supported sites today:
   category is persisted long-term, not the raw text. Cashtags and
   hashtags that don't match any known token are ignored — we don't
   store anything for posts that aren't about a token we recognise.
+- **Server-side Square fetch:** in addition to the above, when a
+  paid user opens the scan panel for a token, our server may fetch
+  the corresponding Binance Square hashtag page directly (the same
+  public page anyone can view at
+  `https://www.binance.com/en/square/hashtag/{symbol}`) to count
+  public mentions and read Binance's own bullish/bearish labels.
+  This fetch happens on our server, not in your browser, and uses
+  only publicly-accessible content. Results are cached 24h per
+  symbol to minimise load on Binance.
 
 **For X (Twitter):** we still never read tweet text. X sentiment is
 sourced from a separate third-party API (Sorsa) on our backend, not
