@@ -1247,11 +1247,22 @@
     // the CTA. Saves Sorsa quota when the user just wants to glance at
     // safety + market data, and frames the data as a VIP action.
     const cta = panel.querySelector(".trusty-pp-reveal-cta");
+    const symbol = (result.symbol || "").replace(/^\$/, "");
     if (cta) {
-      const symbol = (result.symbol || "").replace(/^\$/, "");
       cta.addEventListener("click", function () {
         revealKols(ca, chain, symbol);
       });
+    }
+
+    // Auto-load X + Square activity for paid users on panel open.
+    // The reveal CTA was originally a Sorsa-quota guard, but Sorsa is
+    // server-side-cached 24h so calling /api/kols on every panel open
+    // is effectively free. Without this, the Square section stays
+    // hidden until the user clicks "Reveal KOL mentions" — which
+    // hides the whole Square integration from anyone who doesn't
+    // explicitly trigger KOLs.
+    if (!blurred) {
+      revealKols(ca, chain, symbol);
     }
 
     // Tweet-preview popover on KOL row hover. Delegated so it works
