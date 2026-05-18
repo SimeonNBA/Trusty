@@ -312,6 +312,15 @@ async function handleScan(ca, chain, env, opts) {
 
   const result = await scanToken(ca, chain, env, opts);
 
+  // Maintain a symbol → CA index so Square ticker mentions ($SYMBOL,
+  // #symbol) can resolve to the right token. Fire-and-forget; never
+  // blocks the scan response. Skips fallback/hex symbols.
+  if (result && result.symbol && !result.symbolFallback) {
+    try {
+      await writeSymref(result.chain || chain, ca, result.symbol, env);
+    } catch (_) {}
+  }
+
   // Only cache when GoPlus actually responded. The "Tax data
   // unavailable" / "Transfer fee data unavailable" labels only appear
   // when the GoPlus fetch failed. Caching those would mean every
@@ -2950,28 +2959,65 @@ async function handleSquareMention(request, env) {
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: "bad json" }, 400); }
 
-  const rawCa = String(body?.ca || "").trim();
-  const chain = String(body?.chain || "bsc").toLowerCase();
-  const isSol = isSolana(chain);
-  const ca = isSol ? rawCa : rawCa.toLowerCase();
-  if (!isValidCa(ca, chain)) return json({ error: "invalid ca" }, 400);
-
   const postId = String(body?.postId || "").slice(0, 64);
   if (!postId) return json({ error: "missing postId" }, 400);
 
   const text = String(body?.text || "").slice(0, 4000); // cap input size
   const engagement = parseInt(body?.engagement || "0", 10) || 0;
 
+  // Ticker path — $SYMBOL / #symbol detected client-side. Server
+  // resolves the ticker to one or more known CAs via the symref
+  // table (written when users scan a token). Filters out generic
+  // hashtags like #crypto since those have no symref entry.
+  const ticker = String(body?.ticker || "").trim().toUpperCase();
+  if (ticker) {
+    if (!/^[A-Z0-9]{1,12}$/.test(ticker)) {
+      return json({ error: "invalid ticker" }, 400);
+    }
+    if (!env.SCAN_KV) return json({ ok: true, recorded: false });
+    const cas = await resolveTickerToCas(ticker, env);
+    if (!cas.length) {
+      // Not a known token — silently ignore. Avoids spamming sentiment
+      // on every English hashtag that happens to look ticker-shaped.
+      return json({ ok: true, recorded: false, reason: "unknown_ticker", ticker });
+    }
+    let recorded = 0;
+    for (const ref of cas) {
+      const wrote = await recordSquareMention(ref.ca, ref.chain, postId, text, engagement, env);
+      if (wrote) recorded++;
+    }
+    return json({ ok: true, recorded: recorded, matched: cas.length });
+  }
+
+  // CA path — explicit contract address in the post body.
+  const rawCa = String(body?.ca || "").trim();
+  const chain = String(body?.chain || "bsc").toLowerCase();
+  const isSol = isSolana(chain);
+  const ca = isSol ? rawCa : rawCa.toLowerCase();
+  if (!isValidCa(ca, chain)) return json({ error: "invalid ca or ticker" }, 400);
+
   if (!env.SCAN_KV) return json({ ok: true, recorded: false });
 
-  // Dedup: same post can't be counted twice. KV check-then-write
-  // (race-tolerant; double-counting is acceptable, just not common).
-  // TTL matches the 7-day Square aggregation window — a post stays
-  // dedup-protected for as long as it can influence the sentiment.
+  const wrote = await recordSquareMention(ca, chain, postId, text, engagement, env);
+  if (wrote === "dedup") return json({ ok: true, dedup: true });
+  return json({ ok: true, recorded: !!wrote });
+}
+
+// Shared write path used by both the explicit-CA and ticker-resolved
+// paths in handleSquareMention. Returns:
+//   "dedup" — this post was already counted for this CA
+//   true    — mention appended to the agg
+//   false   — KV not configured (no-op)
+async function recordSquareMention(ca, chain, postId, text, engagement, env) {
+  if (!env.SCAN_KV) return false;
+
+  // Dedup: same (post, CA) pair can't be counted twice. TTL matches
+  // the 7-day aggregation window — a post stays dedup-protected for
+  // as long as it can still influence sentiment.
   const dedupKey = `sqm:post:${postId}:${ca}`;
   try {
     const seen = await env.SCAN_KV.get(dedupKey);
-    if (seen) return json({ ok: true, dedup: true });
+    if (seen) return "dedup";
     await env.SCAN_KV.put(dedupKey, "1", { expirationTtl: 8 * 24 * 3600 });
   } catch (_) {}
 
@@ -2994,10 +3040,8 @@ async function handleSquareMention(request, env) {
   const now = Date.now();
   agg.mentions.push({ ts: now, sentiment, engagement, textHash });
 
-  // Trim to last 7 days to keep object size bounded.
   const cutoff = now - 7 * 24 * 3600 * 1000;
   agg.mentions = agg.mentions.filter(function (m) { return m.ts >= cutoff; });
-  // Hard cap on stored mentions (cost guardrail).
   if (agg.mentions.length > 500) {
     agg.mentions = agg.mentions.slice(-500);
   }
@@ -3005,11 +3049,81 @@ async function handleSquareMention(request, env) {
 
   try {
     await env.SCAN_KV.put(aggKey, JSON.stringify(agg), {
-      expirationTtl: 8 * 24 * 3600, // 8 days, slightly past the 7-day read window
+      expirationTtl: 8 * 24 * 3600,
     });
   } catch (_) {}
+  return true;
+}
 
-  return json({ ok: true });
+// Pre-seeded symrefs for well-known tokens — guarantees ticker
+// resolution works on day-one for the project's own token before
+// scan-history accumulates organic entries. Add sparingly; the
+// scan-time symref write covers everything else.
+const SYMREF_SEEDS = {
+  TRUSTY: [{ chain: "bsc", ca: "0x65aea108c21439693468fcd542d81c29e8df4444" }],
+};
+
+// Resolve a ticker symbol ($SYMBOL / #symbol stripped + uppercased)
+// to the list of (chain, CA) pairs we've seen for that symbol in
+// scan history. Returns [] when the symbol is unknown — which is
+// also how we filter out generic English hashtags (#crypto, #trusty
+// as adjective) that aren't tokens.
+async function resolveTickerToCas(ticker, env) {
+  if (!env.SCAN_KV) return SYMREF_SEEDS[ticker] || [];
+  try {
+    const idx = await env.SCAN_KV.get(`symref:idx:${ticker}`, "json");
+    const fromIdx = (idx && Array.isArray(idx.entries))
+      ? idx.entries.filter(function (e) { return e && e.ca && e.chain; })
+      : [];
+    const seeds = SYMREF_SEEDS[ticker] || [];
+    if (!seeds.length) return fromIdx;
+    // Merge seeds with index entries, de-duped on chain:ca.
+    const seen = new Set(fromIdx.map(function (e) { return e.chain + ":" + e.ca; }));
+    for (const s of seeds) {
+      const key = s.chain + ":" + s.ca;
+      if (!seen.has(key)) { fromIdx.push(s); seen.add(key); }
+    }
+    return fromIdx;
+  } catch (_) {
+    return SYMREF_SEEDS[ticker] || [];
+  }
+}
+
+// Record a (chain, CA, symbol) triple in the symref index so future
+// ticker mentions for this symbol resolve to this CA. Idempotent —
+// repeat scans of the same token refresh the entry's lastSeen.
+async function writeSymref(chain, ca, symbol, env) {
+  if (!env.SCAN_KV) return;
+  const sym = String(symbol || "").replace(/^\$/, "").toUpperCase();
+  if (!sym || !/^[A-Z0-9]{1,12}$/.test(sym)) return;
+  const idxKey = `symref:idx:${sym}`;
+  let idx = null;
+  try {
+    idx = await env.SCAN_KV.get(idxKey, "json");
+  } catch (_) {}
+  if (!idx || !Array.isArray(idx.entries)) idx = { entries: [] };
+  const now = Date.now();
+  const key = `${chain}:${ca}`;
+  const existing = idx.entries.find(function (e) {
+    return e && (`${e.chain}:${e.ca}`) === key;
+  });
+  if (existing) {
+    existing.lastSeen = now;
+  } else {
+    idx.entries.push({ chain: chain, ca: ca, lastSeen: now });
+    if (idx.entries.length > 20) {
+      // Cap per-symbol entries — keep the 20 most-recently-seen.
+      idx.entries.sort(function (a, b) { return (b.lastSeen || 0) - (a.lastSeen || 0); });
+      idx.entries = idx.entries.slice(0, 20);
+    }
+  }
+  try {
+    // 90-day TTL — a symbol that hasn't been scanned in 90 days
+    // probably isn't a live token anyway. Refreshed on each scan.
+    await env.SCAN_KV.put(idxKey, JSON.stringify(idx), {
+      expirationTtl: 90 * 24 * 3600,
+    });
+  } catch (_) {}
 }
 
 // Read-only summary used by /api/kols (paid panel). Returns the same

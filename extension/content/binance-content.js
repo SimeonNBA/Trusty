@@ -104,28 +104,48 @@
     if (reportedPosts.has(postEl)) return;
 
     // Report sentiment mention(s) for the worker to aggregate.
-    // Only fires if the post contains at least one CA — we never report
-    // CA-free posts to the worker.
+    // Two paths: explicit CAs in the post body, and ticker symbols
+    // ($SYMBOL / #symbol). The ticker path catches the majority of
+    // Square posts which mention tokens by ticker rather than CA.
+    // Worker resolves ticker → CA via scan-history symref entries.
     const text = postEl.textContent || "";
-    const found = detectCAsInText(text);
-    if (!found.length) {
-      // Mark it processed anyway so we don't re-scan empty posts on
-      // every mutation tick.
+    const cas = detectCAsInText(text);
+    const tickers = (window.TrustyCA && window.TrustyCA.findTickerSymbols)
+      ? window.TrustyCA.findTickerSymbols(text) : [];
+
+    if (!cas.length && !tickers.length) {
+      // Mark processed so we don't re-scan empty posts on every
+      // mutation tick.
       reportedPosts.add(postEl);
       return;
     }
 
     const postId = extractPostId(postEl);
     const engagement = extractEngagement(postEl);
-    const seenInThisPost = new Set(); // dedup CAs within a single post
-    for (const entry of found) {
+
+    // CA path — dedup within the post
+    const seenCa = new Set();
+    for (const entry of cas) {
       const key = (entry.ca || "").toLowerCase();
-      if (!key || seenInThisPost.has(key)) continue;
-      seenInThisPost.add(key);
+      if (!key || seenCa.has(key)) continue;
+      seenCa.add(key);
       if (window.TrustyAPI && window.TrustyAPI.reportSquareMention) {
         window.TrustyAPI.reportSquareMention(entry.ca, entry.chain, postId, text, engagement);
       }
     }
+
+    // Ticker path — dedup within the post. Worker filters tickers
+    // that don't match any known token via the symref table.
+    const seenTicker = new Set();
+    for (const sym of tickers) {
+      const u = String(sym || "").toUpperCase();
+      if (!u || seenTicker.has(u)) continue;
+      seenTicker.add(u);
+      if (window.TrustyAPI && window.TrustyAPI.reportSquareTicker) {
+        window.TrustyAPI.reportSquareTicker(u, postId, text, engagement);
+      }
+    }
+
     reportedPosts.add(postEl);
   }
 

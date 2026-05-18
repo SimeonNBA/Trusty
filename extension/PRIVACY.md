@@ -41,12 +41,16 @@ Supported sites today:
   the optional paid subscription with your install and to sync your
   watchlist across the extension and trustyai.tech)
 - Standard HTTP headers your browser automatically sends to any website
-- **On Binance Square pages only:** when a Square post containing a
-  contract address scrolls into view, the post's visible text and
-  engagement counts are sent to our server for sentiment classification.
+- **On Binance Square pages only:** when a Square post scrolls into
+  view and contains either (a) a contract address, (b) a cashtag
+  ($SYMBOL), or (c) a hashtag (#symbol) that matches a token someone
+  has previously scanned, the post's visible text and engagement
+  counts are sent to our server for sentiment classification.
   The text is used to classify the post as bullish / bearish / neutral
   and to detect coordinated shilling; only the resulting sentiment
-  category is persisted long-term, not the raw text.
+  category is persisted long-term, not the raw text. Cashtags and
+  hashtags that don't match any known token are ignored — we don't
+  store anything for posts that aren't about a token we recognise.
 
 **For X (Twitter):** we still never read tweet text. X sentiment is
 sourced from a separate third-party API (Sorsa) on our backend, not

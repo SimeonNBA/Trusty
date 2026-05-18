@@ -236,6 +236,27 @@
     } catch (e) { /* never block */ }
   }
 
+  // Ticker-based mention reporting — $SYMBOL or #symbol detected in
+  // a Square post. Worker resolves the ticker against known scans
+  // (symref table) and aggregates against any CAs that match. Same
+  // privacy properties as reportSquareMention — text is classified
+  // and discarded, only the derived sentiment class is stored.
+  function reportSquareTicker(ticker, postId, text, engagement) {
+    if (!ticker || !postId) return;
+    try {
+      fetch(API_BASE + "/api/square-mention", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticker: String(ticker).toUpperCase(),
+          postId: postId,
+          text: text || "",
+          engagement: engagement || 0,
+        }),
+      }).catch(function () { /* swallow */ });
+    } catch (e) { /* never block */ }
+  }
+
   // ── Swap-quote enrichment for the paid-panel Trade row ─────
   // Read-only — fetches an indicative quote (expected output, price
   // impact, provider) for "native → token" on the resolved chain.
@@ -285,6 +306,7 @@
     getSwapQuote,
     reportEvent,
     reportSquareMention,
+    reportSquareTicker,
     shortAddr,
     verdictFromScore
   };
