@@ -229,6 +229,120 @@ function dexChainToCanonical(dxChain) {
   return null;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// Secondary signal provider — HMAC-SHA256 signed requests to a
+// third-party crypto data gateway. Used only as a fallback when our
+// primary sources (GoPlus, Dexscreener) rate-limit or return empty.
+// Free tier is 1 req/s, so we never call from the hot path — only
+// when something else has already failed.
+//
+// Set TWAK_ACCESS_ID + TWAK_HMAC_SECRET as Worker secrets to enable:
+//   npx wrangler secret put TWAK_ACCESS_ID  --config api/wrangler.toml
+//   npx wrangler secret put TWAK_HMAC_SECRET --config api/wrangler.toml
+//
+// When the secrets are absent the entire integration short-circuits
+// to null, so the worker keeps working exactly as before.
+// ═══════════════════════════════════════════════════════════════════
+const TWAK_BASE = "https://tws.trustwallet.com";
+const TWAK_CACHE_TTL = 24 * 60 * 60; // 24h — security flags are immutable per CA
+
+function twakConfigured(env) {
+  return !!(env && env.TWAK_ACCESS_ID && env.TWAK_HMAC_SECRET);
+}
+
+// HMAC-SHA256 over plaintext `METHOD;PATH;SORTED_QUERY;ACCESS_ID;NONCE;DATE`,
+// base64-encoded. Matches the format documented in the upstream skill's
+// setup.md reference.
+async function twakSign(plaintext, secret) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sigBuf = await crypto.subtle.sign("HMAC", key, enc.encode(plaintext));
+  const bytes = new Uint8Array(sigBuf);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+function twakSortedQuery(query) {
+  if (!query) return "";
+  const keys = Object.keys(query).sort();
+  if (!keys.length) return "";
+  return keys.map((k) => `${k}=${query[k]}`).join("&");
+}
+
+async function twakHeaders(method, path, query, env) {
+  const nonce = crypto.randomUUID();
+  const date = new Date().toUTCString();
+  const sortedQuery = twakSortedQuery(query);
+  const plaintext = [
+    method.toUpperCase(),
+    path,
+    sortedQuery,
+    env.TWAK_ACCESS_ID,
+    nonce,
+    date,
+  ].join(";");
+  const signature = await twakSign(plaintext, env.TWAK_HMAC_SECRET);
+  return {
+    "X-TW-CREDENTIAL": env.TWAK_ACCESS_ID,
+    "X-TW-NONCE": nonce,
+    "X-TW-DATE": date,
+    "Authorization": `HMAC-SHA256 Signature=${signature}`,
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "User-Agent": "trusty-ai/0.5.1",
+  };
+}
+
+async function twakGet(path, query, env) {
+  if (!twakConfigured(env)) throw new Error("twak not configured");
+  const headers = await twakHeaders("GET", path, query, env);
+  const qs = query && Object.keys(query).length
+    ? "?" + Object.keys(query).map((k) => `${k}=${encodeURIComponent(query[k])}`).join("&")
+    : "";
+  const r = await fetch(TWAK_BASE + path + qs, { headers });
+  if (!r.ok) throw new Error(`twak ${path} ${r.status}`);
+  return r.json();
+}
+
+async function twakPost(path, body, env) {
+  if (!twakConfigured(env)) throw new Error("twak not configured");
+  const headers = await twakHeaders("POST", path, null, env);
+  const r = await fetch(TWAK_BASE + path, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body || {}),
+  });
+  if (!r.ok) throw new Error(`twak ${path} ${r.status}`);
+  return r.json();
+}
+
+// Asset ID format per the gateway's setup.md:
+//   native coin → c{coinId}
+//   token       → c{coinId}_t{contractAddress}
+// Coin IDs: BNB Smart Chain 714, Ethereum 60, Polygon 966, Solana 501.
+function twakChainCoinId(chain) {
+  const c = (chain || "").toLowerCase();
+  if (c === "bsc" || c === "bnb" || c === "binance") return 714;
+  if (c === "eth" || c === "ethereum") return 60;
+  if (c === "polygon" || c === "matic") return 966;
+  if (c === "solana" || c === "sol") return 501;
+  return null;
+}
+
+function twakAssetId(chain, ca) {
+  const coinId = twakChainCoinId(chain);
+  if (!coinId) return null;
+  if (!ca) return `c${coinId}`;
+  return `c${coinId}_t${ca}`;
+}
+
 // When chain is generic "evm", quickly sniff which EVM chain the
 // token actually lives on by looking at Dexscreener's pair distribution.
 // Returns the canonical chain key (e.g. "ethereum") with the highest
