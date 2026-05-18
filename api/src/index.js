@@ -299,6 +299,37 @@ async function scanTokenEvm(ca, chain, env) {
   const d = dxRes.status === "fulfilled" ? dxRes.value : null;
   const fm = fmRes.status === "fulfilled" ? fmRes.value : null;
 
+  // No GoPlus data → fresh token (not yet in their safety database) OR
+  // soft-throttled. Showing 5 ❌ rows + RUN/0 makes a perfectly-fine
+  // brand-new token look like a confirmed rug. Distinguish "unknown"
+  // from "confirmed bad" by returning a PENDING-style response:
+  // CAUTION verdict (yellow, not red), score "?", one honest row.
+  // The label still contains "data unavailable" so isUpstreamOk
+  // refuses to cache — next scan retries against GoPlus.
+  if (!g) {
+    const realSym = d?.symbol;
+    const symbolPending = "$" + (realSym || ca.slice(2, 6)).replace(/^\$/, "").toUpperCase();
+    const namePending = d?.name || "Token " + shortAddr(ca);
+    const out = {
+      ca,
+      chain: resolvedChain,
+      score: "?",
+      verdict: "CAUTION",
+      symbol: symbolPending,
+      name: namePending,
+      checks: [
+        { ok: false, label: "Safety data unavailable — fresh token, retry shortly" }
+      ],
+      paidChecks: [],
+      kols: [],
+      activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
+      marketData: marketData(d, null),
+    };
+    if (!realSym) out.symbolFallback = true;
+    if (fm && fm.launchedOn) out.launchedOn = fm.launchedOn;
+    return out;
+  }
+
   const checks = buildChecks(g);
   const paidChecks = buildPaidChecks(g);
   const score = computeScore(g, checks, paidChecks, d);
@@ -332,6 +363,32 @@ async function scanTokenSolana(ca, chain, env) {
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
   const d = dxRes.status === "fulfilled" ? dxRes.value : null;
   const rc = rcRes.status === "fulfilled" ? rcRes.value : null;
+
+  // Same PENDING-state handling as EVM — see scanTokenEvm for rationale.
+  // RugCheck might still have data even when GoPlus doesn't, so we treat
+  // "no GoPlus AND no RugCheck" as the unknown state.
+  if (!g && !rc) {
+    const realSym = d?.symbol;
+    const symbolPending = "$" + (realSym || ca.slice(0, 4)).replace(/^\$/, "").toUpperCase();
+    const namePending = d?.name || "Token " + shortAddrSol(ca);
+    const out = {
+      ca,
+      chain,
+      score: "?",
+      verdict: "CAUTION",
+      symbol: symbolPending,
+      name: namePending,
+      checks: [
+        { ok: false, label: "Safety data unavailable — fresh token, retry shortly" }
+      ],
+      paidChecks: [],
+      kols: [],
+      activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
+      marketData: marketDataSolana(d, null),
+    };
+    if (!realSym) out.symbolFallback = true;
+    return out;
+  }
 
   const checks = buildChecksSolana(g, rc);
   const paidChecks = buildPaidChecksSolana(g);
