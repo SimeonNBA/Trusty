@@ -3211,7 +3211,7 @@ async function fetchSquareForSymbol(symbol, env) {
   }
 
   if (!html || html.length < 500) {
-    return { mentions7d: 0, sentiment: "—", coordShill: false, source: "binance-square", windowDays: 7, serverFetched: true, fetchStatus: "short_html", htmlLength: html ? html.length : 0 };
+    return { mentions7d: 0, sentiment: "—", coordShill: false, source: "binance-square", windowDays: 7, serverFetched: true, fetchStatus: "short_html", htmlLength: html ? html.length : 0, htmlSnippet: (html || "").slice(0, 600) };
   }
 
   // Extract unique post IDs from URL patterns. Each unique post
@@ -3246,6 +3246,13 @@ async function fetchSquareForSymbol(symbol, env) {
     htmlLength: html.length,
     httpStatus: httpStatus,
   };
+  // When we got HTML back but no posts in it, include a snippet so
+  // the operator can see what Binance actually served — usually
+  // tells us whether it's an anti-bot stub, a redirect page, or a
+  // genuine "no results" empty state.
+  if (total === 0) {
+    result.htmlSnippet = html.slice(0, 800);
+  }
 
   // Only cache when we actually found something — don't poison the
   // cache with transient failures. Next call will re-try.
