@@ -45,6 +45,23 @@
     },
     {
       "matches": [
+        "https://www.binance.com/*/square",
+        "https://www.binance.com/*/square/*"
+      ],
+      "js": [
+        "lib/ca-detector.js",
+        "lib/api.js",
+        "lib/tier.js",
+        "lib/pill-injector.js",
+        "content/binance-content.js"
+      ],
+      "css": [
+        "content/shared.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
         "https://trustyai.tech/*",
         "https://www.trustyai.tech/*"
       ],
