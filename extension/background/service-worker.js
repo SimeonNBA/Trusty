@@ -31,9 +31,18 @@ function normalizeSymbol(sym) {
   return String(sym || "").trim().replace(/^[\$#]/, "").toLowerCase();
 }
 
+// Permissive symbol filter — allows Unicode chars (Chinese / Korean /
+// Japanese / etc.) so e.g. $币安人生 works. Only blocks empty, too
+// long, whitespace, or URL-breaking characters.
+function isValidSquareSymbol(sym) {
+  if (!sym) return false;
+  if (sym.length > 30) return false;
+  return !/[\s/?#&=]/.test(sym);
+}
+
 async function fetchSquareHashtag(rawSymbol) {
   const sym = normalizeSymbol(rawSymbol);
-  if (!sym || !/^[a-z0-9]{2,12}$/.test(sym)) {
+  if (!isValidSquareSymbol(sym)) {
     return { ok: false, reason: "bad_symbol", symbol: sym };
   }
 

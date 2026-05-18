@@ -795,13 +795,12 @@
             '<div class="trusty-pp-section-title">📈 X activity</div>' +
             renderActivityBody(data.activity || {});
         }
-        const sq = stillLive.querySelector('[data-trusty-section="square"]');
-        if (sq) {
-          sq.style.display = "";
-          sq.innerHTML =
-            '<div class="trusty-pp-section-title">🟡 Binance Square activity</div>' +
-            renderSquareActivityBody(data.squareActivity || {});
-        }
+        // Square section is owned by proxyFetchSquareForPanel (which
+        // does the residential-IP fetch + post-link rendering).
+        // revealKols used to ALSO render Square from the worker's
+        // /api/kols response, but that raced with the proxy path
+        // and overwrote real data with the worker's stale empty
+        // state. Letting proxy own it eliminates the race.
       }).catch(function () {
         const k = document.getElementById(PANEL_ID)?.querySelector('[data-trusty-section="kols"]');
         if (k) {
