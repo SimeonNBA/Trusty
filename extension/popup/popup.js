@@ -375,6 +375,206 @@
     const recoveryCopy = $("recoveryCopyBtn");
     if (recoveryCopy) recoveryCopy.addEventListener("click", onRecoveryCopy);
 
+    // Tab navigation — Home (default) vs Trending
+    document.querySelectorAll(".tab-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const target = btn.getAttribute("data-tab");
+        switchTab(target);
+      });
+    });
+
+    // How-it-works helper — show on first opens, dismissible per-device.
+    // Storage key persists across popup re-opens via localStorage; chrome
+    // extension popups have their own localStorage scope.
+    setupHelpSection();
+
+    // What's-new banner — shown once per version after an update lands.
+    setupWhatsNew();
+
     init();
   });
+
+  const WHATS_NEW_KEY = "trusty_whatsnew_dismissed";
+  function setupWhatsNew() {
+    const banner = $("whatsNew");
+    if (!banner) return;
+    // Tie the dismiss state to the manifest version. If user dismissed
+    // v0.5.0's callout and v0.6.0 ships, the banner shows again automatically.
+    const version = (chrome.runtime && chrome.runtime.getManifest)
+      ? chrome.runtime.getManifest().version
+      : "0.0.0";
+    let dismissedVer = "";
+    try { dismissedVer = localStorage.getItem(WHATS_NEW_KEY) || ""; } catch (_) {}
+    if (dismissedVer === version) return; // already dismissed this version
+    banner.style.display = "";
+    const btn = $("whatsNewClose");
+    if (btn) {
+      btn.addEventListener("click", function () {
+        try { localStorage.setItem(WHATS_NEW_KEY, version); } catch (_) {}
+        banner.style.display = "none";
+      });
+    }
+  }
+
+  const HELP_DISMISSED_KEY = "trusty_help_dismissed_v1";
+  function setupHelpSection() {
+    const section = $("helpSection");
+    if (!section) return;
+    let dismissed = false;
+    try { dismissed = localStorage.getItem(HELP_DISMISSED_KEY) === "1"; } catch (_) {}
+    section.style.display = dismissed ? "none" : "";
+    const btn = $("helpDismiss");
+    if (btn) {
+      btn.addEventListener("click", function () {
+        try { localStorage.setItem(HELP_DISMISSED_KEY, "1"); } catch (_) {}
+        section.style.display = "none";
+      });
+    }
+  }
+
+  /* ──────────────────────────────────────────────────────────────
+     Trending tab — fetches data/trending.json from trustyai.tech.
+
+     Reuses the same JSON the website uses, so the BNB list and the
+     pinned $TRUSTY entry render identically across surfaces.
+
+     Cached in module scope for the lifetime of the popup; popup
+     re-opens are fast (no refetch within ~5 min) but always fresh
+     enough since the cron updates every 15 min anyway.
+     ────────────────────────────────────────────────────────────── */
+  const TRENDING_URL = "https://trustyai.tech/data/trending.json";
+  const TRENDING_CACHE_MS = 5 * 60 * 1000;
+  const TRENDING_CHAIN_KEY = "trusty_popup_trending_chain";
+  let trendingCache = { at: 0, data: null };
+
+  function getSelectedChain() {
+    const select = $("popupTrendingChain");
+    if (select && select.value) return select.value;
+    try { return localStorage.getItem(TRENDING_CHAIN_KEY) || "bnb"; }
+    catch (_) { return "bnb"; }
+  }
+
+  function switchTab(target) {
+    document.querySelectorAll(".tab-btn").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-tab") === target);
+    });
+    document.querySelectorAll(".tab-view").forEach(function (v) {
+      v.style.display = v.getAttribute("data-view") === target ? "" : "none";
+    });
+    if (target === "trending") {
+      // Restore last selected chain preference on first activation
+      const select = $("popupTrendingChain");
+      if (select && !select.dataset.wired) {
+        try {
+          const remembered = localStorage.getItem(TRENDING_CHAIN_KEY);
+          if (remembered) select.value = remembered;
+        } catch (_) {}
+        select.addEventListener("change", function () {
+          try { localStorage.setItem(TRENDING_CHAIN_KEY, select.value); } catch (_) {}
+          // Re-render from cache if available, otherwise refetch
+          if (trendingCache.data) {
+            renderTrendingTab(trendingCache.data, $("popupTrendingList"), $("popupTrendingUpdated"));
+          } else {
+            loadTrendingTab();
+          }
+        });
+        select.dataset.wired = "1";
+      }
+      loadTrendingTab();
+    }
+  }
+
+  async function loadTrendingTab() {
+    const listEl = $("popupTrendingList");
+    const updatedEl = $("popupTrendingUpdated");
+    if (!listEl) return;
+
+    // Serve cached data if fresh.
+    const now = Date.now();
+    if (trendingCache.data && (now - trendingCache.at) < TRENDING_CACHE_MS) {
+      renderTrendingTab(trendingCache.data, listEl, updatedEl);
+      return;
+    }
+
+    try {
+      const res = await fetch(TRENDING_URL + "?t=" + now);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      trendingCache = { at: now, data: data };
+      renderTrendingTab(data, listEl, updatedEl);
+    } catch (e) {
+      listEl.innerHTML = '<div class="trending-tab-error">Could not load trending. Try again later.</div>';
+      if (updatedEl) updatedEl.textContent = "error";
+    }
+  }
+
+  function renderTrendingTab(data, listEl, updatedEl) {
+    const chain = getSelectedChain();
+    const coins = (data && data.categories && data.categories[chain]) || [];
+    if (!coins.length) {
+      listEl.innerHTML = '<div class="trending-tab-empty">No hot tokens on this chain right now.</div>';
+      if (updatedEl) updatedEl.textContent = "—";
+      return;
+    }
+
+    if (updatedEl && data.updatedAt) {
+      updatedEl.textContent = "updated " + timeAgo(new Date(data.updatedAt).getTime());
+    }
+
+    listEl.innerHTML = coins.slice(0, 10).map(function (coin, i) {
+      const isPinned = coin.pinned === true;
+      const ca = coin.assetId || "";
+      const change = Number(coin.priceChange24h) || 0;
+      const changeClass = change >= 0 ? "up" : "down";
+      const changeStr = (change >= 0 ? "+" : "") + change.toFixed(1) + "%";
+      const mc = fmtCompactUsd(coin.marketCapUsd);
+      const symbol = coin.symbol ? "$" + escapeHtml(coin.symbol) : "—";
+      const name = escapeHtml(coin.name || "—");
+      const rank = isPinned ? "★" : (i + 1);
+      const logo = coin.logoUrl
+        ? '<img src="' + escapeAttr(coin.logoUrl) + '" alt="" onerror="this.style.display=\'none\'">'
+        : '🪙';
+      const href = "https://trustyai.tech/?ca=" + encodeURIComponent(ca);
+      return ''
+        + '<a class="trending-tab-item' + (isPinned ? ' pinned' : '') + '" '
+        +     'href="' + href + '" target="_blank" rel="noopener">'
+        +   '<div class="trending-tab-rank">' + rank + '</div>'
+        +   '<div class="trending-tab-icon">' + logo + '</div>'
+        +   '<div class="trending-tab-info">'
+        +     '<div class="trending-tab-symbol">' + symbol + '</div>'
+        +     '<div class="trending-tab-name">' + name + '</div>'
+        +   '</div>'
+        +   '<div class="trending-tab-mc">' + mc + '</div>'
+        +   '<div class="trending-tab-change ' + changeClass + '">' + changeStr + '</div>'
+        + '</a>';
+    }).join("");
+  }
+
+  function fmtCompactUsd(n) {
+    if (!n || !isFinite(n)) return "—";
+    if (n >= 1e9) return "$" + (n / 1e9).toFixed(1) + "B";
+    if (n >= 1e6) return "$" + (n / 1e6).toFixed(1) + "M";
+    if (n >= 1e3) return "$" + (n / 1e3).toFixed(0) + "K";
+    return "$" + n.toFixed(0);
+  }
+
+  function timeAgo(ts) {
+    const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+    if (s < 60) return s + "s ago";
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + "m ago";
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + "h ago";
+    return Math.floor(h / 24) + "d ago";
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
 })();

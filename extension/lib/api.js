@@ -13,7 +13,14 @@
   "use strict";
 
   const API_BASE = "https://api.trustyai.tech";
-  const REQUEST_TIMEOUT_MS = 6000;
+  // Cold-cache scans hit GoPlus + Dexscreener (sometimes RugCheck) on the
+  // worker and routinely take 7-12s. 6s was too aggressive — we were
+  // timing out and falling back to mock data on the FIRST scan of any
+  // fresh CA, even though the worker would finish ~3s later and cache
+  // the real result in KV. 15s covers nearly all real-world cold scans.
+  // Subsequent scans of the same CA within 5min hit the worker's KV
+  // cache and return in ~100ms.
+  const REQUEST_TIMEOUT_MS = 15000;
 
   const TRUSTY_CA = "0x65aea108c21439693468FCD542D81C29E8df4444";
 
@@ -68,6 +75,9 @@
   }
 
   // ── Offline fallback so dev mode + transient outages don't break the UI ──
+  // _isMock flag lets the cache layer skip storing this (so next call
+  // retries the live worker) and lets pill renderers detect "this is
+  // fake data, schedule a retry."
   function mockScan(ca, chain) {
     const score = caScore(ca);
     const verdict = verdictFromScore(score);
@@ -104,20 +114,35 @@
         age: "—",
         holders: 0,
       },
+      _isMock: true,
     };
   }
 
   // ── Cache layer ──
+  // Real worker results are cached for the page session (worker also
+  // has its own 5min KV cache server-side). Mock fallback results are
+  // NEVER cached long-term — once the worker recovers / cache warms,
+  // the next call gets real data instead of staying stuck on a mock.
   const cache = new Map(); // key → Promise<scanResult>
 
   function scan(ca, chain) {
     const key = (ca + ":" + (chain || "evm")).toLowerCase();
     if (cache.has(key)) return cache.get(key);
-    const promise = scanRemote(ca, chain).catch((err) => {
-      // Don't cache failures — let next call retry
-      cache.delete(key);
-      throw err;
-    });
+    const promise = scanRemote(ca, chain)
+      .then((result) => {
+        // If this resolved to a mock fallback, evict from cache so the
+        // next call retries the live worker (which has likely cached the
+        // real result in KV by then).
+        if (result && result._isMock) {
+          cache.delete(key);
+        }
+        return result;
+      })
+      .catch((err) => {
+        // Don't cache hard failures either — let next call retry.
+        cache.delete(key);
+        throw err;
+      });
     cache.set(key, promise);
     return promise;
   }

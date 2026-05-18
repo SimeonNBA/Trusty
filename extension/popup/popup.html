@@ -18,6 +18,40 @@
 
   <main class="body">
 
+    <!-- Tab navigation -->
+    <nav class="tab-nav" id="tabNav">
+      <button class="tab-btn active" type="button" data-tab="home">Home</button>
+      <button class="tab-btn" type="button" data-tab="trending">Trending</button>
+    </nav>
+
+    <!-- Home view (default) -->
+    <div class="tab-view" id="viewHome" data-view="home">
+
+    <!-- What's new — auto-shows once per version, dismissible -->
+    <div class="whats-new" id="whatsNew" style="display:none;">
+      <button class="whats-new-close" id="whatsNewClose" type="button" aria-label="Dismiss">×</button>
+      <div class="whats-new-tag">🆕 v0.5.0</div>
+      <div class="whats-new-body">
+        New <strong>Trending</strong> tab with BNB / ETH / SOL chain switcher, live <strong>$TRUSTY</strong> pin, and a refreshed help overview.
+      </div>
+    </div>
+
+    <!-- How it works — onboarding helper, dismissible per-device -->
+    <section class="help-section" id="helpSection">
+      <button class="help-dismiss" id="helpDismiss" type="button" aria-label="Dismiss">×</button>
+      <div class="help-title">🛡️ How Trusty works</div>
+      <ol class="help-steps">
+        <li>Browse <strong>X (Twitter)</strong> — Trusty drops a colored pill on every contract address:
+          <span class="help-verdict ape">🟢 APE</span>
+          <span class="help-verdict cau">🟡 CAUTION</span>
+          <span class="help-verdict run">🔴 RUN</span>
+        </li>
+        <li><strong>Hover</strong> the pill for the verdict + 5 safety checks (honeypot, sell tax, LP lock, mint, holders).</li>
+        <li><strong>Click</strong> the pill for the full panel — KOL activity, X sentiment, coord-shill detection, market data (paid).</li>
+        <li>Open <a href="https://trustyai.tech" target="_blank" rel="noopener">trustyai.tech</a> for the deep report + optional <strong>🧠 Gut Check</strong> — your honest 5-question self-review. <em>NFA.</em></li>
+      </ol>
+    </section>
+
     <!-- Tier status block -->
     <section class="tier" id="tierBlock">
       <div class="tier-header">
@@ -116,6 +150,29 @@
     <div class="footnote">
       Trusty is a community project. Not affiliated with Trust Wallet.<br />
       Not financial advice. DYOR.
+    </div>
+
+    </div><!-- /#viewHome -->
+
+    <!-- Trending view (chain-filtered, fetched from trustyai.tech) -->
+    <div class="tab-view" id="viewTrending" data-view="trending" style="display:none;">
+      <div class="trending-tab-header">
+        <span class="trending-tab-title">🔥 Hot Tokens</span>
+        <select id="popupTrendingChain" class="trending-tab-chain" aria-label="Chain">
+          <option value="bnb">🟡 BNB</option>
+          <option value="eth">🔵 ETH</option>
+          <option value="sol">🟣 SOL</option>
+        </select>
+      </div>
+      <div class="trending-tab-meta">
+        <span class="trending-tab-updated" id="popupTrendingUpdated">—</span>
+      </div>
+      <div class="trending-tab-list" id="popupTrendingList">
+        <div class="trending-tab-loading">Loading…</div>
+      </div>
+      <a class="trending-tab-seeall" href="https://trustyai.tech/#trending" target="_blank" rel="noopener">
+        See all categories on trustyai.tech →
+      </a>
     </div>
   </main>
 

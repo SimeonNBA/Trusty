@@ -238,6 +238,16 @@
     const tt = ensureTooltip();
     if (!pill._trustyResult) {
       tt.innerHTML = '<div class="trusty-tt-loading">Scanning the chain…</div>';
+    } else if (pill._trustyResult._unavailable) {
+      tt.innerHTML = (
+        '<div class="trusty-tt-unavailable">' +
+          '<div class="trusty-tt-unavailable-title">Safety data unavailable</div>' +
+          '<div class="trusty-tt-unavailable-body">' +
+            "The scanner couldn’t verify this token right now. This is usually temporary — refresh the tab in a few seconds to retry. " +
+            'You can also <a href="https://trustyai.tech/?ca=' + encodeURIComponent(pill._trustyResult.ca || "") + '" target="_blank" rel="noopener">open the full report on trustyai.tech</a>.' +
+          '</div>' +
+        '</div>'
+      );
     } else {
       tt.innerHTML = renderTooltipHtml(pill._trustyResult);
     }
@@ -1038,8 +1048,49 @@
     }
 
     if (window.TrustyAPI && window.TrustyAPI.scan) {
+      // Result-handling policy for a SAFETY product:
+      // - Real worker data → display as-is.
+      // - Mock fallback (worker timed out / GoPlus throttled the worker IP) →
+      //   NEVER render the mock as if it were real. Hash-derived "scores"
+      //   on a safety pill are actively misleading — a token that's
+      //   genuinely safe would show "❌ Not a honeypot, 42/100 RUN" simply
+      //   because its address hashes to 42. That's worse than a slow load.
+      //   Instead, keep the pill in "scanning…" state, retry behind the
+      //   scenes, and if still no real data after the retry, fall back
+      //   to an explicit "data unavailable" state (gray, "?" score).
+      function applyPendingState(pill) {
+        pill.classList.remove(PILL_CLASS + "-loading");
+        pill.classList.add(PILL_CLASS + "-pending");
+        const sc = pill.querySelector("." + PILL_CLASS + "-score");
+        if (sc) sc.textContent = "?";
+        // Stash a sentinel result so the tooltip can render an explanatory
+        // message instead of "Scanning the chain…" indefinitely.
+        pill._trustyResult = { _isMock: true, _unavailable: true, ca: ca, chain: chain };
+      }
+
+      const handle = function (result) {
+        if (result && result._isMock) {
+          // Keep the pill in "scanning…" state — don't show mock data.
+          // Schedule a retry: by then the worker has usually completed
+          // its scan and cached the real result in KV.
+          setTimeout(function () {
+            if (!pill.isConnected) return;
+            window.TrustyAPI.scan(ca, chain)
+              .then(function (r2) {
+                if (r2 && !r2._isMock) {
+                  applyResultToPill(pill, r2);
+                } else {
+                  applyPendingState(pill);
+                }
+              })
+              .catch(function () { applyPendingState(pill); });
+          }, 5000);
+        } else {
+          applyResultToPill(pill, result);
+        }
+      };
       window.TrustyAPI.scan(ca, chain)
-        .then(function (result) { applyResultToPill(pill, result); })
+        .then(handle)
         .catch(function (err) {
           console.warn("Trusty scan failed for", ca, err);
           pill.classList.remove(PILL_CLASS + "-loading");
