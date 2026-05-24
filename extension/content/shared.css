@@ -321,13 +321,12 @@
   margin-top: 3px;
 }
 
-/* 24h + 7d % change — two box-tiles in the hover tooltip, mirroring
-   the MC/Vol market grid above. Each cell is color-coded by direction.
-   Renders even with one cell as "—" so the user knows the timeframe
-   exists, just no data yet for it. */
+/* 24h % change — full-width tile in the hover tooltip, mirroring the
+   MC/Vol box style above. Color-coded by direction. 7d removed —
+   no reliable per-token 7d data source available. */
 .trusty-tt-change-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 6px;
   margin: 6px 0 10px;
 }
@@ -1389,13 +1388,13 @@
   margin-top: 2px;
 }
 
-/* 24h + 7d % change — two box-tiles at the top of the paid-panel
-   Market section. Mirrors the stat-tile aesthetic from the 5-tile
-   grid below, but with bigger value font and color-saturated
-   backgrounds because paid users specifically asked for prominence. */
+/* 24h % change — full-width tile at the top of the paid-panel Market
+   section. Mirrors the stat-tile aesthetic from the 5-tile grid
+   below, but with bigger value font and color-saturated background
+   for prominence. 7d removed — no reliable data source. */
 .trusty-pp-change-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
   margin: 0 0 8px;
 }

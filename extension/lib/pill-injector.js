@@ -443,23 +443,18 @@
     const md = result.marketData || {};
     const mcap = md.mcap || "—";
     const vol = md.volume24h || "—";
-    // 24h + 7d % change boxes — same visual treatment as the MC/Vol
-    // boxes above. Each box stands on its own; one can be populated
-    // while the other is "—" if a timeframe is missing. Hidden entirely
-    // only when both are null.
+    // 24h % change box — same visual treatment as the MC/Vol boxes
+    // above. Hidden when neither TWAK nor Dexscreener returned change
+    // data (rare on tradeable tokens). 7d was dropped because no
+    // reliable per-token data source covers it across our scan range.
     const change = (md.change && typeof md.change === "object") ? md.change : {};
     const ch24 = formatChangePct(change.h24);
-    const ch7d = formatChangePct(change.d7);
-    const changeHtml = (ch24.dir !== "none" || ch7d.dir !== "none")
+    const changeHtml = (ch24.dir !== "none")
       ? (
           '<div class="trusty-tt-change-grid">' +
             '<div class="trusty-tt-change-cell trusty-tt-change-cell-' + ch24.dir + '">' +
               '<div class="trusty-tt-change-num">' + ch24.text + '</div>' +
-              '<div class="trusty-tt-change-lbl">24h</div>' +
-            '</div>' +
-            '<div class="trusty-tt-change-cell trusty-tt-change-cell-' + ch7d.dir + '">' +
-              '<div class="trusty-tt-change-num">' + ch7d.text + '</div>' +
-              '<div class="trusty-tt-change-lbl">7d</div>' +
+              '<div class="trusty-tt-change-lbl">24h change</div>' +
             '</div>' +
           '</div>'
         )
@@ -1336,22 +1331,18 @@
       '<div class="trusty-pp-section">' +
         '<div class="trusty-pp-section-title">📊 Market</div>' +
         (function () {
-          // 24h + 7d % change as two boxes side-by-side at the top of
-          // the Market section — same visual treatment as the stat tiles
-          // below but slightly larger to give the % change prominence.
+          // 24h % change as a prominent full-width tile at the top of
+          // the Market section — same visual treatment as the stat
+          // tiles below but slightly larger for emphasis. 7d removed
+          // (no reliable data source). Hidden when no change data.
           const change = (md.change && typeof md.change === "object") ? md.change : {};
           const ch24 = formatChangePct(change.h24);
-          const ch7d = formatChangePct(change.d7);
-          if (ch24.dir === "none" && ch7d.dir === "none") return '';
+          if (ch24.dir === "none") return '';
           return (
             '<div class="trusty-pp-change-grid">' +
               '<div class="trusty-pp-change-cell trusty-pp-change-cell-' + ch24.dir + '">' +
                 '<div class="trusty-pp-change-num">' + ch24.text + '</div>' +
                 '<div class="trusty-pp-change-lbl">24h change</div>' +
-              '</div>' +
-              '<div class="trusty-pp-change-cell trusty-pp-change-cell-' + ch7d.dir + '">' +
-                '<div class="trusty-pp-change-num">' + ch7d.text + '</div>' +
-                '<div class="trusty-pp-change-lbl">7d change</div>' +
               '</div>' +
             '</div>'
           );
