@@ -638,6 +638,116 @@ async function twakPrices(assetIds, env) {
   catch (_) { return null; }
 }
 
+// Fetch ATH market cap + date for a token via TWAK coinstatus.
+// Always-on enrichment (not a fallback) — populates the MC ATH line
+// shown on the free pill hover and in the paid panel. Cached aggressively
+// (24h) because ATH moves slowly: typically not at all between consecutive
+// scans for the same CA, so in practice we rarely hit TWAK after the
+// first scan of a given token. Returns { mcapAth, athPrice, athAt }
+// or null on any failure.
+async function fetchTwakAth(ca, chain, env, opts) {
+  if (!twakConfigured(env)) return null;
+  const twakCa = (opts && opts.caOriginal) || ca;
+  const assetId = twakAssetId(chain, twakCa);
+  if (!assetId) return null;
+
+  const cacheKey = `twak-ath:v1:${chain}:${ca}`;
+  if (env.SCAN_KV) {
+    try {
+      const cached = await env.SCAN_KV.get(cacheKey, "json");
+      if (cached) return cached;
+    } catch (_) {}
+  }
+
+  try {
+    const data = await twakGet(`/v2/coinstatus/${assetId}`, {
+      version: "2",
+      include_security_info: "true",
+      include_solana_security_info: "true",
+    }, env);
+    const parsed = parseTwakAth(data);
+    if (parsed && env.SCAN_KV) {
+      try {
+        await env.SCAN_KV.put(cacheKey, JSON.stringify(parsed), {
+          expirationTtl: 24 * 60 * 60, // 24h
+        });
+      } catch (_) {}
+    }
+    return parsed;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Defensive parser — probes several plausible nesting points and field
+// name variants for ATH market cap, ATH price, and ATH timestamp. Public
+// docs don't pin the exact response shape, so we try every spelling we've
+// observed elsewhere in the gateway (snake_case + camelCase). If we get
+// ATH price + supply but not MC ATH directly, compute MC ATH = price × supply.
+function parseTwakAth(raw) {
+  if (!raw || typeof raw !== "object") return null;
+
+  const layers = [
+    raw,
+    raw.data,
+    raw.market,
+    raw.market_data,
+    raw.marketData,
+    raw.ticker,
+    Array.isArray(raw.tickers) ? raw.tickers[0] : null,
+  ].filter(Boolean);
+
+  let mcapAth = 0;
+  let athPrice = 0;
+  let athAt = 0;
+  let supply = 0;
+
+  for (const c of layers) {
+    if (typeof c !== "object") continue;
+    if (!mcapAth) {
+      mcapAth = parseFloat(
+        c.market_cap_ath || c.marketCapAth || c.mcap_ath || c.mcapAth ||
+        c.market_cap_at_ath || c.marketCapAtAth || c.ath_market_cap ||
+        c.athMarketCap || 0
+      ) || 0;
+    }
+    if (!athPrice) {
+      athPrice = parseFloat(
+        c.ath || c.athUsd || c.ath_usd || c.ath_price || c.athPrice ||
+        c.all_time_high || c.allTimeHigh || c.allTimeHighPrice ||
+        c.allTimeHighUsd || 0
+      ) || 0;
+    }
+    if (!athAt) {
+      const rawDate = c.ath_date || c.athDate || c.ath_at || c.athAt ||
+                      c.ath_timestamp || c.athTimestamp || c.allTimeHighDate || 0;
+      if (rawDate) {
+        let t = 0;
+        if (typeof rawDate === "string") {
+          t = Date.parse(rawDate);
+        } else if (typeof rawDate === "number") {
+          t = rawDate > 1e12 ? rawDate : rawDate * 1000;
+        }
+        if (!isNaN(t) && t > 0) athAt = t;
+      }
+    }
+    if (!supply) {
+      supply = parseFloat(
+        c.total_supply || c.totalSupply || c.circulating_supply ||
+        c.circulatingSupply || c.supply || 0
+      ) || 0;
+    }
+  }
+
+  // Derive MC ATH from price × supply when not returned directly.
+  if (!mcapAth && athPrice > 0 && supply > 0) {
+    mcapAth = athPrice * supply;
+  }
+
+  if (!mcapAth && !athPrice) return null;
+  return { mcapAth, athPrice, athAt };
+}
+
 // Adapter — converts a single TWAK ticker entry into the same shape
 // fetchDexRaw returns. Lets the rest of the pipeline treat the data
 // identically without branching everywhere. Liquidity + pairCreatedAt
@@ -804,17 +914,19 @@ async function scanTokenEvm(ca, chain, env, opts) {
     if (detected) resolvedChain = detected;
   }
 
-  const [gpRes, dxRes, fmRes] = await Promise.allSettled([
+  const [gpRes, dxRes, fmRes, athRes] = await Promise.allSettled([
     (opts && opts.forcePending) ? Promise.resolve(null) : fetchGoPlus(chainId(resolvedChain), ca, env),
     fetchDex(ca, resolvedChain === "ethereum" ? "ethereum"
                 : resolvedChain === "base"    ? "base"
                 : resolvedChain === "polygon" ? "polygon"
                 : "bsc", env),
     fetchFourMemeOrigin(ca, resolvedChain, env),
+    fetchTwakAth(ca, resolvedChain, env, opts),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
   let   d = dxRes.status === "fulfilled" ? dxRes.value : null;
   const fm = fmRes.status === "fulfilled" ? fmRes.value : null;
+  const athTwak = athRes.status === "fulfilled" ? athRes.value : null;
 
   // Market-data fallback: when Dexscreener returns nothing (throttle
   // or unindexed token) try the secondary gateway. Sequential so we
@@ -868,7 +980,7 @@ async function scanTokenEvm(ca, chain, env, opts) {
       paidChecks: [],
       kols: [],
       activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
-      marketData: marketData(d, null),
+      marketData: marketData(d, null, athTwak),
       _twak: twakDiagFor(twakResult, env),
     };
     if (!realSym) out.symbolFallback = true;
@@ -897,21 +1009,23 @@ async function scanTokenEvm(ca, chain, env, opts) {
 
   // Return the resolved chain so the frontend uses the right chain
   // for trade-row UAI / launchpad-badge link / future logic.
-  const shape = baseScanShape(ca, resolvedChain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g), fm);
+  const shape = baseScanShape(ca, resolvedChain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g, athTwak), fm);
   if (symbolFallback) shape.symbolFallback = true;
   shape.subScores = subScores;
   return shape;
 }
 
 async function scanTokenSolana(ca, chain, env, opts) {
-  const [gpRes, dxRes, rcRes] = await Promise.allSettled([
+  const [gpRes, dxRes, rcRes, athRes] = await Promise.allSettled([
     (opts && opts.forcePending) ? Promise.resolve(null) : fetchGoPlusSolana(ca, env),
     fetchDex(ca, "solana", env),
     fetchRugCheck(ca),
+    fetchTwakAth(ca, "solana", env, opts),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
   let   d = dxRes.status === "fulfilled" ? dxRes.value : null;
   const rc = rcRes.status === "fulfilled" ? rcRes.value : null;
+  const athTwak = athRes.status === "fulfilled" ? athRes.value : null;
 
   // Same market-data fallback as the EVM path: when Dexscreener
   // returns nothing for a Solana token, try the secondary gateway.
@@ -955,7 +1069,7 @@ async function scanTokenSolana(ca, chain, env, opts) {
       paidChecks: [],
       kols: [],
       activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
-      marketData: marketDataSolana(d, null),
+      marketData: marketDataSolana(d, null, athTwak),
       _twak: twakDiagFor(twakResult, env),
     };
     if (!realSym) out.symbolFallback = true;
@@ -976,7 +1090,7 @@ async function scanTokenSolana(ca, chain, env, opts) {
   const name = d?.name || g?.metadata?.name || "Token " + shortAddrSol(ca);
   const symbolFallback = !realSym;
 
-  const shape = baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketDataSolana(d, g));
+  const shape = baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketDataSolana(d, g, athTwak));
   if (symbolFallback) shape.symbolFallback = true;
   shape.subScores = subScores;
   return shape;
@@ -1506,7 +1620,7 @@ function buildPaidChecksSolana(g) {
   ];
 }
 
-function marketDataSolana(d, g) {
+function marketDataSolana(d, g, ath) {
   // Same shape as EVM marketData(). Holder count comes from GoPlus.
   const mcap = d?.mcap || 0;
   const liq = d?.liquidityUsd || 0;
@@ -1521,6 +1635,7 @@ function marketDataSolana(d, g) {
     volume24h: fmtUsd(vol),
     age: ageDays ? ageDays + "d" : "—",
     holders,
+    ath: formatAthBlock(ath, mcap),
   };
 }
 
@@ -1748,7 +1863,27 @@ function computeSubScores(g, d, chain) {
 }
 
 // ── market data formatting (matches mock shape) ──
-function marketData(d, g) {
+//
+// Shared helper for the ATH block surfaced on /api/scan responses.
+// Consumed by both the free pill hover and the paid panel. Returns
+// null when we have no usable ATH data — the extension hides the row
+// in that case rather than rendering a placeholder.
+function formatAthBlock(ath, currentMcap) {
+  if (!ath || !(ath.mcapAth > 0)) return null;
+  const deltaPct = currentMcap > 0
+    ? Math.round(((ath.mcapAth - currentMcap) / ath.mcapAth) * 100)
+    : null;
+  const daysAgo = ath.athAt > 0
+    ? Math.max(0, Math.floor((Date.now() - ath.athAt) / 86400000))
+    : null;
+  return {
+    mcap: fmtUsd(ath.mcapAth),
+    deltaPct,
+    daysAgo,
+  };
+}
+
+function marketData(d, g, ath) {
   const mcap = d?.mcap || 0;
   const liq = d?.liquidityUsd || 0;
   const vol = d?.volume24h || 0;
@@ -1763,6 +1898,7 @@ function marketData(d, g) {
     volume24h: fmtUsd(vol),
     age: ageDays ? ageDays + "d" : "—",
     holders,
+    ath: formatAthBlock(ath, mcap),
   };
 }
 
