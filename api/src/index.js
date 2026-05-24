@@ -161,27 +161,33 @@ async function handleTwakTest(url, request, env) {
   const assetId = ca ? twakAssetId(chain, ca) : `c${twakChainCoinId(chain) || 714}`;
   if (!assetId) return json({ error: "unsupported chain for twak" }, 400);
 
-  // Probe both endpoints we care about in parallel so a single curl
-  // shows the full TWAK response surface for this asset. /v1/assets is
-  // the documented "asset details" lookup — primary candidate for
-  // multi-timeframe percent_change_* fields needed by the box layout.
-  const [coinstatusRes, assetsRes] = await Promise.allSettled([
+  // Probe 4 candidate endpoints in parallel so a single curl reveals
+  // where multi-timeframe percent_change_* fields actually live for a
+  // given token. /v1/assets returned [] for fresh memecoins —
+  // narrowing down which endpoint TWAK uses for per-token 7d data.
+  const ca2 = (url.searchParams.get("ca") || "").trim();
+  const wrap = (p) => p.status === "fulfilled"
+    ? { ok: true, response: p.value }
+    : { ok: false, error: String(p.reason?.message || p.reason) };
+  const [coinstatusRes, assetsRes, searchRes, tickersRes] = await Promise.allSettled([
     twakGet(`/v2/coinstatus/${assetId}`, {
       version: "2",
       include_security_info: "true",
       include_solana_security_info: "true",
     }, env),
-    twakGet(`/v1/assets`, { assetId: assetId }, env),
+    twakGet(`/v1/assets`, { assetId }, env),
+    ca2
+      ? twakGet(`/v1/search/assets`, { query: ca2, networks: String(twakChainCoinId(chain) || "") }, env)
+      : Promise.resolve(null),
+    twakPost(`/v2/market/tickers`, { currency: "USD", assets: [assetId] }, env),
   ]);
   return json({
     assetId,
     chain,
-    coinstatus_v2: coinstatusRes.status === "fulfilled"
-      ? { ok: true, response: coinstatusRes.value }
-      : { ok: false, error: String(coinstatusRes.reason?.message || coinstatusRes.reason) },
-    assets_v1: assetsRes.status === "fulfilled"
-      ? { ok: true, response: assetsRes.value }
-      : { ok: false, error: String(assetsRes.reason?.message || assetsRes.reason) },
+    coinstatus_v2: wrap(coinstatusRes),
+    assets_v1: wrap(assetsRes),
+    search_v1: wrap(searchRes),
+    tickers_v2: wrap(tickersRes),
   });
 }
 
