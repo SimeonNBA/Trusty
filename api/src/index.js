@@ -579,11 +579,31 @@ function twakChainCoinId(chain) {
   return null;
 }
 
+// TWAK's INTERNAL network ID, distinct from SLIP-44 coin ID. Discovered
+// empirically: /v1/assets/listings returns BSC tokens with asset_id
+// "c20000714_t0x..." and network: 20000714 — token lookups via
+// /v2/market/tickers, /v1/assets, /v2/coinstatus only succeed when the
+// token asset_id uses this prefix. Native-asset lookups (no _t suffix)
+// still accept the SLIP-44 c714 form on the same endpoints.
+//
+// Fall back to twakChainCoinId for chains where we haven't observed
+// the internal ID yet — that's the previous behaviour, so worst case
+// we degrade to "returns empty" exactly like before.
+function twakNetworkId(chain) {
+  const c = (chain || "").toLowerCase();
+  if (c === "bsc" || c === "bnb" || c === "binance") return 20000714;
+  return twakChainCoinId(chain);
+}
+
 function twakAssetId(chain, ca) {
-  const coinId = twakChainCoinId(chain);
-  if (!coinId) return null;
-  if (!ca) return `c${coinId}`;
-  return `c${coinId}_t${ca}`;
+  if (!ca) {
+    // Native asset — c{slip44}, TWAK accepts both c714 and c20000714 here
+    const coinId = twakChainCoinId(chain);
+    return coinId ? `c${coinId}` : null;
+  }
+  // Token — must use TWAK's internal network ID (c20000714 for BSC)
+  const networkId = twakNetworkId(chain);
+  return networkId ? `c${networkId}_t${ca}` : null;
 }
 
 // Security check via TWAK gateway. Null on any failure (rate limit,
@@ -681,79 +701,92 @@ async function twakPrices(assetIds, env) {
 }
 
 // Fetch multi-timeframe price-change data for a token via TWAK
-// /v1/assets?assetId=... — the "asset details" endpoint, per docs the
-// likely source of percent_change_1h/24h/7d/30d. Always-on enrichment
-// (not a fallback) because Dexscreener doesn't expose anything beyond
-// 24h. 6h KV cache. Returns { h24, d7 } as numbers (percent points)
-// or null on any failure / no usable fields.
+// /v1/assets/listings — the only endpoint we've confirmed returns
+// percent_change_1h/24h/7d/30d/60d/90d per asset. Bulk-cached for 1h
+// so we hit TWAK once per (chain, category) per hour and serve every
+// scan for tokens in that listing from KV. Returns { h24, d7 } or
+// null when the token isn't in the cached listing.
+//
+// Long-tail memecoins won't be in TWAK's curated listings — they'll
+// get null d7 here and fall through to Dexscreener-only h24 in
+// marketData(). That's by design; TWAK simply doesn't have 7d data
+// for every token, and that's preferable to making per-token TWAK
+// calls that hit the 1 req/s quota for tokens TWAK doesn't index.
 async function fetchTwakChange(ca, chain, env, opts) {
   if (!twakConfigured(env)) return null;
   const twakCa = (opts && opts.caOriginal) || ca;
-  const assetId = twakAssetId(chain, twakCa);
-  if (!assetId) return null;
+  const networkId = twakNetworkId(chain);
+  const slip44 = twakChainCoinId(chain);
+  if (!networkId || !slip44) return null;
 
-  const cacheKey = `twak-change:v1:${chain}:${ca}`;
+  // Categories worth scanning for BSC — broad ecosystem listings cover
+  // most established tokens, memes + pump-fun cover the meme tail.
+  // We fetch each listing once per hour and look the CA up in every
+  // cached list in turn.
+  const categories = (chain === "bsc" || chain === "bnb")
+    ? ["bnb-ecosystem", "memes", "pump-fun"]
+    : (chain === "ethereum" || chain === "eth")
+    ? ["eth-ecosystem", "memes"]
+    : (chain === "solana" || chain === "sol")
+    ? ["solana-ecosystem", "memes", "bonk", "pump-fun"]
+    : ["trending"];
+
+  // Token asset_id as it appears in listings — TWAK uses checksummed
+  // contract addresses there. We compare case-insensitively in the
+  // lookup loop below so callers don't have to pre-checksum.
+  const caLower = String(twakCa).toLowerCase();
+
+  for (const category of categories) {
+    const listing = await fetchTwakListing(chain, slip44, category, env);
+    if (!listing || !Array.isArray(listing.docs)) continue;
+    for (const doc of listing.docs) {
+      const docId = (doc?.asset?.asset_id || "").toLowerCase();
+      // asset_id is e.g. "c20000714_t0xabc...". Tail-match on _t<ca>.
+      if (docId.endsWith("_t" + caLower)) {
+        const p = doc.price || {};
+        // TWAK returns these as percentage points already (BNB at
+        // percent_change_24h: 0.99 means +0.99%, not +99%).
+        const h24 = typeof p.percent_change_24h === "number" ? p.percent_change_24h : null;
+        const d7  = typeof p.percent_change_7d  === "number" ? p.percent_change_7d  : null;
+        if (h24 === null && d7 === null) return null;
+        return { h24, d7 };
+      }
+    }
+  }
+  return null;
+}
+
+// Bulk listing fetch with 1h KV cache. Cache key per (chain, category)
+// so multiple scans for different tokens in the same category reuse
+// one TWAK call. Returns the raw response object or null.
+async function fetchTwakListing(chain, slip44, category, env) {
+  const cacheKey = `twak-listing:v1:${chain}:${category}`;
   if (env.SCAN_KV) {
     try {
       const cached = await env.SCAN_KV.get(cacheKey, "json");
       if (cached) return cached;
     } catch (_) {}
   }
-
   try {
-    const data = await twakGet(`/v1/assets`, { assetId }, env);
-    const parsed = parseTwakChange(data);
-    if (parsed && env.SCAN_KV) {
+    const data = await twakGet(`/v1/assets/listings`, {
+      version: "27",
+      currency: "USD",
+      category_id: category,
+      sort: "mcap",
+      limit: "100",
+      networks: String(slip44),
+    }, env);
+    if (data && env.SCAN_KV) {
       try {
-        await env.SCAN_KV.put(cacheKey, JSON.stringify(parsed), {
-          expirationTtl: 6 * 60 * 60, // 6h — price moves; same TTL as twakPrices
+        await env.SCAN_KV.put(cacheKey, JSON.stringify(data), {
+          expirationTtl: 60 * 60, // 1h — price moves but mcap ranking is stable
         });
       } catch (_) {}
     }
-    return parsed;
+    return data;
   } catch (_) {
     return null;
   }
-}
-
-// Defensive parser — /v1/assets isn't fully documented in the public
-// TWAK reference, but /v1/assets/listings is, and they likely share
-// the same per-asset shape. The listings format wraps each asset in
-// { asset, market, price } with `price.percent_change_*` fields.
-// We probe the documented path plus a handful of alternative nestings
-// in case /v1/assets returns the asset directly or under `data`.
-function parseTwakChange(raw) {
-  if (!raw || typeof raw !== "object") return null;
-
-  const candidates = [];
-  // Documented listings shape: { docs: [{ asset, market, price }] }
-  if (Array.isArray(raw.docs) && raw.docs[0]?.price) candidates.push(raw.docs[0].price);
-  // Same shape but ungrouped (likely for the single-asset lookup)
-  if (raw.price && typeof raw.price === "object") candidates.push(raw.price);
-  // Older or alternative wrapping
-  if (raw.data?.price) candidates.push(raw.data.price);
-  if (raw.data && typeof raw.data === "object") candidates.push(raw.data);
-  // Flat — fields directly on the response object
-  candidates.push(raw);
-
-  let h24 = null;
-  let d7 = null;
-
-  for (const c of candidates) {
-    if (typeof c !== "object" || c === null) continue;
-    if (h24 === null) {
-      const v = c.percent_change_24h ?? c.percentChange24h ?? c.change_24h ?? c.change24h ?? null;
-      if (v !== null && v !== undefined && !isNaN(parseFloat(v))) h24 = parseFloat(v);
-    }
-    if (d7 === null) {
-      const v = c.percent_change_7d ?? c.percentChange7d ?? c.change_7d ?? c.change7d ?? null;
-      if (v !== null && v !== undefined && !isNaN(parseFloat(v))) d7 = parseFloat(v);
-    }
-    if (h24 !== null && d7 !== null) break;
-  }
-
-  if (h24 === null && d7 === null) return null;
-  return { h24, d7 };
 }
 
 // Adapter — converts a single TWAK ticker entry into the same shape
