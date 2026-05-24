@@ -258,15 +258,17 @@
     }
   };
 
-  // Build the compact 24h % change string used on the pill itself,
-  // the hover tooltip, and the paid panel.
-  // Returns { text, dir } where dir is "up" | "down" | "flat", or null
-  // when there's no change data (caller hides the indicator).
-  function formatChange24h(pct) {
-    if (typeof pct !== "number" || !isFinite(pct)) return null;
+  // Format a single % change value for one of the change boxes.
+  // Returns { text, dir } — dir is "up"/"down"/"flat" for coloring.
+  // Returns a placeholder { text: "—", dir: "none" } when the value
+  // is null so the box still renders (rather than disappearing) when
+  // only one of the two timeframes has data.
+  function formatChangePct(pct) {
+    if (typeof pct !== "number" || !isFinite(pct)) {
+      return { text: "—", dir: "none" };
+    }
     const dir = pct > 0.05 ? "up" : pct < -0.05 ? "down" : "flat";
     const arrow = dir === "up" ? "▲" : dir === "down" ? "▼" : "·";
-    // Round to 1 decimal under 10%, integer above
     const abs = Math.abs(pct);
     const rounded = abs >= 10 ? Math.round(abs) : Math.round(abs * 10) / 10;
     return {
@@ -441,13 +443,26 @@
     const md = result.marketData || {};
     const mcap = md.mcap || "—";
     const vol = md.volume24h || "—";
-    // 24h % change line — colour-coded green/red. Hidden when the
-    // upstream sources returned no change data (rare on tradeable tokens).
-    const ch24 = formatChange24h(md.change24h);
-    const changeHtml = ch24
-      ? '<div class="trusty-tt-change trusty-tt-change-' + ch24.dir + '">' +
-          '<span class="trusty-tt-change-lbl">24h</span> ' + ch24.text +
-        '</div>'
+    // 24h + 7d % change boxes — same visual treatment as the MC/Vol
+    // boxes above. Each box stands on its own; one can be populated
+    // while the other is "—" if a timeframe is missing. Hidden entirely
+    // only when both are null.
+    const change = (md.change && typeof md.change === "object") ? md.change : {};
+    const ch24 = formatChangePct(change.h24);
+    const ch7d = formatChangePct(change.d7);
+    const changeHtml = (ch24.dir !== "none" || ch7d.dir !== "none")
+      ? (
+          '<div class="trusty-tt-change-grid">' +
+            '<div class="trusty-tt-change-cell trusty-tt-change-cell-' + ch24.dir + '">' +
+              '<div class="trusty-tt-change-num">' + ch24.text + '</div>' +
+              '<div class="trusty-tt-change-lbl">24h</div>' +
+            '</div>' +
+            '<div class="trusty-tt-change-cell trusty-tt-change-cell-' + ch7d.dir + '">' +
+              '<div class="trusty-tt-change-num">' + ch7d.text + '</div>' +
+              '<div class="trusty-tt-change-lbl">7d</div>' +
+            '</div>' +
+          '</div>'
+        )
       : '';
 
     // 6-category sub-score breakdown. Degrades cleanly if the worker
@@ -552,20 +567,6 @@
     pill.classList.add(PILL_CLASS + "-" + result.verdict.toLowerCase());
     const score = pill.querySelector("." + PILL_CLASS + "-score");
     if (score) score.textContent = String(result.score);
-    // 24h % change indicator — small color-coded arrow inline on the
-    // pill. Free users get this as a teaser; hides when no change data.
-    const changeEl = pill.querySelector("." + PILL_CLASS + "-change");
-    if (changeEl) {
-      const ch24 = formatChange24h(result.marketData && result.marketData.change24h);
-      if (ch24) {
-        changeEl.textContent = ch24.text;
-        changeEl.classList.remove(PILL_CLASS + "-change-up", PILL_CLASS + "-change-down", PILL_CLASS + "-change-flat");
-        changeEl.classList.add(PILL_CLASS + "-change-" + ch24.dir);
-        changeEl.style.display = "";
-      } else {
-        changeEl.style.display = "none";
-      }
-    }
     pill._trustyResult = result;
   }
 
@@ -1335,15 +1336,25 @@
       '<div class="trusty-pp-section">' +
         '<div class="trusty-pp-section-title">📊 Market</div>' +
         (function () {
-          // Dedicated 24h % change row above the stat grid — paid users
-          // get the more prominent treatment. Hidden when no change data.
-          const ch24 = formatChange24h(md.change24h);
-          return ch24
-            ? '<div class="trusty-pp-change-row trusty-pp-change-row-' + ch24.dir + '">' +
-                '<span class="trusty-pp-change-lbl">24h change</span> ' +
-                '<span class="trusty-pp-change-val">' + ch24.text + '</span>' +
-              '</div>'
-            : '';
+          // 24h + 7d % change as two boxes side-by-side at the top of
+          // the Market section — same visual treatment as the stat tiles
+          // below but slightly larger to give the % change prominence.
+          const change = (md.change && typeof md.change === "object") ? md.change : {};
+          const ch24 = formatChangePct(change.h24);
+          const ch7d = formatChangePct(change.d7);
+          if (ch24.dir === "none" && ch7d.dir === "none") return '';
+          return (
+            '<div class="trusty-pp-change-grid">' +
+              '<div class="trusty-pp-change-cell trusty-pp-change-cell-' + ch24.dir + '">' +
+                '<div class="trusty-pp-change-num">' + ch24.text + '</div>' +
+                '<div class="trusty-pp-change-lbl">24h change</div>' +
+              '</div>' +
+              '<div class="trusty-pp-change-cell trusty-pp-change-cell-' + ch7d.dir + '">' +
+                '<div class="trusty-pp-change-num">' + ch7d.text + '</div>' +
+                '<div class="trusty-pp-change-lbl">7d change</div>' +
+              '</div>' +
+            '</div>'
+          );
         })() +
         '<div class="trusty-pp-stat-grid trusty-pp-stat-grid-3">' +
           '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (md.mcap || "—") + '</div><div class="trusty-pp-stat-lbl">market cap</div></div>' +
@@ -1519,13 +1530,6 @@
     score.className = PILL_CLASS + "-score";
     score.textContent = "…";
 
-    // 24h % change indicator — populated by applyResultToPill. Hidden
-    // by default until we have data, so the pill skeleton doesn't show
-    // an empty box during the loading state.
-    const change = document.createElement("span");
-    change.className = PILL_CLASS + "-change";
-    change.style.display = "none";
-
     // Star button — toggles watchlist membership without leaving the
     // page. We start with empty-star, flip filled when the watchlist
     // mirror reports the CA is in the list.
@@ -1539,7 +1543,6 @@
 
     pill.appendChild(icon);
     pill.appendChild(score);
-    pill.appendChild(change);
     pill.appendChild(star);
 
     // Reflect existing watchlist state
