@@ -700,90 +700,33 @@ async function twakPrices(assetIds, env) {
   catch (_) { return null; }
 }
 
-// Fetch multi-timeframe price-change data for a token via TWAK
-// /v1/assets/listings — the only endpoint we've confirmed returns
-// percent_change_1h/24h/7d/30d/60d/90d per asset. Bulk-cached for 1h
-// so we hit TWAK once per (chain, category) per hour and serve every
-// scan for tokens in that listing from KV. Returns { h24, d7 } or
-// null when the token isn't in the cached listing.
+// Fetch 24h % change for a token via TWAK /v2/market/tickers — the
+// per-token endpoint that returns change_24h. Confirmed working for
+// any TWAK-indexed BSC token once we corrected the chain prefix to
+// c20000714_t... (see twakAssetId). Returns { h24 } or null on any
+// failure / token not indexed by TWAK; in the null case marketData()
+// falls back to Dexscreener's priceChange.h24.
 //
-// Long-tail memecoins won't be in TWAK's curated listings — they'll
-// get null d7 here and fall through to Dexscreener-only h24 in
-// marketData(). That's by design; TWAK simply doesn't have 7d data
-// for every token, and that's preferable to making per-token TWAK
-// calls that hit the 1 req/s quota for tokens TWAK doesn't index.
+// 7d was attempted via /v1/assets/listings but only worked for tokens
+// in curated category listings (bnb-ecosystem etc. — CAKE not even
+// in there). Too thin to ship, so removed entirely. No per-token 7d
+// data source exists in our stack.
 async function fetchTwakChange(ca, chain, env, opts) {
   if (!twakConfigured(env)) return null;
   const twakCa = (opts && opts.caOriginal) || ca;
-  const networkId = twakNetworkId(chain);
-  const slip44 = twakChainCoinId(chain);
-  if (!networkId || !slip44) return null;
+  const assetId = twakAssetId(chain, twakCa);
+  if (!assetId) return null;
 
-  // Categories worth scanning for BSC — broad ecosystem listings cover
-  // most established tokens, memes + pump-fun cover the meme tail.
-  // We fetch each listing once per hour and look the CA up in every
-  // cached list in turn.
-  const categories = (chain === "bsc" || chain === "bnb")
-    ? ["bnb-ecosystem", "memes", "pump-fun"]
-    : (chain === "ethereum" || chain === "eth")
-    ? ["eth-ecosystem", "memes"]
-    : (chain === "solana" || chain === "sol")
-    ? ["solana-ecosystem", "memes", "bonk", "pump-fun"]
-    : ["trending"];
-
-  // Token asset_id as it appears in listings — TWAK uses checksummed
-  // contract addresses there. We compare case-insensitively in the
-  // lookup loop below so callers don't have to pre-checksum.
-  const caLower = String(twakCa).toLowerCase();
-
-  for (const category of categories) {
-    const listing = await fetchTwakListing(chain, slip44, category, env);
-    if (!listing || !Array.isArray(listing.docs)) continue;
-    for (const doc of listing.docs) {
-      const docId = (doc?.asset?.asset_id || "").toLowerCase();
-      // asset_id is e.g. "c20000714_t0xabc...". Tail-match on _t<ca>.
-      if (docId.endsWith("_t" + caLower)) {
-        const p = doc.price || {};
-        // TWAK returns these as percentage points already (BNB at
-        // percent_change_24h: 0.99 means +0.99%, not +99%).
-        const h24 = typeof p.percent_change_24h === "number" ? p.percent_change_24h : null;
-        const d7  = typeof p.percent_change_7d  === "number" ? p.percent_change_7d  : null;
-        if (h24 === null && d7 === null) return null;
-        return { h24, d7 };
-      }
-    }
-  }
-  return null;
-}
-
-// Bulk listing fetch with 1h KV cache. Cache key per (chain, category)
-// so multiple scans for different tokens in the same category reuse
-// one TWAK call. Returns the raw response object or null.
-async function fetchTwakListing(chain, slip44, category, env) {
-  const cacheKey = `twak-listing:v1:${chain}:${category}`;
-  if (env.SCAN_KV) {
-    try {
-      const cached = await env.SCAN_KV.get(cacheKey, "json");
-      if (cached) return cached;
-    } catch (_) {}
-  }
   try {
-    const data = await twakGet(`/v1/assets/listings`, {
-      version: "27",
+    const data = await twakPost(`/v2/market/tickers`, {
       currency: "USD",
-      category_id: category,
-      sort: "mcap",
-      limit: "100",
-      networks: String(slip44),
+      assets: [assetId],
     }, env);
-    if (data && env.SCAN_KV) {
-      try {
-        await env.SCAN_KV.put(cacheKey, JSON.stringify(data), {
-          expirationTtl: 60 * 60, // 1h — price moves but mcap ranking is stable
-        });
-      } catch (_) {}
-    }
-    return data;
+    const ticker = Array.isArray(data?.tickers) ? data.tickers[0] : null;
+    if (!ticker) return null;
+    const h24 = typeof ticker.change_24h === "number" ? ticker.change_24h : null;
+    if (h24 === null) return null;
+    return { h24 };
   } catch (_) {
     return null;
   }
@@ -1690,7 +1633,6 @@ function marketDataSolana(d, g, twChange) {
 
   const h24 = (twChange && typeof twChange.h24 === "number") ? twChange.h24
             : (typeof d?.change24h === "number" ? d.change24h : null);
-  const d7  = (twChange && typeof twChange.d7  === "number") ? twChange.d7  : null;
 
   return {
     mcap: fmtUsd(mcap),
@@ -1698,7 +1640,7 @@ function marketDataSolana(d, g, twChange) {
     volume24h: fmtUsd(vol),
     age: ageDays ? ageDays + "d" : "—",
     holders,
-    change: { h24, d7 },
+    change: { h24 },
   };
 }
 
@@ -1936,13 +1878,12 @@ function marketData(d, g, twChange) {
     : 0;
   const holders = g?.holder_count ? parseInt(g.holder_count, 10) : 0;
 
-  // Multi-timeframe % change. TWAK /v1/assets is the primary source
-  // (gives both 24h and 7d). Dexscreener fills in 24h as a fallback
-  // — it has priceChange.h24 but nothing longer than 24h. Raw numbers
-  // (percent points, e.g. -12.34) so the extension can color/arrow.
+  // 24h % change. TWAK /v2/market/tickers is the primary source for
+  // any token TWAK indexes. Dexscreener priceChange.h24 fills in for
+  // long-tail tokens TWAK doesn't have. Raw percent points so the
+  // extension can colour and add an arrow.
   const h24 = (twChange && typeof twChange.h24 === "number") ? twChange.h24
             : (typeof d?.change24h === "number" ? d.change24h : null);
-  const d7  = (twChange && typeof twChange.d7  === "number") ? twChange.d7  : null;
 
   return {
     mcap: fmtUsd(mcap),
@@ -1950,7 +1891,7 @@ function marketData(d, g, twChange) {
     volume24h: fmtUsd(vol),
     age: ageDays ? ageDays + "d" : "—",
     holders,
-    change: { h24, d7 },
+    change: { h24 },
   };
 }
 
