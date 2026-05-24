@@ -161,16 +161,28 @@ async function handleTwakTest(url, request, env) {
   const assetId = ca ? twakAssetId(chain, ca) : `c${twakChainCoinId(chain) || 714}`;
   if (!assetId) return json({ error: "unsupported chain for twak" }, 400);
 
-  try {
-    const data = await twakGet(`/v2/coinstatus/${assetId}`, {
+  // Probe both endpoints we care about in parallel so a single curl
+  // shows the full TWAK response surface for this asset. /v1/assets is
+  // the documented "asset details" lookup — primary candidate for
+  // multi-timeframe percent_change_* fields needed by the box layout.
+  const [coinstatusRes, assetsRes] = await Promise.allSettled([
+    twakGet(`/v2/coinstatus/${assetId}`, {
       version: "2",
       include_security_info: "true",
       include_solana_security_info: "true",
-    }, env);
-    return json({ ok: true, assetId, chain, response: data });
-  } catch (e) {
-    return json({ ok: false, assetId, chain, error: String(e && e.message || e) }, 502);
-  }
+    }, env),
+    twakGet(`/v1/assets`, { assetId: assetId }, env),
+  ]);
+  return json({
+    assetId,
+    chain,
+    coinstatus_v2: coinstatusRes.status === "fulfilled"
+      ? { ok: true, response: coinstatusRes.value }
+      : { ok: false, error: String(coinstatusRes.reason?.message || coinstatusRes.reason) },
+    assets_v1: assetsRes.status === "fulfilled"
+      ? { ok: true, response: assetsRes.value }
+      : { ok: false, error: String(assetsRes.reason?.message || assetsRes.reason) },
+  });
 }
 
 // Admin-protected probe of arbitrary upstream paths. Used during
@@ -638,6 +650,82 @@ async function twakPrices(assetIds, env) {
   catch (_) { return null; }
 }
 
+// Fetch multi-timeframe price-change data for a token via TWAK
+// /v1/assets?assetId=... — the "asset details" endpoint, per docs the
+// likely source of percent_change_1h/24h/7d/30d. Always-on enrichment
+// (not a fallback) because Dexscreener doesn't expose anything beyond
+// 24h. 6h KV cache. Returns { h24, d7 } as numbers (percent points)
+// or null on any failure / no usable fields.
+async function fetchTwakChange(ca, chain, env, opts) {
+  if (!twakConfigured(env)) return null;
+  const twakCa = (opts && opts.caOriginal) || ca;
+  const assetId = twakAssetId(chain, twakCa);
+  if (!assetId) return null;
+
+  const cacheKey = `twak-change:v1:${chain}:${ca}`;
+  if (env.SCAN_KV) {
+    try {
+      const cached = await env.SCAN_KV.get(cacheKey, "json");
+      if (cached) return cached;
+    } catch (_) {}
+  }
+
+  try {
+    const data = await twakGet(`/v1/assets`, { assetId }, env);
+    const parsed = parseTwakChange(data);
+    if (parsed && env.SCAN_KV) {
+      try {
+        await env.SCAN_KV.put(cacheKey, JSON.stringify(parsed), {
+          expirationTtl: 6 * 60 * 60, // 6h — price moves; same TTL as twakPrices
+        });
+      } catch (_) {}
+    }
+    return parsed;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Defensive parser — /v1/assets isn't fully documented in the public
+// TWAK reference, but /v1/assets/listings is, and they likely share
+// the same per-asset shape. The listings format wraps each asset in
+// { asset, market, price } with `price.percent_change_*` fields.
+// We probe the documented path plus a handful of alternative nestings
+// in case /v1/assets returns the asset directly or under `data`.
+function parseTwakChange(raw) {
+  if (!raw || typeof raw !== "object") return null;
+
+  const candidates = [];
+  // Documented listings shape: { docs: [{ asset, market, price }] }
+  if (Array.isArray(raw.docs) && raw.docs[0]?.price) candidates.push(raw.docs[0].price);
+  // Same shape but ungrouped (likely for the single-asset lookup)
+  if (raw.price && typeof raw.price === "object") candidates.push(raw.price);
+  // Older or alternative wrapping
+  if (raw.data?.price) candidates.push(raw.data.price);
+  if (raw.data && typeof raw.data === "object") candidates.push(raw.data);
+  // Flat — fields directly on the response object
+  candidates.push(raw);
+
+  let h24 = null;
+  let d7 = null;
+
+  for (const c of candidates) {
+    if (typeof c !== "object" || c === null) continue;
+    if (h24 === null) {
+      const v = c.percent_change_24h ?? c.percentChange24h ?? c.change_24h ?? c.change24h ?? null;
+      if (v !== null && v !== undefined && !isNaN(parseFloat(v))) h24 = parseFloat(v);
+    }
+    if (d7 === null) {
+      const v = c.percent_change_7d ?? c.percentChange7d ?? c.change_7d ?? c.change7d ?? null;
+      if (v !== null && v !== undefined && !isNaN(parseFloat(v))) d7 = parseFloat(v);
+    }
+    if (h24 !== null && d7 !== null) break;
+  }
+
+  if (h24 === null && d7 === null) return null;
+  return { h24, d7 };
+}
+
 // Adapter — converts a single TWAK ticker entry into the same shape
 // fetchDexRaw returns. Lets the rest of the pipeline treat the data
 // identically without branching everywhere. Liquidity + pairCreatedAt
@@ -812,17 +900,19 @@ async function scanTokenEvm(ca, chain, env, opts) {
     if (detected) resolvedChain = detected;
   }
 
-  const [gpRes, dxRes, fmRes] = await Promise.allSettled([
+  const [gpRes, dxRes, fmRes, chRes] = await Promise.allSettled([
     (opts && opts.forcePending) ? Promise.resolve(null) : fetchGoPlus(chainId(resolvedChain), ca, env),
     fetchDex(ca, resolvedChain === "ethereum" ? "ethereum"
                 : resolvedChain === "base"    ? "base"
                 : resolvedChain === "polygon" ? "polygon"
                 : "bsc", env),
     fetchFourMemeOrigin(ca, resolvedChain, env),
+    fetchTwakChange(ca, resolvedChain, env, opts),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
   let   d = dxRes.status === "fulfilled" ? dxRes.value : null;
   const fm = fmRes.status === "fulfilled" ? fmRes.value : null;
+  const twChange = chRes.status === "fulfilled" ? chRes.value : null;
 
   // Market-data fallback: when Dexscreener returns nothing (throttle
   // or unindexed token) try the secondary gateway. Sequential so we
@@ -876,7 +966,7 @@ async function scanTokenEvm(ca, chain, env, opts) {
       paidChecks: [],
       kols: [],
       activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
-      marketData: marketData(d, null),
+      marketData: marketData(d, null, twChange),
       _twak: twakDiagFor(twakResult, env),
     };
     if (!realSym) out.symbolFallback = true;
@@ -905,21 +995,23 @@ async function scanTokenEvm(ca, chain, env, opts) {
 
   // Return the resolved chain so the frontend uses the right chain
   // for trade-row UAI / launchpad-badge link / future logic.
-  const shape = baseScanShape(ca, resolvedChain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g), fm);
+  const shape = baseScanShape(ca, resolvedChain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g, twChange), fm);
   if (symbolFallback) shape.symbolFallback = true;
   shape.subScores = subScores;
   return shape;
 }
 
 async function scanTokenSolana(ca, chain, env, opts) {
-  const [gpRes, dxRes, rcRes] = await Promise.allSettled([
+  const [gpRes, dxRes, rcRes, chRes] = await Promise.allSettled([
     (opts && opts.forcePending) ? Promise.resolve(null) : fetchGoPlusSolana(ca, env),
     fetchDex(ca, "solana", env),
     fetchRugCheck(ca),
+    fetchTwakChange(ca, "solana", env, opts),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
   let   d = dxRes.status === "fulfilled" ? dxRes.value : null;
   const rc = rcRes.status === "fulfilled" ? rcRes.value : null;
+  const twChange = chRes.status === "fulfilled" ? chRes.value : null;
 
   // Same market-data fallback as the EVM path: when Dexscreener
   // returns nothing for a Solana token, try the secondary gateway.
@@ -963,7 +1055,7 @@ async function scanTokenSolana(ca, chain, env, opts) {
       paidChecks: [],
       kols: [],
       activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
-      marketData: marketDataSolana(d, null),
+      marketData: marketDataSolana(d, null, twChange),
       _twak: twakDiagFor(twakResult, env),
     };
     if (!realSym) out.symbolFallback = true;
@@ -984,7 +1076,7 @@ async function scanTokenSolana(ca, chain, env, opts) {
   const name = d?.name || g?.metadata?.name || "Token " + shortAddrSol(ca);
   const symbolFallback = !realSym;
 
-  const shape = baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketDataSolana(d, g));
+  const shape = baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketDataSolana(d, g, twChange));
   if (symbolFallback) shape.symbolFallback = true;
   shape.subScores = subScores;
   return shape;
@@ -1523,7 +1615,7 @@ function buildPaidChecksSolana(g) {
   ];
 }
 
-function marketDataSolana(d, g) {
+function marketDataSolana(d, g, twChange) {
   // Same shape as EVM marketData(). Holder count comes from GoPlus.
   const mcap = d?.mcap || 0;
   const liq = d?.liquidityUsd || 0;
@@ -1532,13 +1624,18 @@ function marketDataSolana(d, g) {
     ? Math.max(1, Math.floor((Date.now() - d.pairCreatedAt) / 86400000))
     : 0;
   const holders = g?.holder_count ? parseInt(g.holder_count, 10) : 0;
+
+  const h24 = (twChange && typeof twChange.h24 === "number") ? twChange.h24
+            : (typeof d?.change24h === "number" ? d.change24h : null);
+  const d7  = (twChange && typeof twChange.d7  === "number") ? twChange.d7  : null;
+
   return {
     mcap: fmtUsd(mcap),
     liquidity: fmtUsd(liq),
     volume24h: fmtUsd(vol),
     age: ageDays ? ageDays + "d" : "—",
     holders,
-    change24h: typeof d?.change24h === "number" ? d.change24h : null,
+    change: { h24, d7 },
   };
 }
 
@@ -1767,7 +1864,7 @@ function computeSubScores(g, d, chain) {
 
 // ── market data formatting (matches mock shape) ──
 
-function marketData(d, g) {
+function marketData(d, g, twChange) {
   const mcap = d?.mcap || 0;
   const liq = d?.liquidityUsd || 0;
   const vol = d?.volume24h || 0;
@@ -1776,17 +1873,21 @@ function marketData(d, g) {
     : 0;
   const holders = g?.holder_count ? parseInt(g.holder_count, 10) : 0;
 
+  // Multi-timeframe % change. TWAK /v1/assets is the primary source
+  // (gives both 24h and 7d). Dexscreener fills in 24h as a fallback
+  // — it has priceChange.h24 but nothing longer than 24h. Raw numbers
+  // (percent points, e.g. -12.34) so the extension can color/arrow.
+  const h24 = (twChange && typeof twChange.h24 === "number") ? twChange.h24
+            : (typeof d?.change24h === "number" ? d.change24h : null);
+  const d7  = (twChange && typeof twChange.d7  === "number") ? twChange.d7  : null;
+
   return {
     mcap: fmtUsd(mcap),
     liquidity: fmtUsd(liq),
     volume24h: fmtUsd(vol),
     age: ageDays ? ageDays + "d" : "—",
     holders,
-    // 24h % change — from Dexscreener priceChange.h24 (always present on
-    // tradeable tokens) or TWAK change_24h as fallback. Null when no
-    // upstream source returned change data (rare). Stored as a raw number
-    // (e.g. -12.34) so the extension can color it and add an arrow.
-    change24h: typeof d?.change24h === "number" ? d.change24h : null,
+    change: { h24, d7 },
   };
 }
 
