@@ -321,6 +321,21 @@
   margin-top: 3px;
 }
 
+/* MC ATH one-liner — sits between the 2-cell market grid and the
+   sub-scores breakdown on the free hover tooltip. Hidden (empty
+   string) when the worker returns null ath for this token. */
+.trusty-tt-ath {
+  font-size: 11px;
+  font-weight: 600;
+  color: #c8d2e0;
+  text-align: center;
+  padding: 6px 8px;
+  margin: 6px 0 10px;
+  background: rgba(99, 130, 184, 0.08);
+  border-radius: 6px;
+  letter-spacing: 0.2px;
+}
+
 /* Checks list */
 .trusty-tt-checks {
   list-style: none;
@@ -1350,6 +1365,23 @@
   letter-spacing: 1px;
   text-transform: uppercase;
   margin-top: 2px;
+}
+
+/* MC ATH row — sits above the 5-tile stat grid inside the Market
+   section of the paid panel. More prominent than the tooltip version
+   because paid users prefer the visible treatment. Hidden when the
+   worker returns null ath for this token. */
+.trusty-pp-ath-row {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f5f5f7;
+  text-align: center;
+  padding: 10px 12px;
+  margin: 0 0 8px;
+  background: linear-gradient(135deg, rgba(99, 130, 184, 0.14), rgba(99, 130, 184, 0.06));
+  border: 1px solid #233247;
+  border-radius: 8px;
+  letter-spacing: 0.3px;
 }
 
 /* Tweet-preview popover shown on KOL row hover */

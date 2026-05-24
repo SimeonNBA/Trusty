@@ -258,6 +258,25 @@
     }
   };
 
+  // Build the "MC ATH" one-liner shown on the free hover tooltip and
+  // the paid panel. Format: "MC ATH: $42M ▼87% from ATH · 142d ago".
+  // Each segment is independently nullable — caller can omit just the
+  // delta or just the age if the worker didn't return that field.
+  // Returns null when there's no MC ATH at all (caller hides the row).
+  function formatAthLine(ath) {
+    if (!ath || !ath.mcap) return null;
+    let line = "MC ATH: " + ath.mcap;
+    if (typeof ath.deltaPct === "number" && ath.deltaPct > 0) {
+      line += " ▼" + ath.deltaPct + "% from ATH";
+    }
+    if (typeof ath.daysAgo === "number") {
+      line += ath.daysAgo === 0
+        ? " · today"
+        : " · " + ath.daysAgo + "d ago";
+    }
+    return line;
+  }
+
   // Render one sub-score row. data-trusty-metric-key links the row
   // to METRIC_DATA so the click handler can open the right modal.
   // data-trusty-sub-value carries the numeric score so the modal
@@ -424,6 +443,12 @@
     const md = result.marketData || {};
     const mcap = md.mcap || "—";
     const vol = md.volume24h || "—";
+    // MC ATH line — appears only when the worker returned non-null ath
+    // data. Long-tail tokens without TWAK coverage stay clean (no row).
+    const athText = formatAthLine(md.ath);
+    const athHtml = athText
+      ? '<div class="trusty-tt-ath">' + athText + '</div>'
+      : '';
 
     // 6-category sub-score breakdown. Degrades cleanly if the worker
     // doesn't send subScores (older worker version → no section rendered).
@@ -460,6 +485,7 @@
           '<div class="trusty-tt-market-lbl">Vol 24h</div>' +
         '</div>' +
       '</div>' +
+      athHtml +
       subScoresHtml +
       '<ul class="trusty-tt-checks">' + checksHtml + '</ul>' +
       '<div class="trusty-tt-tease">' +
@@ -1294,6 +1320,15 @@
 
       '<div class="trusty-pp-section">' +
         '<div class="trusty-pp-section-title">📊 Market</div>' +
+        (function () {
+          // Dedicated ATH row above the stat grid — paid users get the
+          // more prominent treatment. Hidden when the worker returns
+          // null ath (long-tail tokens without TWAK coverage).
+          const athText = formatAthLine(md.ath);
+          return athText
+            ? '<div class="trusty-pp-ath-row">' + athText + '</div>'
+            : '';
+        })() +
         '<div class="trusty-pp-stat-grid trusty-pp-stat-grid-3">' +
           '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (md.mcap || "—") + '</div><div class="trusty-pp-stat-lbl">market cap</div></div>' +
           '<div class="trusty-pp-stat"><div class="trusty-pp-stat-num">' + (md.volume24h || "—") + '</div><div class="trusty-pp-stat-lbl">vol 24h</div></div>' +
