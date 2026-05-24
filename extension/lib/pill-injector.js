@@ -258,23 +258,21 @@
     }
   };
 
-  // Build the "MC ATH" one-liner shown on the free hover tooltip and
-  // the paid panel. Format: "MC ATH: $42M ▼87% from ATH · 142d ago".
-  // Each segment is independently nullable — caller can omit just the
-  // delta or just the age if the worker didn't return that field.
-  // Returns null when there's no MC ATH at all (caller hides the row).
-  function formatAthLine(ath) {
-    if (!ath || !ath.mcap) return null;
-    let line = "MC ATH: " + ath.mcap;
-    if (typeof ath.deltaPct === "number" && ath.deltaPct > 0) {
-      line += " ▼" + ath.deltaPct + "% from ATH";
-    }
-    if (typeof ath.daysAgo === "number") {
-      line += ath.daysAgo === 0
-        ? " · today"
-        : " · " + ath.daysAgo + "d ago";
-    }
-    return line;
+  // Build the compact 24h % change string used on the pill itself,
+  // the hover tooltip, and the paid panel.
+  // Returns { text, dir } where dir is "up" | "down" | "flat", or null
+  // when there's no change data (caller hides the indicator).
+  function formatChange24h(pct) {
+    if (typeof pct !== "number" || !isFinite(pct)) return null;
+    const dir = pct > 0.05 ? "up" : pct < -0.05 ? "down" : "flat";
+    const arrow = dir === "up" ? "▲" : dir === "down" ? "▼" : "·";
+    // Round to 1 decimal under 10%, integer above
+    const abs = Math.abs(pct);
+    const rounded = abs >= 10 ? Math.round(abs) : Math.round(abs * 10) / 10;
+    return {
+      text: arrow + " " + rounded + "%",
+      dir: dir,
+    };
   }
 
   // Render one sub-score row. data-trusty-metric-key links the row
@@ -443,11 +441,13 @@
     const md = result.marketData || {};
     const mcap = md.mcap || "—";
     const vol = md.volume24h || "—";
-    // MC ATH line — appears only when the worker returned non-null ath
-    // data. Long-tail tokens without TWAK coverage stay clean (no row).
-    const athText = formatAthLine(md.ath);
-    const athHtml = athText
-      ? '<div class="trusty-tt-ath">' + athText + '</div>'
+    // 24h % change line — colour-coded green/red. Hidden when the
+    // upstream sources returned no change data (rare on tradeable tokens).
+    const ch24 = formatChange24h(md.change24h);
+    const changeHtml = ch24
+      ? '<div class="trusty-tt-change trusty-tt-change-' + ch24.dir + '">' +
+          '<span class="trusty-tt-change-lbl">24h</span> ' + ch24.text +
+        '</div>'
       : '';
 
     // 6-category sub-score breakdown. Degrades cleanly if the worker
@@ -485,7 +485,7 @@
           '<div class="trusty-tt-market-lbl">Vol 24h</div>' +
         '</div>' +
       '</div>' +
-      athHtml +
+      changeHtml +
       subScoresHtml +
       '<ul class="trusty-tt-checks">' + checksHtml + '</ul>' +
       '<div class="trusty-tt-tease">' +
@@ -552,6 +552,20 @@
     pill.classList.add(PILL_CLASS + "-" + result.verdict.toLowerCase());
     const score = pill.querySelector("." + PILL_CLASS + "-score");
     if (score) score.textContent = String(result.score);
+    // 24h % change indicator — small color-coded arrow inline on the
+    // pill. Free users get this as a teaser; hides when no change data.
+    const changeEl = pill.querySelector("." + PILL_CLASS + "-change");
+    if (changeEl) {
+      const ch24 = formatChange24h(result.marketData && result.marketData.change24h);
+      if (ch24) {
+        changeEl.textContent = ch24.text;
+        changeEl.classList.remove(PILL_CLASS + "-change-up", PILL_CLASS + "-change-down", PILL_CLASS + "-change-flat");
+        changeEl.classList.add(PILL_CLASS + "-change-" + ch24.dir);
+        changeEl.style.display = "";
+      } else {
+        changeEl.style.display = "none";
+      }
+    }
     pill._trustyResult = result;
   }
 
@@ -1321,12 +1335,14 @@
       '<div class="trusty-pp-section">' +
         '<div class="trusty-pp-section-title">📊 Market</div>' +
         (function () {
-          // Dedicated ATH row above the stat grid — paid users get the
-          // more prominent treatment. Hidden when the worker returns
-          // null ath (long-tail tokens without TWAK coverage).
-          const athText = formatAthLine(md.ath);
-          return athText
-            ? '<div class="trusty-pp-ath-row">' + athText + '</div>'
+          // Dedicated 24h % change row above the stat grid — paid users
+          // get the more prominent treatment. Hidden when no change data.
+          const ch24 = formatChange24h(md.change24h);
+          return ch24
+            ? '<div class="trusty-pp-change-row trusty-pp-change-row-' + ch24.dir + '">' +
+                '<span class="trusty-pp-change-lbl">24h change</span> ' +
+                '<span class="trusty-pp-change-val">' + ch24.text + '</span>' +
+              '</div>'
             : '';
         })() +
         '<div class="trusty-pp-stat-grid trusty-pp-stat-grid-3">' +
@@ -1503,6 +1519,13 @@
     score.className = PILL_CLASS + "-score";
     score.textContent = "…";
 
+    // 24h % change indicator — populated by applyResultToPill. Hidden
+    // by default until we have data, so the pill skeleton doesn't show
+    // an empty box during the loading state.
+    const change = document.createElement("span");
+    change.className = PILL_CLASS + "-change";
+    change.style.display = "none";
+
     // Star button — toggles watchlist membership without leaving the
     // page. We start with empty-star, flip filled when the watchlist
     // mirror reports the CA is in the list.
@@ -1516,6 +1539,7 @@
 
     pill.appendChild(icon);
     pill.appendChild(score);
+    pill.appendChild(change);
     pill.appendChild(star);
 
     // Reflect existing watchlist state
