@@ -161,33 +161,57 @@ async function handleTwakTest(url, request, env) {
   const assetId = ca ? twakAssetId(chain, ca) : `c${twakChainCoinId(chain) || 714}`;
   if (!assetId) return json({ error: "unsupported chain for twak" }, 400);
 
-  // Probe 4 candidate endpoints in parallel so a single curl reveals
-  // where multi-timeframe percent_change_* fields actually live for a
-  // given token. /v1/assets returned [] for fresh memecoins —
-  // narrowing down which endpoint TWAK uses for per-token 7d data.
-  const ca2 = (url.searchParams.get("ca") || "").trim();
+  // Isolate WHY all market/asset/search endpoints returned empty for
+  // CAKE — by probing known-working docs examples alongside our actual
+  // token. If even the exact docs example (ETH native c60 + USDC
+  // checksummed) returns empty, our API key has no market access and
+  // we need a different data source. If docs examples work but BSC
+  // tokens don't, it's case/format/coverage specific to BSC.
   const wrap = (p) => p.status === "fulfilled"
     ? { ok: true, response: p.value }
     : { ok: false, error: String(p.reason?.message || p.reason) };
-  const [coinstatusRes, assetsRes, searchRes, tickersRes] = await Promise.allSettled([
-    twakGet(`/v2/coinstatus/${assetId}`, {
-      version: "2",
-      include_security_info: "true",
-      include_solana_security_info: "true",
-    }, env),
+
+  // EIP-55 checksum CAKE address for case-sensitivity probe
+  const CAKE_CHECKSUM = "c714_t0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82";
+  // The exact USDC asset ID from /v2/market/tickers docs example
+  const USDC_ETH_DOCS = "c60_t0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+
+  const [
+    coinstatusOurs, assetsOurs, tickersOurs,
+    tickersEthNative, tickersBnbNative, tickersUsdcDocs,
+    tickersCakeChecksum,
+    listingsBnb,
+    searchByCaUpper,
+  ] = await Promise.allSettled([
+    // Our token, current behaviour
+    twakGet(`/v2/coinstatus/${assetId}`, { version: "2", include_security_info: "true", include_solana_security_info: "true" }, env),
     twakGet(`/v1/assets`, { assetId }, env),
-    ca2
-      ? twakGet(`/v1/search/assets`, { query: ca2, networks: String(twakChainCoinId(chain) || "") }, env)
-      : Promise.resolve(null),
     twakPost(`/v2/market/tickers`, { currency: "USD", assets: [assetId] }, env),
+    // Native chain assets — isolate if BSC works at all vs ETH
+    twakPost(`/v2/market/tickers`, { currency: "USD", assets: ["c60"] }, env),
+    twakPost(`/v2/market/tickers`, { currency: "USD", assets: ["c714"] }, env),
+    // The exact docs example — if THIS returns empty, our key has no market access
+    twakPost(`/v2/market/tickers`, { currency: "USD", assets: [USDC_ETH_DOCS] }, env),
+    // CAKE with EIP-55 checksum — isolate case sensitivity
+    twakPost(`/v2/market/tickers`, { currency: "USD", assets: [CAKE_CHECKSUM] }, env),
+    // Listings endpoint — does it work for BSC ecosystem at all
+    twakGet(`/v1/assets/listings`, { version: "27", currency: "USD", category_id: "bnb-ecosystem", sort: "mcap", limit: "5" }, env),
+    // Search using uppercase CA (some indexes care)
+    twakGet(`/v1/search/assets`, { query: "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82", networks: "714" }, env),
   ]);
+
   return json({
-    assetId,
-    chain,
-    coinstatus_v2: wrap(coinstatusRes),
-    assets_v1: wrap(assetsRes),
-    search_v1: wrap(searchRes),
-    tickers_v2: wrap(tickersRes),
+    assetId, chain,
+    note: "If tickersUsdcDocs is empty → API key has no market access. If tickersBnbNative is empty but tickersEthNative isn't → BSC not in our tier. If tickersCakeChecksum has data but tickersOurs doesn't → case sensitivity.",
+    coinstatusOurs: wrap(coinstatusOurs),
+    assetsOurs: wrap(assetsOurs),
+    tickersOurs: wrap(tickersOurs),
+    tickersEthNative: wrap(tickersEthNative),
+    tickersBnbNative: wrap(tickersBnbNative),
+    tickersUsdcDocs: wrap(tickersUsdcDocs),
+    tickersCakeChecksum: wrap(tickersCakeChecksum),
+    listingsBnb: wrap(listingsBnb),
+    searchByCaUpper: wrap(searchByCaUpper),
   });
 }
 
