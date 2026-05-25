@@ -1432,6 +1432,36 @@
   border-color: rgba(239, 68, 68, 0.30);
 }
 
+/* Share buttons — opens X intent with a prefilled tweet linking
+   to trustyai.tech/share?ca=... Available in both the free hover
+   tooltip (compact) and the paid panel (prominent). */
+.trusty-tt-share {
+  display: block; width: 100%; margin: 8px 0 6px;
+  padding: 7px 10px; background: rgba(91,156,247,0.10);
+  border: 1px solid rgba(91,156,247,0.30); border-radius: 6px;
+  color: #c8d2e0; font: inherit; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.3px; cursor: pointer; text-align: center;
+}
+.trusty-tt-share:hover {
+  background: rgba(91,156,247,0.18);
+  color: #f5f5f7;
+}
+
+.trusty-pp-share {
+  display: flex; width: 100%; align-items: center; justify-content: center;
+  gap: 8px; margin: 6px 0 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(91,156,247,0.18), rgba(91,156,247,0.08));
+  border: 1px solid rgba(91,156,247,0.35); border-radius: 10px;
+  color: #f5f5f7; font: inherit; font-size: 14px; font-weight: 800;
+  letter-spacing: 0.3px; cursor: pointer; text-align: center;
+}
+.trusty-pp-share:hover {
+  background: linear-gradient(135deg, rgba(91,156,247,0.30), rgba(91,156,247,0.12));
+}
+.trusty-pp-share-icon { font-size: 16px; }
+.trusty-pp-share-text { }
+
 /* Topaz Dex section — paid-panel only. Two-line block: pool data /
    CTA on the second line. Green dot in section title when pool
    exists, gray dot when not listed. */

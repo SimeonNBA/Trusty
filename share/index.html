@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trusty AI Safety Scan — BNB Chain token scanner</title>
+  <meta name="description" content="A free 1-click safety scanner for BNB Chain tokens. Honeypot detection, LP-lock check, ownership status, social signals — all in your X timeline." />
+
+  <!-- Open Graph / Twitter card -->
+  <meta property="og:title" content="Trusty AI — BNB Chain Safety Scanner" />
+  <meta property="og:description" content="Scan any BNB Chain token in 1 click. Honeypot detection, LP-lock, ownership, social signals — straight in your X timeline." />
+  <meta property="og:image" content="https://trustyai.tech/assets/mascot-hero.png" />
+  <meta property="og:url" content="https://trustyai.tech/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Trusty AI — BNB Chain Safety Scanner" />
+  <meta name="twitter:description" content="Scan any BNB Chain token in 1 click — honeypot, LP-lock, ownership and more." />
+  <meta name="twitter:image" content="https://trustyai.tech/assets/mascot-hero.png" />
+
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --panel: #111827;
+      --panel-border: #233247;
+      --text: #f5f5f7;
+      --muted: #8b95a8;
+      --accent: #5b9cf7;
+      --good: #22C55E;
+      --bad: #EF4444;
+      --warn: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      line-height: 1.5;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px; }
+    .top-back {
+      display: inline-block; font-size: 13px; color: var(--muted);
+      margin-bottom: 24px; letter-spacing: 0.4px;
+    }
+    .top-back:hover { color: var(--text); text-decoration: none; }
+
+    /* ── Card ── */
+    .scan-card {
+      background: var(--panel); border: 1px solid var(--panel-border);
+      border-radius: 14px; padding: 22px 24px; margin-top: 6px;
+    }
+    .verdict-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .verdict-tag {
+      font-size: 18px; font-weight: 800; letter-spacing: 0.3px;
+    }
+    .verdict-tag.ape   { color: var(--good); }
+    .verdict-tag.caution { color: var(--warn); }
+    .verdict-tag.run   { color: var(--bad); }
+    .verdict-tag.pending { color: var(--muted); }
+    .score {
+      font-size: 24px; font-weight: 800; color: var(--text);
+    }
+    .score-suffix { font-size: 14px; color: var(--muted); font-weight: 600; }
+
+    .symbol-line {
+      font-size: 18px; font-weight: 800; margin-bottom: 12px;
+    }
+    .chain-pill {
+      display: inline-block; font-size: 10px; padding: 2px 6px;
+      border-radius: 3px; background: rgba(99,130,184,0.15);
+      letter-spacing: 0.8px; text-transform: uppercase; font-weight: 700;
+      color: var(--muted); margin-left: 4px; vertical-align: middle;
+    }
+
+    /* ── Market grid ── */
+    .market-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-bottom: 16px;
+    }
+    .market-cell {
+      background: rgba(99,130,184,0.06); border: 1px solid var(--panel-border);
+      border-radius: 8px; padding: 10px 12px; text-align: center;
+    }
+    .market-num { font-size: 16px; font-weight: 800; }
+    .market-lbl {
+      font-size: 9px; color: var(--muted); margin-top: 3px;
+      letter-spacing: 1.2px; text-transform: uppercase; font-weight: 700;
+    }
+
+    /* ── Checks ── */
+    .check-list { list-style: none; margin: 0; padding: 0; }
+    .check-item {
+      display: flex; align-items: center; gap: 8px; padding: 6px 0;
+      font-size: 13px; border-bottom: 1px solid rgba(99,130,184,0.05);
+    }
+    .check-item:last-child { border-bottom: none; }
+    .check-icon { width: 16px; text-align: center; }
+    .check-icon.ok { color: var(--good); }
+    .check-icon.bad { color: var(--bad); }
+
+    /* ── CTA ── */
+    .cta {
+      margin-top: 20px; padding: 18px; text-align: center;
+      background: linear-gradient(135deg, rgba(91,156,247,0.14), rgba(91,156,247,0.04));
+      border: 1px solid rgba(91,156,247,0.25); border-radius: 12px;
+    }
+    .cta-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+    .cta-sub { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+    .cta-btn {
+      display: inline-block; background: var(--accent); color: #fff;
+      padding: 10px 20px; border-radius: 8px; font-weight: 800;
+      font-size: 14px; letter-spacing: 0.3px; text-decoration: none;
+    }
+    .cta-btn:hover { opacity: 0.92; text-decoration: none; }
+
+    /* ── Empty / loading ── */
+    .empty, .loading, .error {
+      padding: 28px; text-align: center; color: var(--muted);
+      font-size: 13px;
+    }
+    .error { color: var(--bad); }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 26px; padding-top: 16px;
+      border-top: 1px solid var(--panel-border);
+      font-size: 12px; color: var(--muted); text-align: center;
+    }
+    .ca-line {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 11px; color: var(--muted);
+      margin-top: 10px; word-break: break-all;
+    }
+    .ca-line a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="/" class="top-back">← Back to trustyai.tech</a>
+
+    <h1 style="font-size:24px;margin:0 0 8px;letter-spacing:-0.3px;">
+      🛡️ Shared Scan
+    </h1>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 20px;">
+      Someone scanned a token with Trusty AI and shared the result. Here's what they saw.
+    </p>
+
+    <div id="content" class="scan-card">
+      <div class="loading">Loading scan…</div>
+    </div>
+
+    <div class="cta">
+      <div class="cta-title">Scan any BNB Chain token in 1 click</div>
+      <div class="cta-sub">Install the free Trusty AI extension for Chrome — never get rugged again.</div>
+      <a class="cta-btn" href="https://chromewebstore.google.com/" target="_blank" rel="noopener">
+        Install the extension →
+      </a>
+    </div>
+
+    <div class="footer">
+      <a href="/">trustyai.tech</a>
+      &nbsp;·&nbsp;
+      <a href="/receipts/">Weekly receipts</a>
+      &nbsp;·&nbsp;
+      <a href="https://x.com/Trusty_BSC" target="_blank" rel="noopener">Follow on X</a>
+    </div>
+  </div>
+
+  <script>
+    /*
+      Share-result viewer. Reads ?ca=...&chain=... from the URL,
+      fetches /api/scan, renders the result. Independent of the
+      extension — anyone can land here from a tweet without
+      having Trusty installed.
+    */
+    const API_BASE = "https://api.trustyai.tech";
+
+    function el(tag, attrs, ...children) {
+      const e = document.createElement(tag);
+      if (attrs) for (const k in attrs) {
+        if (k === "className") e.className = attrs[k];
+        else if (k === "html") e.innerHTML = attrs[k];
+        else e.setAttribute(k, attrs[k]);
+      }
+      for (const c of children) {
+        if (c == null) continue;
+        if (typeof c === "string") e.appendChild(document.createTextNode(c));
+        else e.appendChild(c);
+      }
+      return e;
+    }
+
+    function getParam(name) {
+      const u = new URL(window.location.href);
+      return u.searchParams.get(name) || "";
+    }
+
+    function explorerUrl(chain, ca) {
+      switch ((chain || "").toLowerCase()) {
+        case "bsc": case "bnb": return "https://bscscan.com/token/" + ca;
+        case "ethereum": case "eth": return "https://etherscan.io/token/" + ca;
+        case "base": return "https://basescan.org/token/" + ca;
+        case "polygon": return "https://polygonscan.com/token/" + ca;
+        case "solana": case "sol": return "https://solscan.io/token/" + ca;
+      }
+      return "#";
+    }
+
+    async function loadScan() {
+      const ca = getParam("ca");
+      const chain = getParam("chain") || "bsc";
+      const content = document.getElementById("content");
+
+      if (!ca) {
+        content.innerHTML = '<div class="empty">No token specified. <a href="/">Go to homepage →</a></div>';
+        return;
+      }
+
+      try {
+        const r = await fetch(API_BASE + "/api/scan?ca=" + encodeURIComponent(ca) + "&chain=" + encodeURIComponent(chain));
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const data = await r.json();
+        renderScan(data, ca, chain);
+      } catch (e) {
+        content.innerHTML = '<div class="error">Could not load this scan: ' + e.message + '</div>';
+      }
+    }
+
+    function renderScan(data, ca, chain) {
+      const content = document.getElementById("content");
+      content.innerHTML = "";
+
+      const verdict = (data.verdict || "PENDING").toUpperCase();
+      const verdictClass = verdict.toLowerCase();
+      const score = (data.score != null) ? data.score : "?";
+      const symbol = data.symbol || "?";
+      const md = data.marketData || {};
+
+      // Verdict + score row
+      content.appendChild(
+        el("div", { className: "verdict-row" },
+          el("span", { className: "verdict-tag " + verdictClass }, verdict),
+          el("span", { className: "score" }, String(score), el("span", { className: "score-suffix" }, "/100"))
+        )
+      );
+
+      // Symbol + chain
+      content.appendChild(
+        el("div", { className: "symbol-line" },
+          symbol,
+          el("span", { className: "chain-pill" }, (chain || "").toUpperCase())
+        )
+      );
+
+      // Market grid (MC + Vol)
+      content.appendChild(
+        el("div", { className: "market-grid" },
+          el("div", { className: "market-cell" },
+            el("div", { className: "market-num" }, md.mcap || "—"),
+            el("div", { className: "market-lbl" }, "Market Cap")),
+          el("div", { className: "market-cell" },
+            el("div", { className: "market-num" }, md.volume24h || "—"),
+            el("div", { className: "market-lbl" }, "Vol 24h"))
+        )
+      );
+
+      // Checks
+      const checks = Array.isArray(data.checks) ? data.checks : [];
+      if (checks.length) {
+        const ul = el("ul", { className: "check-list" });
+        for (const c of checks) {
+          ul.appendChild(
+            el("li", { className: "check-item" },
+              el("span", { className: "check-icon " + (c.ok ? "ok" : "bad") }, c.ok ? "✓" : "✗"),
+              el("span", {}, c.label || "")
+            )
+          );
+        }
+        content.appendChild(ul);
+      }
+
+      // CA line
+      content.appendChild(
+        el("div", { className: "ca-line" },
+          "Contract: ",
+          el("a", { href: explorerUrl(chain, ca), target: "_blank", rel: "noopener" }, ca)
+        )
+      );
+    }
+
+    loadScan();
+  </script>
+</body>
+</html>

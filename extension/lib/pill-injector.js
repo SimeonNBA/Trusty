@@ -277,6 +277,32 @@
     };
   }
 
+  // Open X (Twitter) intent with a prefilled tweet sharing the scan
+  // result. Tweet contains the token symbol + score + verdict emoji
+  // and links to trustyai.tech/share?ca=...&chain=... — anyone
+  // clicking the link sees the full scan result rendered on the site.
+  // Works for both free and paid users; share button appears on the
+  // free hover tooltip and inside the paid panel.
+  function openShareIntent(result) {
+    if (!result) return;
+    const symRaw = String(result.symbol || "?");
+    const sym = symRaw.startsWith("$") ? symRaw : ("$" + symRaw);
+    const ca = encodeURIComponent(result.ca || "");
+    const chain = encodeURIComponent(result.chain || "bsc");
+    const score = (result.score != null) ? result.score : "?";
+    const verdict = String(result.verdict || "").toUpperCase();
+    const emoji = verdict === "APE" ? "✅"
+                : verdict === "RUN" ? "🚩"
+                : verdict === "CAUTION" ? "⚠️"
+                : "";
+    const shareUrl = "https://trustyai.tech/share?ca=" + ca + "&chain=" + chain;
+    const tweet =
+      "I just scanned " + sym + " with @Trusty_BSC — score " + score + "/100 " + emoji +
+      "\n\nCheck any BNB Chain token in 1 click:\n" + shareUrl;
+    const intentUrl = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(tweet);
+    window.open(intentUrl, "_blank", "noopener,noreferrer");
+  }
+
   // Render one sub-score row. data-trusty-metric-key links the row
   // to METRIC_DATA so the click handler can open the right modal.
   // data-trusty-sub-value carries the numeric score so the modal
@@ -503,6 +529,12 @@
         '<span class="trusty-tt-tease-text">KOL activity · X velocity · sentiment</span>' +
         '<span class="trusty-tt-tease-lock">🔒</span>' +
       '</div>' +
+      // Share button — free users get the share flow too. Click opens
+      // an X intent prefilled with the symbol + score + a link to
+      // trustyai.tech/share?ca=... Click bound after innerHTML below.
+      '<button type="button" class="trusty-tt-share" data-trusty-share="1">' +
+        '<span>📤 Share this scan</span>' +
+      '</button>' +
       '<div class="trusty-tt-footer">' +
         "<strong>Upgrade for $5/mo or $50/yr</strong>" +
       '</div>'
@@ -546,6 +578,16 @@
       );
     } else {
       tt.innerHTML = renderTooltipHtml(pill._trustyResult);
+      // Bind share button — must re-bind each render because innerHTML
+      // replaces the DOM. Captures the current result via closure.
+      const shareBtn = tt.querySelector(".trusty-tt-share");
+      if (shareBtn) {
+        const resultForShare = pill._trustyResult;
+        shareBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          openShareIntent(resultForShare);
+        });
+      }
     }
     positionTooltip(pill, tt);
     tt.classList.add("show");
@@ -1408,6 +1450,13 @@
           '</div>'
         : '') +
 
+      // Share button — opens X intent with prefilled scan summary +
+      // link to trustyai.tech/share?ca=... Click bound after appendChild.
+      '<button type="button" class="trusty-pp-share" data-trusty-share="1">' +
+        '<span class="trusty-pp-share-icon">📤</span>' +
+        '<span class="trusty-pp-share-text">Share this scan on X</span>' +
+      '</button>' +
+
       '<div class="trusty-pp-footer">' +
         'Open the full report on ' +
         '<a href="https://trustyai.tech/?ca=' + encodeURIComponent(ca) + '&chain=' + encodeURIComponent(chain) + '&utm_source=extension_paid" target="_blank" rel="noopener">trustyai.tech →</a>' +
@@ -1416,6 +1465,17 @@
     document.body.appendChild(panel);
     panel.querySelector(".trusty-pp-close").addEventListener("click", closePaidPanel);
     document.documentElement.style.overflow = "hidden";
+
+    // Share button — opens X intent. Bound here (not inline) so we
+    // can capture the current result object via closure for the
+    // tweet template.
+    const shareBtn = panel.querySelector(".trusty-pp-share");
+    if (shareBtn) {
+      shareBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openShareIntent(result);
+      });
+    }
 
     // Free users: the inline upgrade card is informational (no click
     // action) because subscription only happens in the extension popup.
