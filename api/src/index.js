@@ -756,12 +756,66 @@ async function fetchTwakChange(ca, chain, env, opts) {
 // further caching at our layer keeps the subgraph quota happy.
 const TOPAZ_V3_URL = "https://api.goldsky.com/api/public/project_cmgzljqwl006c5np2gnao4li4/subgraphs/topaz-v3/v0.0.1/gn";
 const TOPAZ_V2_URL = "https://api.goldsky.com/api/public/project_cmgzljqwl006c5np2gnao4li4/subgraphs/topaz-v2/v0.0.3/gn";
+const TOPAZ_STATS_URL = "https://www.topazdex.com/api/stats/pools";
+
+// Bulk-fetch all Topaz pool stats once per 15 min and cache an
+// {address → feeApr} map in KV. The Stats API doesn't accept a
+// per-address filter, so we pull the top 200 pools sorted by TVL
+// (covers all relevant pools given Topaz's current size) and look
+// up our pool address client-side.
+async function fetchTopazStatsPools(env) {
+  const cacheKey = `topaz-stats:v3:all-pools`;
+  if (env.SCAN_KV) {
+    try {
+      const cached = await env.SCAN_KV.get(cacheKey, "json");
+      if (cached) return cached;
+    } catch (_) {}
+  }
+  try {
+    const r = await fetch(`${TOPAZ_STATS_URL}?sort=tvl&limit=200`, {
+      headers: { "Accept": "application/json", "User-Agent": "trusty-ai/0.1" },
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    // Confirmed shape (probed live 2026-05-25): { ok: true, data: [...] }
+    // where each entry has poolAddress, feeApr (string), tvlUsd, etc.
+    // Keep the other wrapper fallbacks defensively in case the shape
+    // shifts in a future Stats API version.
+    const pools = Array.isArray(data?.data) ? data.data
+      : Array.isArray(data) ? data
+      : Array.isArray(data?.pools) ? data.pools
+      : Array.isArray(data?.docs) ? data.docs
+      : [];
+
+    const map = {};
+    for (const p of pools) {
+      // Stats API uses `poolAddress` for the contract; `id` is a
+      // numeric DB row id, not a contract address. Try poolAddress
+      // first to avoid the easy mismatch.
+      const addr = String(p.poolAddress || p.address || "").toLowerCase();
+      if (!/^0x[a-f0-9]{40}$/.test(addr)) continue;
+      // feeApr field name varies — accept both camelCase and snake_case.
+      const aprRaw = p.feeApr ?? p.fee_apr ?? p.apr ?? null;
+      const feeApr = (aprRaw !== null && aprRaw !== undefined && !isNaN(parseFloat(aprRaw)))
+        ? parseFloat(aprRaw) : null;
+      if (feeApr !== null) map[addr] = feeApr;
+    }
+    if (env.SCAN_KV) {
+      try {
+        await env.SCAN_KV.put(cacheKey, JSON.stringify(map), { expirationTtl: 15 * 60 });
+      } catch (_) {}
+    }
+    return map;
+  } catch (_) {
+    return null;
+  }
+}
 
 async function fetchTopazPool(ca, env) {
   const caLower = String(ca || "").toLowerCase();
   if (!/^0x[a-f0-9]{40}$/.test(caLower)) return null;
 
-  const cacheKey = `topaz:v1:bsc:${caLower}`;
+  const cacheKey = `topaz:v3:bsc:${caLower}`;
   if (env.SCAN_KV) {
     try {
       const cached = await env.SCAN_KV.get(cacheKey, "json");
@@ -827,9 +881,20 @@ async function fetchTopazPool(ca, env) {
   } else {
     const totalTvl = pools.reduce((sum, p) => sum + p.tvl, 0);
     const top = pools.sort((a, b) => b.tvl - a.tvl)[0];
+    // Enrich with fee APR for the top pool — sourced from Topaz's
+    // Stats API (added in v2.5.0). Null if the pool isn't in the
+    // bulk-cached stats map (rare; means very low TVL or new pool).
+    let feeApr = null;
+    try {
+      const statsMap = await fetchTopazStatsPools(env);
+      if (statsMap && typeof statsMap[top.id] === "number") {
+        feeApr = statsMap[top.id];
+      }
+    } catch (_) { /* stats lookup is best-effort */ }
     result = {
       hasPool: true,
       tvl: fmtUsd(totalTvl),
+      feeApr,
       poolAddress: top.id,
     };
   }
