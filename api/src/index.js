@@ -740,6 +740,108 @@ async function fetchTwakChange(ca, chain, env, opts) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//   TOPAZ DEX — public Goldsky subgraph (v2 Solidly + v3 Slipstream)
+// ═══════════════════════════════════════════════════════════════════
+// No auth required. Returns { hasPool: true, tvl: "$40.8K",
+// poolAddress: "0x..." } when at least one Topaz pool exists with
+// non-zero TVL for this CA, or { hasPool: false } otherwise. BSC-only
+// — Topaz isn't deployed on other chains.
+//
+// We query both v2 and v3 in parallel; each query is a single GraphQL
+// request with two aliased selections (token0 + token1 matches) so
+// we get all pools where the CA appears on either side. TVL is summed
+// across all active pools, abandoned pools (TVL = 0) are filtered out.
+// 5-min KV cache — pool data updates within the subgraph indexer lag,
+// further caching at our layer keeps the subgraph quota happy.
+const TOPAZ_V3_URL = "https://api.goldsky.com/api/public/project_cmgzljqwl006c5np2gnao4li4/subgraphs/topaz-v3/v0.0.1/gn";
+const TOPAZ_V2_URL = "https://api.goldsky.com/api/public/project_cmgzljqwl006c5np2gnao4li4/subgraphs/topaz-v2/v0.0.3/gn";
+
+async function fetchTopazPool(ca, env) {
+  const caLower = String(ca || "").toLowerCase();
+  if (!/^0x[a-f0-9]{40}$/.test(caLower)) return null;
+
+  const cacheKey = `topaz:v1:bsc:${caLower}`;
+  if (env.SCAN_KV) {
+    try {
+      const cached = await env.SCAN_KV.get(cacheKey, "json");
+      if (cached) return cached;
+    } catch (_) {}
+  }
+
+  // Single GraphQL doc per subgraph with token0 + token1 aliased
+  // queries — TVL field name differs between v2 (reserveUSD) and v3
+  // (totalValueLockedUSD).
+  const v3Body = JSON.stringify({
+    query: `{
+      t0: pools(where: { token0: "${caLower}" }, first: 50) { id totalValueLockedUSD }
+      t1: pools(where: { token1: "${caLower}" }, first: 50) { id totalValueLockedUSD }
+    }`,
+  });
+  const v2Body = JSON.stringify({
+    query: `{
+      t0: pairs(where: { token0: "${caLower}" }, first: 50) { id reserveUSD }
+      t1: pairs(where: { token1: "${caLower}" }, first: 50) { id reserveUSD }
+    }`,
+  });
+
+  const post = async (url, body) => {
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": "trusty-ai/0.1" },
+        body,
+      });
+      if (!r.ok) return null;
+      const j = await r.json();
+      return j?.data || null;
+    } catch (_) { return null; }
+  };
+
+  const [v3Data, v2Data] = await Promise.all([
+    post(TOPAZ_V3_URL, v3Body),
+    post(TOPAZ_V2_URL, v2Body),
+  ]);
+
+  // Merge, dedupe by pool id, drop abandoned (TVL = 0).
+  const seen = new Set();
+  const pools = [];
+  const collect = (arr, tvlField) => {
+    if (!Array.isArray(arr)) return;
+    for (const p of arr) {
+      if (!p?.id) continue;
+      const id = String(p.id).toLowerCase();
+      if (seen.has(id)) continue;
+      const tvl = parseFloat(p[tvlField] || 0) || 0;
+      if (tvl <= 0) continue;
+      seen.add(id);
+      pools.push({ id, tvl });
+    }
+  };
+  if (v3Data) { collect(v3Data.t0, "totalValueLockedUSD"); collect(v3Data.t1, "totalValueLockedUSD"); }
+  if (v2Data) { collect(v2Data.t0, "reserveUSD"); collect(v2Data.t1, "reserveUSD"); }
+
+  let result;
+  if (pools.length === 0) {
+    result = { hasPool: false };
+  } else {
+    const totalTvl = pools.reduce((sum, p) => sum + p.tvl, 0);
+    const top = pools.sort((a, b) => b.tvl - a.tvl)[0];
+    result = {
+      hasPool: true,
+      tvl: fmtUsd(totalTvl),
+      poolAddress: top.id,
+    };
+  }
+
+  if (env.SCAN_KV) {
+    try {
+      await env.SCAN_KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 5 * 60 });
+    } catch (_) {}
+  }
+  return result;
+}
+
 // Adapter — converts a single TWAK ticker entry into the same shape
 // fetchDexRaw returns. Lets the rest of the pipeline treat the data
 // identically without branching everywhere. Liquidity + pairCreatedAt
@@ -914,7 +1016,8 @@ async function scanTokenEvm(ca, chain, env, opts) {
     if (detected) resolvedChain = detected;
   }
 
-  const [gpRes, dxRes, fmRes, chRes] = await Promise.allSettled([
+  const isBsc = resolvedChain === "bsc" || resolvedChain === "bnb";
+  const [gpRes, dxRes, fmRes, chRes, tpRes] = await Promise.allSettled([
     (opts && opts.forcePending) ? Promise.resolve(null) : fetchGoPlus(chainId(resolvedChain), ca, env),
     fetchDex(ca, resolvedChain === "ethereum" ? "ethereum"
                 : resolvedChain === "base"    ? "base"
@@ -922,11 +1025,15 @@ async function scanTokenEvm(ca, chain, env, opts) {
                 : "bsc", env),
     fetchFourMemeOrigin(ca, resolvedChain, env),
     fetchTwakChange(ca, resolvedChain, env, opts),
+    // Topaz subgraph lookup — BSC only. Returns { hasPool, tvl,
+    // poolAddress } or { hasPool: false } or null for non-BSC.
+    isBsc ? fetchTopazPool(ca, env) : Promise.resolve(null),
   ]);
   const g = gpRes.status === "fulfilled" ? gpRes.value : null;
   let   d = dxRes.status === "fulfilled" ? dxRes.value : null;
   const fm = fmRes.status === "fulfilled" ? fmRes.value : null;
   const twChange = chRes.status === "fulfilled" ? chRes.value : null;
+  const topaz = tpRes.status === "fulfilled" ? tpRes.value : null;
 
   // Market-data fallback: when Dexscreener returns nothing (throttle
   // or unindexed token) try the secondary gateway. Sequential so we
@@ -982,6 +1089,7 @@ async function scanTokenEvm(ca, chain, env, opts) {
       activity: { tweets24h: 0, deltaPct: 0, sentiment: "—", coordShill: false },
       marketData: marketData(d, null, twChange),
       _twak: twakDiagFor(twakResult, env),
+      topaz: topaz,
     };
     if (!realSym) out.symbolFallback = true;
     if (fm && fm.launchedOn) out.launchedOn = fm.launchedOn;
@@ -1012,6 +1120,7 @@ async function scanTokenEvm(ca, chain, env, opts) {
   const shape = baseScanShape(ca, resolvedChain, score, verdict, symbol, name, checks, paidChecks, marketData(d, g, twChange), fm);
   if (symbolFallback) shape.symbolFallback = true;
   shape.subScores = subScores;
+  shape.topaz = topaz;
   return shape;
 }
 
