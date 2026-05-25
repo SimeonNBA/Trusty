@@ -101,6 +101,10 @@ export default {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       return handleAdminListCodes(request, env);
     }
+    if (url.pathname === "/api/admin/publish-receipt") {
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      return handleAdminPublishReceipt(url, request, env);
+    }
     if (url.pathname === "/api/admin/revoke-code") {
       if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
       return handleAdminRevokeCode(request, env);
@@ -3016,6 +3020,143 @@ async function handleAdminStats(request, env) {
       fullyUsed: codesFullyUsed,
     },
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//   /api/admin/publish-receipt — weekly receipt generator
+// ═══════════════════════════════════════════════════════════════════
+// Reads every receipt:scan:* snapshot from KV, re-fetches current Dex
+// data for each CA, and categorises:
+//   - hits[] : entries where verdictAtScan === "RUN" (we flagged it)
+//   - rugged[] : entries where MC OR liquidity dropped >= 80% since
+//                the snapshot; caughtByUs:true if it was also a RUN
+//
+// Read-only. Doesn't modify KV. Operator uploads the JSON to
+// Greenfield manually via dCellar. Admin-secret protected.
+async function handleAdminPublishReceipt(url, request, env) {
+  const secret = request.headers.get("x-admin-secret") || url.searchParams.get("admin");
+  if (!env.ADMIN_SECRET || secret !== env.ADMIN_SECRET) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  if (!env.SCAN_KV) return json({ error: "kv not configured" }, 503);
+
+  // List all receipt:scan: keys across all chains
+  const keys = [];
+  let cursor;
+  for (let i = 0; i < 5; i++) {
+    const page = await env.SCAN_KV.list({ prefix: "receipt:scan:", cursor, limit: 1000 });
+    keys.push(...page.keys.map(k => k.name));
+    if (page.list_complete || !page.cursor) break;
+    cursor = page.cursor;
+  }
+
+  // Read each snapshot in parallel
+  const snapshots = (await Promise.allSettled(
+    keys.map(k => env.SCAN_KV.get(k, "json"))
+  )).map(r => r.status === "fulfilled" ? r.value : null).filter(Boolean);
+
+  // Re-fetch current Dex data in batches of 10 to avoid burst-hammering
+  // Dexscreener. Per-snapshot timeout is bounded by fetchDex's existing
+  // retry logic — failed fetches just return null and we skip the rug
+  // computation for that CA.
+  async function currentFor(snap) {
+    try {
+      const chainForDex = snap.chain === "ethereum" ? "ethereum"
+                        : snap.chain === "base"     ? "base"
+                        : snap.chain === "polygon"  ? "polygon"
+                        : snap.chain === "solana"   ? "solana"
+                        : "bsc";
+      const d = await fetchDex(snap.ca, chainForDex, env);
+      if (!d) return null;
+      return {
+        mc: parseFloat(d.mcap || 0) || 0,
+        liquidity: parseFloat(d.liquidityUsd || 0) || 0,
+      };
+    } catch (_) { return null; }
+  }
+  const currents = [];
+  for (let i = 0; i < snapshots.length; i += 10) {
+    const chunk = snapshots.slice(i, i + 10);
+    const results = await Promise.allSettled(chunk.map(currentFor));
+    currents.push(...results.map(r => r.status === "fulfilled" ? r.value : null));
+  }
+
+  // Categorise
+  const hits = [];
+  const rugged = [];
+  for (let i = 0; i < snapshots.length; i++) {
+    const s = snapshots[i];
+    const c = currents[i];
+    const isHit = s.verdictAtScan === "RUN";
+
+    // MC drop. If current returned null (token gone from Dexscreener
+    // entirely), treat as 100% drop — strongest rug signal.
+    let mcDropPct = null, liqDropPct = null;
+    if (s.mcAtScan > 0) {
+      const curMc = c ? c.mc : 0;
+      mcDropPct = Math.max(0, Math.min(100, Math.round((1 - curMc / s.mcAtScan) * 100)));
+    }
+    if (s.liquidityAtScan > 0) {
+      const curLiq = c ? c.liquidity : 0;
+      liqDropPct = Math.max(0, Math.min(100, Math.round((1 - curLiq / s.liquidityAtScan) * 100)));
+    }
+    const isRugged = (mcDropPct !== null && mcDropPct >= 80)
+                  || (liqDropPct !== null && liqDropPct >= 80);
+
+    if (isHit) {
+      hits.push({
+        ca: s.ca,
+        symbol: s.symbol,
+        chain: s.chain,
+        flaggedAt: s.firstScannedAt,
+        scoreAtScan: s.scoreAtScan,
+        verdictAtScan: s.verdictAtScan,
+        mcAtScan: s.mcAtScan,
+        currentMc: c ? c.mc : 0,
+      });
+    }
+    if (isRugged) {
+      rugged.push({
+        ca: s.ca,
+        symbol: s.symbol,
+        chain: s.chain,
+        flaggedAt: s.firstScannedAt,
+        scoreAtScan: s.scoreAtScan,
+        verdictAtScan: s.verdictAtScan,
+        mcAtScan: s.mcAtScan,
+        currentMc: c ? c.mc : 0,
+        mcDropPct,
+        liquidityAtScan: s.liquidityAtScan,
+        currentLiquidity: c ? c.liquidity : 0,
+        liquidityDropPct: liqDropPct,
+        caughtByUs: isHit,
+      });
+    }
+  }
+
+  // Week label: ISO week of "now" (operator can override via ?week=).
+  const weekLabel = url.searchParams.get("week") || isoWeekLabel(new Date());
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setUTCDate(now.getUTCDate() - 7);
+
+  return json({
+    week: weekLabel,
+    dateRange: weekStart.toISOString().slice(0, 10) + " to " + now.toISOString().slice(0, 10),
+    generatedAt: now.toISOString(),
+    totalScans: snapshots.length,
+    hits: hits.sort((a, b) => a.scoreAtScan - b.scoreAtScan),
+    rugged: rugged.sort((a, b) => (b.mcDropPct || 0) - (a.mcDropPct || 0)),
+  });
+}
+
+// ISO week label like "2026-W22" — Thursday-anchored per ISO 8601.
+function isoWeekLabel(date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return d.getUTCFullYear() + "-W" + String(weekNum).padStart(2, "0");
 }
 
 async function handleAdminListCodes(request, env) {
