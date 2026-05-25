@@ -724,8 +724,16 @@ async function fetchTwakChange(ca, chain, env, opts) {
     }, env);
     const ticker = Array.isArray(data?.tickers) ? data.tickers[0] : null;
     if (!ticker) return null;
-    const h24 = typeof ticker.change_24h === "number" ? ticker.change_24h : null;
+    let h24 = typeof ticker.change_24h === "number" ? ticker.change_24h : null;
     if (h24 === null) return null;
+    // TWAK's change_24h scale depends on the upstream provider:
+    // - "coinmarketcap" (native assets) returns percent points (e.g.
+    //   BNB at 0.99 means +0.99%).
+    // - "cmcdex" (DEX-tracked tokens) returns raw decimal (e.g.
+    //   CAKE at -0.024 means -2.4%, not -0.024%).
+    // Observed directly via /api/twak-test. Scale up the cmcdex form
+    // so the extension receives percent points consistently.
+    if (ticker.provider === "cmcdex") h24 = h24 * 100;
     return { h24 };
   } catch (_) {
     return null;
