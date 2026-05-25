@@ -1186,6 +1186,7 @@ async function scanTokenEvm(ca, chain, env, opts) {
   if (symbolFallback) shape.symbolFallback = true;
   shape.subScores = subScores;
   shape.topaz = topaz;
+  await recordScanForReceipt(d, shape, env);
   return shape;
 }
 
@@ -1267,6 +1268,7 @@ async function scanTokenSolana(ca, chain, env, opts) {
   const shape = baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChecks, marketDataSolana(d, g, twChange));
   if (symbolFallback) shape.symbolFallback = true;
   shape.subScores = subScores;
+  await recordScanForReceipt(d, shape, env);
   return shape;
 }
 
@@ -1281,6 +1283,60 @@ function baseScanShape(ca, chain, score, verdict, symbol, name, checks, paidChec
   };
   if (origin && origin.launchedOn) out.launchedOn = origin.launchedOn;
   return out;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//   RECEIPT TRACKING — weekly digest source data
+// ═══════════════════════════════════════════════════════════════════
+// Side-effect of every scan with valid market data: store one snapshot
+// per (chain, ca) in KV with 8-day TTL. Snapshot is preserved from the
+// FIRST scan of the week (later scans of the same CA skip the write so
+// the "as we first saw it" baseline stays fixed).
+//
+// At weekly receipt time, /api/admin/publish-receipt lists every
+// receipt:scan:* key, re-fetches current Dex data for each CA, and
+// computes whether MC or liquidity dropped enough to count as rugged.
+//
+// Records every scan regardless of verdict — at receipt time we
+// surface RUN verdicts as "hits" and MC/liquidity drops as "rugged",
+// with caughtByUs:true when the two overlap. Tracks all 5 chains we
+// scan (BSC, ETH, Base, Polygon, Solana).
+//
+// KV cost: ~1 write per unique CA scanned per week. At 5 users this
+// is well within Cloudflare's free tier (1000 writes/day).
+async function recordScanForReceipt(d, scanResult, env) {
+  if (!env.SCAN_KV) return;
+  if (!d || !scanResult) return;
+  const { ca, chain, score, verdict, symbol } = scanResult;
+  if (!ca || !chain) return;
+  // Skip scans without valid market data — we can't compute "rugged"
+  // later without a baseline mc to compare against.
+  const mc = parseFloat(d.mcap || 0) || 0;
+  const liquidity = parseFloat(d.liquidityUsd || 0) || 0;
+  if (mc <= 0) return;
+
+  const key = `receipt:scan:${chain}:${ca}`;
+  try {
+    // Write only if no entry exists — preserve the first-seen snapshot.
+    // Read-then-write race is benign: two concurrent first-scans of the
+    // same CA could both write, but they'd write identical "as we first
+    // saw it" data, so the dedupe end-state is correct either way.
+    const existing = await env.SCAN_KV.get(key);
+    if (existing) return;
+    const record = {
+      ca, chain, symbol,
+      firstScannedAt: new Date().toISOString(),
+      scoreAtScan: score,
+      verdictAtScan: verdict,
+      mcAtScan: mc,
+      liquidityAtScan: liquidity,
+    };
+    await env.SCAN_KV.put(key, JSON.stringify(record), {
+      expirationTtl: 8 * 24 * 60 * 60, // 8 days — 7-day window with buffer
+    });
+  } catch (_) {
+    // Tracking is best-effort; never let it break a scan.
+  }
 }
 
 // ── GoPlus token-security ──
