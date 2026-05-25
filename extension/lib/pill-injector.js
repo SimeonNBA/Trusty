@@ -1365,11 +1365,20 @@
         const topaz = result.topaz;
         if (!topaz) return '';
         if (topaz.hasPool) {
+          // Fee APR line — appears only when the worker returned a
+          // non-null value from Topaz's Stats API for this pool.
+          // "for LPs" qualifier so users don't misread the % as
+          // a buy-and-hold yield on the token itself.
+          const aprText = (typeof topaz.feeApr === "number" && topaz.feeApr > 0)
+            ? ' · ' + (topaz.feeApr >= 10
+                ? Math.round(topaz.feeApr)
+                : Math.round(topaz.feeApr * 10) / 10) + '% fee APR for LPs'
+            : '';
           return (
             '<div class="trusty-pp-section trusty-pp-topaz">' +
               '<div class="trusty-pp-section-title">🟢 Topaz Dex</div>' +
               '<div class="trusty-pp-topaz-body">' +
-                '<span class="trusty-pp-topaz-tvl">' + (topaz.tvl || "—") + ' TVL</span>' +
+                '<span class="trusty-pp-topaz-tvl">' + (topaz.tvl || "—") + ' TVL' + aprText + '</span>' +
                 '<a class="trusty-pp-topaz-link" href="https://www.topazdex.com/" target="_blank" rel="noopener">Trade or LP on Topaz →</a>' +
               '</div>' +
             '</div>'
