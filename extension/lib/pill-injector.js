@@ -1356,6 +1356,36 @@
         '</div>' +
       '</div>' +
 
+      (function () {
+        // Topaz Dex section — surfaces whether the token has a pool on
+        // Topaz (BSC-only DEX partner). If yes: green dot, TVL, deep
+        // link to topazdex.com. If no: gray dot, "reach out" link to
+        // Topaz's Telegram. Hidden entirely for non-BSC scans (the
+        // worker returns null for those).
+        const topaz = result.topaz;
+        if (!topaz) return '';
+        if (topaz.hasPool) {
+          return (
+            '<div class="trusty-pp-section trusty-pp-topaz">' +
+              '<div class="trusty-pp-section-title">🟢 Topaz Dex</div>' +
+              '<div class="trusty-pp-topaz-body">' +
+                '<span class="trusty-pp-topaz-tvl">' + (topaz.tvl || "—") + ' TVL</span>' +
+                '<a class="trusty-pp-topaz-link" href="https://www.topazdex.com/" target="_blank" rel="noopener">Trade or LP on Topaz →</a>' +
+              '</div>' +
+            '</div>'
+          );
+        }
+        return (
+          '<div class="trusty-pp-section trusty-pp-topaz">' +
+            '<div class="trusty-pp-section-title">⚪ Topaz Dex</div>' +
+            '<div class="trusty-pp-topaz-body">' +
+              '<span class="trusty-pp-topaz-empty">Not listed</span>' +
+              '<a class="trusty-pp-topaz-link" href="https://t.me/TopazDex" target="_blank" rel="noopener">Reach out to Topaz Dex →</a>' +
+            '</div>' +
+          '</div>'
+        );
+      })() +
+
       buildTradeRow(result.chain || chain, ca) +
 
       (blurred

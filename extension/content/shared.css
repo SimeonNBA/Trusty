@@ -1432,6 +1432,38 @@
   border-color: rgba(239, 68, 68, 0.30);
 }
 
+/* Topaz Dex section — paid-panel only. Two-line block: pool data /
+   CTA on the second line. Green dot in section title when pool
+   exists, gray dot when not listed. */
+.trusty-pp-topaz-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  flex-wrap: wrap;
+}
+.trusty-pp-topaz-tvl {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f5f5f7;
+}
+.trusty-pp-topaz-empty {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b95a8;
+}
+.trusty-pp-topaz-link {
+  font-size: 12px;
+  font-weight: 700;
+  color: #5b9cf7;
+  text-decoration: none;
+  letter-spacing: 0.2px;
+}
+.trusty-pp-topaz-link:hover {
+  text-decoration: underline;
+}
+
 /* Tweet-preview popover shown on KOL row hover */
 .trusty-kol-preview {
   position: fixed;
