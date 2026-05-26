@@ -556,6 +556,11 @@
       left = window.innerWidth - ttRect.width - margin;
     }
     if (left < margin) left = margin;
+    // Clamp top to viewport — if the tooltip is taller than what fits
+    // both above and below the pill, the header must stay visible.
+    // CSS `max-height: 100vh; overflow-y: auto` lets the body scroll
+    // internally so the user still reaches the bottom.
+    if (top < margin) top = margin;
 
     tt.style.top = top + "px";
     tt.style.left = left + "px";
