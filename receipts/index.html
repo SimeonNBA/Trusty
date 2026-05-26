@@ -53,6 +53,11 @@
       background: rgba(99,130,184,0.08); border: 1px solid var(--panel-border);
       border-radius: 999px; padding: 4px 10px; margin-top: 14px;
       letter-spacing: 0.4px; text-transform: uppercase; font-weight: 700;
+      text-decoration: none; transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    .hero .greenfield-badge:hover {
+      background: rgba(99,130,184,0.16); border-color: var(--accent);
+      color: var(--text); text-decoration: none;
     }
 
     /* ── Cards ── */
@@ -163,7 +168,7 @@
         and which of them actually rugged. Stored permanently on BNB Greenfield — nobody can edit or delete it,
         not even us.
       </p>
-      <div class="greenfield-badge">⛓ Stored on BNB Greenfield</div>
+      <a class="greenfield-badge" href="https://greenfield.bnbchain.org/" target="_blank" rel="noopener">⛓ Stored on BNB Greenfield</a>
     </div>
 
     <div class="card">
@@ -340,10 +345,11 @@
       tablesEl.appendChild(renderRuggedTable(rugged));
       tablesEl.appendChild(renderHitsTable(hits));
 
-      // Permalink
+      // Permalink — labeled so users know clicking opens the raw JSON
+      // record on Greenfield (the immutable source, not a pretty view).
       permaEl.innerHTML = "";
-      permaEl.appendChild(document.createTextNode("Permanent link: "));
-      permaEl.appendChild(el("a", { href: fileUrl, target: "_blank", rel: "noopener" }, fileUrl));
+      permaEl.appendChild(document.createTextNode("Verifiable record on Greenfield: "));
+      permaEl.appendChild(el("a", { href: fileUrl, target: "_blank", rel: "noopener" }, "open raw JSON →"));
     }
 
     function renderRuggedTable(rugged) {
