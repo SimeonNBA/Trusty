@@ -517,6 +517,14 @@
   font-size: 11px;
   color: #f5f5f7;
 }
+/* When the tease row is wired to open the paid panel, give it the
+   affordances of a button — pointer cursor + a brighter hover state.
+   Discoverability hint that the panel exists. */
+.trusty-tt-tease-clickable { cursor: pointer; transition: background 0.12s, border-color 0.12s; }
+.trusty-tt-tease-clickable:hover {
+  background: linear-gradient(110deg, rgba(243, 186, 47, 0.16), rgba(34, 197, 94, 0.10));
+  border-color: rgba(243, 186, 47, 0.40);
+}
 .trusty-tt-tease-icon { font-size: 12px; line-height: 1; flex-shrink: 0; }
 .trusty-tt-tease-text {
   flex: 1 1 auto;

@@ -524,7 +524,10 @@
       changeHtml +
       subScoresHtml +
       '<ul class="trusty-tt-checks">' + checksHtml + '</ul>' +
-      '<div class="trusty-tt-tease">' +
+      // Clickable — opens the paid panel. Same destination as clicking
+      // the pill itself, just a more discoverable entry point inside
+      // the tooltip. Bound after innerHTML in showTooltipFor.
+      '<div class="trusty-tt-tease trusty-tt-tease-clickable" data-trusty-open-panel="1">' +
         '<span class="trusty-tt-tease-icon">🐦</span>' +
         '<span class="trusty-tt-tease-text">KOL activity · X velocity · sentiment</span>' +
         '<span class="trusty-tt-tease-lock">🔒</span>' +
@@ -591,6 +594,23 @@
         shareBtn.addEventListener("click", function (e) {
           e.stopPropagation();
           openShareIntent(resultForShare);
+        });
+      }
+      // Bind the KOL teaser row as a click target for the paid panel.
+      // Same destination as clicking the pill itself, just more
+      // discoverable inside the hover tooltip — users learn the panel
+      // exists by clicking the locked teaser to see what's inside.
+      const teaseEl = tt.querySelector(".trusty-tt-tease-clickable");
+      if (teaseEl) {
+        const pillRef = pill;
+        teaseEl.addEventListener("click", function (e) {
+          e.stopPropagation();
+          hideTooltip();
+          const result = pillRef._trustyResult;
+          const ca = pillRef.dataset.trustyCa;
+          const chain = pillRef.dataset.trustyChain;
+          const isPaid = cachedTier && cachedTier.tier === "paid";
+          openPaidPanel(result, ca, chain, { blurred: !isPaid });
         });
       }
     }
