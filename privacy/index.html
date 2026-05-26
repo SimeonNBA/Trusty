@@ -216,7 +216,7 @@
 
   <header class="hero">
     <h1>Privacy Policy</h1>
-    <span class="updated">Last updated 2026-05-16</span>
+    <span class="updated">Last updated 2026-05-09</span>
     <p class="lede">
       Trusty AI is a Chrome extension that flags risky contract addresses on
       the websites you already visit. This page explains, in plain English,
@@ -235,7 +235,6 @@
   <p>Supported sites today:</p>
   <ul>
     <li><code>x.com</code> and <code>twitter.com</code></li>
-    <li><code>www.binance.com/*/square</code> (Binance Square)</li>
   </ul>
 
   <h2>What we collect</h2>
@@ -254,26 +253,22 @@
     <li>A best-guess chain identifier (<code>bsc</code>, <code>ethereum</code>, <code>solana</code>).</li>
     <li>The persistent random identifier described above (used to associate the optional paid subscription with your install and to sync your watchlist across the extension and trustyai.tech).</li>
     <li>Standard HTTP headers your browser automatically sends to any website.</li>
-    <li><strong>On Binance Square pages only:</strong> when a Square post containing a contract address scrolls into view, the visible post text and engagement counts are sent to our backend for sentiment classification (bullish / bearish / neutral) and coordinated-shilling detection. Only the resulting sentiment <em>category</em> is persisted long-term — the raw text is discarded after classification.</li>
   </ul>
 
   <div class="callout green">
-    <div class="callout-title">🛡️ For X (Twitter)</div>
+    <div class="callout-title">🛡️ That's it.</div>
     <p class="muted" style="margin: 0;">
-      We still never read tweet content. X sentiment is sourced from a
-      separate third-party API (Sorsa) on our backend, not from anything
-      the extension reads in your browser. The X content script only
-      scans for contract addresses.
+      We do not send the page URL, tweet content, your X account,
+      your IP-derived identity, your wallet address, or any other identifying
+      data. The contract address you scan is public on-chain information.
     </p>
   </div>
 
   <h2>What we do not collect</h2>
   <ul>
     <li>Your X/Twitter account, posts, follows, DMs, or profile data.</li>
-    <li>Tweet content from X / Twitter — the extension only extracts contract addresses there.</li>
-    <li>Text from any page outside the supported sites listed above.</li>
-    <li>Your Binance account, wallet, login state, or any user-identifying data — even when scanning Square posts.</li>
-    <li>Which sites you visit beyond the supported sites or how long you spend on them.</li>
+    <li>Any text other than the contract address you scanned.</li>
+    <li>Which sites you visit or how long you spend on them.</li>
     <li>Cookies, fingerprinting, or third-party analytics from inside the extension.</li>
   </ul>
   <p><strong>We never sell, share, or rent any data.</strong></p>
@@ -310,7 +305,6 @@
     <li><code>https://trustyai.tech/*</code> — for the website and click-through reports.</li>
     <li><code>https://api.trustyai.tech/*</code> — to call the Trusty scanning API and the subscription endpoint.</li>
     <li>Content scripts on <code>x.com</code>, <code>twitter.com</code> — to detect contract addresses on the pages you visit.</li>
-    <li>Content scripts on <code>www.binance.com/*/square*</code> — to detect contract addresses in Binance Square posts and (for paid users) to send visible post text to our backend for sentiment classification.</li>
   </ul>
   <p class="muted">
     The extension does not have access to the rest of the web. It cannot
