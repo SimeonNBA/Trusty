@@ -165,6 +165,26 @@ helping users avoid risky tokens before transacting.
 
 ---
 
+## What's new — v0.6.0
+
+(Paste into the "What's new in this version?" field on the v0.6.0
+submission.)
+
+```
+v0.6.0 — Live 24h price moves, Topaz Dex pool data, and verifiable weekly receipts.
+
+• Hover any pill to see the token's 24h % change next to Market Cap and Volume — colour-coded green / red so you spot the move at a glance.
+• Paid panel now shows Topaz Dex pool data for tokens listed there — total liquidity (TVL) and fee APR for liquidity providers. Tokens not listed get a clear "reach out to Topaz Dex" prompt instead.
+• Weekly Receipts: every Monday we publish a verifiable record of every token we flagged as a rug and which of them actually rugged, stored permanently on BNB Greenfield (decentralised storage). Anyone can verify the record without trusting us. Browse at trustyai.tech/receipts/.
+• Share scan to X: one click opens X with the scan summary prefilled — share your finds with one tap.
+• Hover tooltip now scrolls internally on short screens so the verdict + score stay anchored at the top.
+• Click the locked KOL row in the hover (or click the pill) to open the full paid panel — a more discoverable entry point for the deep report.
+
+Trusty is a community project. Not financial advice. DYOR.
+```
+
+---
+
 ## What's new — v0.5.1
 
 (Paste into the "What's new in this version?" field on the v0.5.1
