@@ -295,11 +295,10 @@
                 : verdict === "RUN" ? "🚩"
                 : verdict === "CAUTION" ? "⚠️"
                 : "";
-    // Homepage auto-scans tokens passed via ?ca=&chain= query params,
-    // so for now we link there directly. Once the dedicated /share/
-    // page is deployed to trustyai.tech, swap this back to
-    // "/share?ca=..." for a more focused share-landing experience.
-    const shareUrl = "https://trustyai.tech/?ca=" + ca + "&chain=" + chain + "&utm_source=share";
+    // Focused share-landing page — fetches the scan, renders a
+    // single-token result card with an "Install the extension" CTA.
+    // utm_source=share lets us tell shared traffic apart in analytics.
+    const shareUrl = "https://trustyai.tech/share?ca=" + ca + "&chain=" + chain + "&utm_source=share";
     const tweet =
       "I just scanned " + sym + " with @Trusty_BSC — score " + score + "/100 " + emoji +
       "\n\nCheck any BNB Chain token in 1 click:\n" + shareUrl;
