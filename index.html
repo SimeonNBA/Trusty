@@ -7743,9 +7743,26 @@ window.trustyOpenTwAndRedirect = async function(redirectUrl) {
 };
 
 function trustyTradeRowHtml(chain, ca, symbol) {
+  var safeSym = String(symbol || 'this token').replace(/</g, '&lt;');
+
+  // BSC tokens now route through our own Trusty Swap page (in-house
+  // wallet connect + safest route, user confirms in their wallet) —
+  // replaces the old PancakeSwap deep-link. Non-BSC chains keep the
+  // DEX fallback below until the swap page supports more chains.
+  var c = String(chain || '').toLowerCase();
+  if (c === 'bsc' || c === 'bnb' || c === 'binance' || c === 'evm') {
+    var swapUrl = 'https://trustyai.tech/swap?ca=' + encodeURIComponent(ca) + '&chain=bsc';
+    return '<div class="trusty-trade-row-wrap">' +
+             '<div class="trusty-trade-row" data-trusty-trade="' + safeSym + '">' +
+               '<a class="trusty-trade-btn primary" href="' + swapUrl + '" target="_blank" rel="noopener">' +
+                 '<span class="trusty-trade-icon">🛡️</span><span>Swap ' + safeSym + ' on Trusty</span></a>' +
+             '</div>' +
+             '<div class="trusty-trade-detected">✓ Safest route · connect &amp; confirm in your wallet</div>' +
+           '</div>';
+  }
+
   var urls = trustyTradeUrls(chain, ca);
   if (!urls.tw && !urls.dex) return '';
-  var safeSym = String(symbol || 'this token').replace(/</g, '&lt;');
   var hasTw = trustyHasTwExtension();
   var parts = [];
   if (urls.tw) {
