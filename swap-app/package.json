@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.100.14",
     "@trustwallet/connect-eip155-react": "^0.0.0",
     "@trustwallet/connect-react": "^0.0.0",
     "react": "^19.2.6",
