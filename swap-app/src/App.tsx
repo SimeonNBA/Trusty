@@ -1,20 +1,140 @@
+import { useState, useEffect, useCallback } from 'react'
 import { useTrustModal, useConnections } from '@trustwallet/connect-react'
+import { useSendTransaction } from '@trustwallet/connect-eip155-react'
+import { parseEther } from 'viem'
+import { bsc } from 'viem/chains'
 import './App.css'
+
+const API = 'https://api.trustyai.tech'
+
+type Scan = {
+  symbol?: string
+  name?: string
+  score?: number | string
+  verdict?: string
+  marketData?: { mcap?: string; volume24h?: string }
+}
+
+type Quote = {
+  ok: boolean
+  toAmount?: string | null
+  minOut?: string | null
+  priceImpactPct?: number
+  provider?: string | null
+  transactions?: { to: string; value: string; data: string }[]
+  error?: string
+}
+
+function short(a: string) {
+  return a.slice(0, 6) + '…' + a.slice(-4)
+}
+
+// Rough display of the token amount out. Most BEP-20 use 18 decimals;
+// the wallet shows the exact figure on confirm, this is just indicative.
+function fmtOut(raw?: string | null) {
+  if (!raw) return '—'
+  try {
+    const n = Number(BigInt(raw)) / 1e18
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M'
+    if (n >= 1e3) return (n / 1e3).toFixed(2) + 'K'
+    if (n >= 1) return n.toFixed(2)
+    return n.toPrecision(3)
+  } catch {
+    return '—'
+  }
+}
 
 export default function App() {
   const modal = useTrustModal()
   const connections = useConnections()
+  const { sendTransactionAsync, isConfirming, isConfirmed, hash, error: txError } =
+    useSendTransaction()
 
-  // eip155 connection (BSC). The connection object carries the
-  // connected account address once a wallet is connected.
   const eip155 = (connections as Record<string, unknown> | undefined)?.eip155 as
     | { address?: string; accounts?: { address: string }[] }
     | undefined
   const address = eip155?.address ?? eip155?.accounts?.[0]?.address ?? null
 
-  function short(a: string) {
-    return a.slice(0, 6) + '…' + a.slice(-4)
-  }
+  // Token from URL: trustyai.tech/swap?ca=0x...&chain=bsc
+  const params = new URLSearchParams(window.location.search)
+  const ca = (params.get('ca') || '').trim()
+  const chain = (params.get('chain') || 'bsc').trim()
+
+  const [scan, setScan] = useState<Scan | null>(null)
+  const [amount, setAmount] = useState('0.05')
+  const [quote, setQuote] = useState<Quote | null>(null)
+  const [loadingQuote, setLoadingQuote] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [swapping, setSwapping] = useState(false)
+
+  // Fetch the safety scan for the token in the URL.
+  useEffect(() => {
+    if (!ca) return
+    fetch(`${API}/api/scan?ca=${encodeURIComponent(ca)}&chain=${encodeURIComponent(chain)}`)
+      .then((r) => r.json())
+      .then((d) => setScan(d))
+      .catch(() => setScan(null))
+  }, [ca, chain])
+
+  const getQuote = useCallback(async () => {
+    setErr(null)
+    setQuote(null)
+    if (!address) {
+      setErr('Connect your wallet first.')
+      return
+    }
+    let wei: bigint
+    try {
+      wei = parseEther(amount as `${number}`)
+      if (wei <= 0n) throw new Error('bad amount')
+    } catch {
+      setErr('Enter a valid BNB amount.')
+      return
+    }
+    setLoadingQuote(true)
+    try {
+      const u = `${API}/api/swap-build?ca=${encodeURIComponent(ca)}&chain=${encodeURIComponent(
+        chain,
+      )}&amount=${wei.toString()}&slippage=1&from=${encodeURIComponent(address)}`
+      const r = await fetch(u)
+      const d: Quote = await r.json()
+      if (!d.ok) {
+        setErr(d.error === 'no route' ? 'No swap route for this token.' : d.error || 'Quote failed.')
+      } else {
+        setQuote(d)
+      }
+    } catch (e) {
+      setErr(String((e as Error).message || e))
+    } finally {
+      setLoadingQuote(false)
+    }
+  }, [address, amount, ca, chain])
+
+  const doSwap = useCallback(async () => {
+    if (!quote?.transactions?.length) return
+    setErr(null)
+    setSwapping(true)
+    try {
+      // Send each tx in order (BNB→token is a single swap tx; no approve).
+      for (const tx of quote.transactions) {
+        // chain: bsc is required by viem's typed request. autoSwitchChain
+        // (default on) makes the wallet switch to BSC if it isn't already.
+        await sendTransactionAsync({
+          chain: bsc,
+          to: tx.to as `0x${string}`,
+          value: BigInt(tx.value || '0'),
+          data: tx.data as `0x${string}`,
+        })
+      }
+    } catch (e) {
+      setErr(String((e as Error).message || e))
+    } finally {
+      setSwapping(false)
+    }
+  }, [quote, sendTransactionAsync])
+
+  const verdict = (scan?.verdict || '').toUpperCase()
+  const isRisky = verdict === 'RUN'
 
   return (
     <div className="wrap">
@@ -23,27 +143,118 @@ export default function App() {
         <span className="brand">Trusty Swap</span>
       </header>
 
-      <p className="sub">
-        Connect your wallet to swap BNB Chain tokens through the safest route.
-      </p>
+      {!ca && (
+        <p className="sub">
+          No token specified. Open this page from a Trusty scan, or add{' '}
+          <code>?ca=0x…&amp;chain=bsc</code> to the URL.
+        </p>
+      )}
 
-      {address ? (
-        <div className="connected">
-          <div className="connected-label">Connected</div>
-          <div className="connected-addr">{short(address)}</div>
-          <button className="btn ghost" onClick={() => modal.open()}>
-            Manage wallet
-          </button>
-        </div>
-      ) : (
-        <button className="btn primary" onClick={() => modal.open()}>
-          Connect Wallet
-        </button>
+      {ca && (
+        <>
+          {/* Token + safety */}
+          <div className={'token ' + verdict.toLowerCase()}>
+            <div className="token-row">
+              <span className="token-sym">{scan?.symbol || '…'}</span>
+              {scan?.verdict && (
+                <span className={'verdict ' + verdict.toLowerCase()}>
+                  {verdict} {scan.score != null ? scan.score + '/100' : ''}
+                </span>
+              )}
+            </div>
+            {scan?.marketData && (
+              <div className="token-meta">
+                MC {scan.marketData.mcap || '—'} · Vol {scan.marketData.volume24h || '—'}
+              </div>
+            )}
+            <div className="token-ca">{short(ca)}</div>
+          </div>
+
+          {isRisky && (
+            <div className="warn">
+              ⚠️ Trusty rated this token <strong>RUN</strong> — high risk. Swap only if you
+              understand what you're doing.
+            </div>
+          )}
+
+          {/* Wallet */}
+          {!address ? (
+            <button className="btn primary" onClick={() => modal.open()}>
+              Connect Wallet
+            </button>
+          ) : (
+            <>
+              <div className="connected-mini">
+                Connected <strong>{short(address)}</strong>
+              </div>
+
+              {/* Amount */}
+              <label className="amt-label">You pay (BNB)</label>
+              <input
+                className="amt-input"
+                type="number"
+                min="0"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+
+              {!quote ? (
+                <button className="btn primary" onClick={getQuote} disabled={loadingQuote}>
+                  {loadingQuote ? 'Getting quote…' : 'Get quote'}
+                </button>
+              ) : (
+                <>
+                  <div className="quote">
+                    <div className="quote-row">
+                      <span>You receive ~</span>
+                      <strong>
+                        {fmtOut(quote.toAmount)} {scan?.symbol || ''}
+                      </strong>
+                    </div>
+                    <div className="quote-sub">
+                      via {quote.provider || 'best route'} · impact{' '}
+                      {(quote.priceImpactPct ?? 0).toFixed(2)}% · slippage 1%
+                    </div>
+                  </div>
+
+                  {isConfirmed ? (
+                    <div className="success">
+                      ✅ Swap confirmed!
+                      {hash && (
+                        <a
+                          href={`https://bscscan.com/tx/${hash}`}
+                          target="_blank"
+                          rel="noopener"
+                        >
+                          View on BscScan →
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      className="btn primary"
+                      onClick={doSwap}
+                      disabled={swapping || isConfirming}
+                    >
+                      {swapping || isConfirming ? 'Confirm in wallet…' : 'Swap'}
+                    </button>
+                  )}
+
+                  <button className="btn ghost" onClick={getQuote} disabled={loadingQuote}>
+                    Refresh quote
+                  </button>
+                </>
+              )}
+            </>
+          )}
+
+          {(err || txError) && <div className="error">{err || txError?.message}</div>}
+        </>
       )}
 
       <div className="soon">
-        <strong>Coming next:</strong> paste a token, get the safest swap route,
-        and confirm in your wallet — all in one place.
+        Routing by Trust Wallet · safety by Trusty AI · you confirm every swap in your wallet.
       </div>
     </div>
   )

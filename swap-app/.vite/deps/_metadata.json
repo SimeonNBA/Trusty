@@ -1,0 +1,60 @@
+{
+  "hash": "f8fe7fdc",
+  "configHash": "bd194f55",
+  "lockfileHash": "415bd191",
+  "browserHash": "8a1cdb99",
+  "optimized": {
+    "@trustwallet/connect-eip155-react": {
+      "src": "../../node_modules/@trustwallet/connect-eip155-react/dist/index.js",
+      "file": "@trustwallet_connect-eip155-react.js",
+      "fileHash": "fa29d873",
+      "needsInterop": false
+    },
+    "@trustwallet/connect-react": {
+      "src": "../../node_modules/@trustwallet/connect-react/dist/index.js",
+      "file": "@trustwallet_connect-react.js",
+      "fileHash": "b44a3638",
+      "needsInterop": false
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "1a5b3b71",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "c8b5ce24",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "1ef5e0e5",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "react-CoTh1R2n": {
+      "file": "react-CoTh1R2n.js",
+      "isDynamicEntry": false
+    },
+    "react-dom-DWSBsIl4": {
+      "file": "react-dom-DWSBsIl4.js",
+      "isDynamicEntry": false
+    },
+    "secp256k1-DsytSS5v": {
+      "file": "secp256k1-DsytSS5v.js",
+      "isDynamicEntry": true
+    },
+    "sha2-B2IR8cKy": {
+      "file": "sha2-B2IR8cKy.js",
+      "isDynamicEntry": false
+    },
+    "useConnection-CYhZ-aoN": {
+      "file": "useConnection-CYhZ-aoN.js",
+      "isDynamicEntry": false
+    }
+  }
+}

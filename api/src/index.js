@@ -140,6 +140,15 @@ export default {
     // so the user sees what they'd get before they click through to
     // execute. We never sign or broadcast anything; the actual swap
     // still happens in the user's wallet UI after redirect.
+    if (url.pathname === "/api/swap-build") {
+      // Builds an EXECUTABLE swap for a real wallet address: route +
+      // route/step → ready-to-sign transaction(s). Used by the
+      // trustyai.tech/swap page. Unlike /api/swap-quote (display only,
+      // DEAD address), this needs the user's connected address because
+      // the executable tx data is address-specific.
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      return handleSwapBuild(url, env);
+    }
     if (url.pathname === "/api/swap-quote") {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       return handleSwapQuote(url, env);
@@ -329,6 +338,97 @@ async function handleSwapQuote(url, env) {
     // broken and creates noisy red errors in browser consoles +
     // Cloudflare monitoring for what's really a normal "this token
     // isn't indexed by TWAK's swap router" case.
+    return json({ ok: false, error: String(e && e.message || e) });
+  }
+}
+
+// Builds an executable native-BNB→token swap for a specific wallet.
+// Calls /amber-api/v1/route with the user's real fromAddress (the
+// executable tx is address-specific), then /amber-api/v1/route/step
+// for each step to get the ready-to-sign evmTx. Returns the quote +
+// the transaction(s) the page signs via the wallet. NOT cached —
+// executable tx data is per-address/amount and must be fresh.
+//
+// For native BNB → token there's no ERC-20 approval (approvals only
+// apply to spending tokens), so `approve` is typically null and we
+// return a single swap tx.
+async function handleSwapBuild(url, env) {
+  const chain = (url.searchParams.get("chain") || "bsc").trim();
+  const ca = (url.searchParams.get("ca") || "").trim().toLowerCase();
+  const slippage = (url.searchParams.get("slippage") || "1").trim();
+  const amount = (url.searchParams.get("amount") || "").trim();
+  const from = (url.searchParams.get("from") || "").trim();
+
+  if (!twakConfigured(env)) return json({ ok: false, error: "swap unavailable" }, 503);
+  if (!isValidCa(ca, chain)) return json({ ok: false, error: "invalid ca" }, 400);
+  if (!/^0x[a-fA-F0-9]{40}$/.test(from)) return json({ ok: false, error: "invalid from address" }, 400);
+  if (!/^\d+$/.test(amount) || amount === "0") return json({ ok: false, error: "invalid amount" }, 400);
+
+  const domain = swapDomainForChain(chain);
+  if (!domain) return json({ ok: false, error: "unsupported chain" }, 400);
+
+  const NATIVE_EVM = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+
+  try {
+    const routeData = await twakPost("/amber-api/v1/route", {
+      fromAsset: NATIVE_EVM,
+      toAsset: ca,
+      fromAddress: from,
+      toAddress: from,
+      fromDomain: domain,
+      toDomain: domain,
+      amount: amount,
+      slippage: slippage,
+      contractCall: false,
+      sortBy: "outcome",
+    }, env);
+
+    const route = routeData?.routes?.[0] || null;
+    if (!route || !Array.isArray(route.steps) || !route.steps.length) {
+      return json({ ok: false, error: "no route" });
+    }
+
+    const first = route.steps[0];
+    const last = route.steps[route.steps.length - 1];
+    let totalImpact = 0;
+    for (const s of route.steps) {
+      const imp = parseFloat(s.priceImpact || 0);
+      if (!isNaN(imp)) totalImpact += imp;
+    }
+
+    // Fetch the executable tx for each step. Sequential to respect the
+    // 1 req/s TWAK quota. For a simple BNB→token swap this is one step.
+    const transactions = [];
+    let approve = null;
+    for (const step of route.steps) {
+      const stepData = await twakPost("/amber-api/v1/route/step", { stepId: step.id }, env);
+      const evmTx = stepData?.transaction?.evmTx || null;
+      if (evmTx && evmTx.to && evmTx.data) {
+        transactions.push({
+          to: evmTx.to,
+          value: evmTx.value || "0",
+          data: evmTx.data,
+          gasLimit: evmTx.gasLimit || null,
+        });
+      }
+      if (stepData?.approve) approve = stepData.approve;
+    }
+
+    if (!transactions.length) return json({ ok: false, error: "no executable tx" });
+
+    return json({
+      ok: true,
+      chain, ca,
+      fromAmount: amount,
+      toAmount: last?.to?.amount || null,
+      minOut: last?.to?.minAmountOut || null,
+      priceImpactPct: totalImpact,
+      provider: first?.provider?.name || first?.provider?.id || null,
+      slippage,
+      approve,
+      transactions,
+    });
+  } catch (e) {
     return json({ ok: false, error: String(e && e.message || e) });
   }
 }
