@@ -46,14 +46,22 @@ function fmtOut(raw?: string | null) {
 
 export default function App() {
   const modal = useTrustModal()
-  const connections = useConnections()
+  // useConnections() returns { connections }, not the map directly.
+  const { connections } = useConnections()
   const { sendTransactionAsync, isConfirming, isConfirmed, hash, error: txError } =
     useSendTransaction()
 
-  const eip155 = (connections as Record<string, unknown> | undefined)?.eip155 as
-    | { address?: string; accounts?: { address: string }[] }
+  // The eip155 connection is a discriminated union on `status`. When
+  // 'connected' it carries `address` (may be CAIP-formatted, e.g.
+  // "eip155:56:0x..."). Extract the plain 0x address for display + the
+  // /api/swap-build `from` param.
+  const eip155 = connections?.eip155 as
+    | { status?: string; address?: string }
     | undefined
-  const address = eip155?.address ?? eip155?.accounts?.[0]?.address ?? null
+  const rawAddr = eip155?.status === 'connected' ? eip155?.address : undefined
+  const address = rawAddr
+    ? (String(rawAddr).match(/0x[a-fA-F0-9]{40}/)?.[0] ?? null)
+    : null
 
   // Token from URL: trustyai.tech/swap?ca=0x...&chain=bsc
   const params = new URLSearchParams(window.location.search)
@@ -76,6 +84,29 @@ export default function App() {
       .catch(() => setScan(null))
   }, [ca, chain])
 
+  // Build a swap for the given amount. Shared by getQuote (display) and
+  // doSwap (fresh fetch at execution time). 2% slippage gives headroom
+  // for volatile memecoins so the 0x order doesn't revert on small moves.
+  const fetchBuild = useCallback(
+    async (wei: bigint): Promise<Quote> => {
+      const u = `${API}/api/swap-build?ca=${encodeURIComponent(ca)}&chain=${encodeURIComponent(
+        chain,
+      )}&amount=${wei.toString()}&slippage=2&from=${encodeURIComponent(address || '')}`
+      const r = await fetch(u)
+      return r.json()
+    },
+    [address, ca, chain],
+  )
+
+  const parseAmount = useCallback((): bigint | null => {
+    try {
+      const wei = parseEther(amount as `${number}`)
+      return wei > 0n ? wei : null
+    } catch {
+      return null
+    }
+  }, [amount])
+
   const getQuote = useCallback(async () => {
     setErr(null)
     setQuote(null)
@@ -83,21 +114,14 @@ export default function App() {
       setErr('Connect your wallet first.')
       return
     }
-    let wei: bigint
-    try {
-      wei = parseEther(amount as `${number}`)
-      if (wei <= 0n) throw new Error('bad amount')
-    } catch {
+    const wei = parseAmount()
+    if (!wei) {
       setErr('Enter a valid BNB amount.')
       return
     }
     setLoadingQuote(true)
     try {
-      const u = `${API}/api/swap-build?ca=${encodeURIComponent(ca)}&chain=${encodeURIComponent(
-        chain,
-      )}&amount=${wei.toString()}&slippage=1&from=${encodeURIComponent(address)}`
-      const r = await fetch(u)
-      const d: Quote = await r.json()
+      const d = await fetchBuild(wei)
       if (!d.ok) {
         setErr(d.error === 'no route' ? 'No swap route for this token.' : d.error || 'Quote failed.')
       } else {
@@ -108,15 +132,26 @@ export default function App() {
     } finally {
       setLoadingQuote(false)
     }
-  }, [address, amount, ca, chain])
+  }, [address, parseAmount, fetchBuild])
 
   const doSwap = useCallback(async () => {
-    if (!quote?.transactions?.length) return
     setErr(null)
+    const wei = parseAmount()
+    if (!wei || !address) return
     setSwapping(true)
     try {
+      // Re-build FRESH right before signing — 0x routes expire in ~30-60s,
+      // so the calldata captured at "Get quote" time may already be stale.
+      // Fetching here guarantees the wallet receives a current, executable
+      // transaction and won't revert on an expired order.
+      const fresh = await fetchBuild(wei)
+      if (!fresh.ok || !fresh.transactions?.length) {
+        setErr(fresh.error === 'no route' ? 'Route expired — refresh and retry.' : fresh.error || 'Could not build swap.')
+        return
+      }
+      setQuote(fresh)
       // Send each tx in order (BNB→token is a single swap tx; no approve).
-      for (const tx of quote.transactions) {
+      for (const tx of fresh.transactions) {
         // chain: bsc is required by viem's typed request. autoSwitchChain
         // (default on) makes the wallet switch to BSC if it isn't already.
         await sendTransactionAsync({
@@ -131,7 +166,7 @@ export default function App() {
     } finally {
       setSwapping(false)
     }
-  }, [quote, sendTransactionAsync])
+  }, [address, parseAmount, fetchBuild, sendTransactionAsync])
 
   const verdict = (scan?.verdict || '').toUpperCase()
   const isRisky = verdict === 'RUN'
