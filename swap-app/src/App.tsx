@@ -262,7 +262,7 @@ export default function App() {
                     </div>
                     <div className="quote-sub">
                       via {quote.provider || 'best route'} · impact{' '}
-                      {(quote.priceImpactPct ?? 0).toFixed(2)}% · slippage 1%
+                      {(quote.priceImpactPct ?? 0).toFixed(2)}% · slippage 2%
                     </div>
                   </div>
 
