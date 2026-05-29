@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTrustModal, useConnections } from '@trustwallet/connect-react'
 import { useSendTransaction } from '@trustwallet/connect-eip155-react'
 import { parseEther } from 'viem'
-import { bsc } from 'viem/chains'
+import { resolveChain } from './chains'
 import './App.css'
 
 const API = 'https://api.trustyai.tech'
@@ -63,10 +63,16 @@ export default function App() {
     ? (String(rawAddr).match(/0x[a-fA-F0-9]{40}/)?.[0] ?? null)
     : null
 
-  // Token from URL: trustyai.tech/swap?ca=0x...&chain=bsc
+  // Token from URL: trustyai.tech/swap?ca=0x...&chain=bsc|ethereum|base|polygon
   const params = new URLSearchParams(window.location.search)
   const ca = (params.get('ca') || '').trim()
-  const chain = (params.get('chain') || 'bsc').trim()
+  const chainParam = (params.get('chain') || 'bsc').trim()
+  // Resolve to a supported EVM chain. null = unsupported (e.g. solana) —
+  // we render a "swaps are EVM-only" notice instead of a broken form.
+  const chainEntry = resolveChain(chainParam)
+  const chain = chainEntry?.key ?? chainParam
+  const nativeSym = chainEntry?.viem.nativeCurrency.symbol ?? 'ETH'
+  const explorer = chainEntry?.viem.blockExplorers?.default
 
   const [scan, setScan] = useState<Scan | null>(null)
   const [amount, setAmount] = useState('0.05')
@@ -116,7 +122,7 @@ export default function App() {
     }
     const wei = parseAmount()
     if (!wei) {
-      setErr('Enter a valid BNB amount.')
+      setErr(`Enter a valid ${nativeSym} amount.`)
       return
     }
     setLoadingQuote(true)
@@ -137,7 +143,7 @@ export default function App() {
   const doSwap = useCallback(async () => {
     setErr(null)
     const wei = parseAmount()
-    if (!wei || !address) return
+    if (!wei || !address || !chainEntry) return
     setSwapping(true)
     try {
       // Re-build FRESH right before signing — 0x routes expire in ~30-60s,
@@ -152,10 +158,10 @@ export default function App() {
       setQuote(fresh)
       // Send each tx in order (BNB→token is a single swap tx; no approve).
       for (const tx of fresh.transactions) {
-        // chain: bsc is required by viem's typed request. autoSwitchChain
-        // (default on) makes the wallet switch to BSC if it isn't already.
+        // viem's typed request needs the target chain. autoSwitchChain
+        // (default on) makes the wallet switch to it if it isn't already.
         await sendTransactionAsync({
-          chain: bsc,
+          chain: chainEntry.viem,
           to: tx.to as `0x${string}`,
           value: BigInt(tx.value || '0'),
           data: tx.data as `0x${string}`,
@@ -166,7 +172,7 @@ export default function App() {
     } finally {
       setSwapping(false)
     }
-  }, [address, parseAmount, fetchBuild, sendTransactionAsync])
+  }, [address, parseAmount, fetchBuild, sendTransactionAsync, chainEntry])
 
   const verdict = (scan?.verdict || '').toUpperCase()
   const isRisky = verdict === 'RUN'
@@ -185,7 +191,14 @@ export default function App() {
         </p>
       )}
 
-      {ca && (
+      {ca && !chainEntry && (
+        <p className="sub">
+          Trusty Swap supports EVM chains only (BNB Chain, Ethereum, Base,
+          Polygon). The chain <code>{chainParam}</code> isn't supported here.
+        </p>
+      )}
+
+      {ca && chainEntry && (
         <>
           {/* Token + safety */}
           <div className={'token ' + verdict.toLowerCase()}>
@@ -224,7 +237,7 @@ export default function App() {
               </div>
 
               {/* Amount */}
-              <label className="amt-label">You pay (BNB)</label>
+              <label className="amt-label">You pay ({nativeSym})</label>
               <input
                 className="amt-input"
                 type="number"
@@ -256,13 +269,13 @@ export default function App() {
                   {isConfirmed ? (
                     <div className="success">
                       ✅ Swap confirmed!
-                      {hash && (
+                      {hash && explorer && (
                         <a
-                          href={`https://bscscan.com/tx/${hash}`}
+                          href={`${explorer.url}/tx/${hash}`}
                           target="_blank"
                           rel="noopener"
                         >
-                          View on BscScan →
+                          View on {explorer.name} →
                         </a>
                       )}
                     </div>
