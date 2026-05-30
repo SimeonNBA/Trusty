@@ -153,8 +153,28 @@ export default {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       return handleSwapQuote(url, env);
     }
+    // Trusty Trader (Beta) — paper-trading simulation. /state is a public
+    // KV-only read; /run is an admin-triggered manual cycle for testing.
+    if (url.pathname === "/api/sim/state") {
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      return handleSimState(env);
+    }
+    if (url.pathname === "/api/sim/run") {
+      if (request.method !== "GET" && request.method !== "POST") return json({ error: "method not allowed" }, 405);
+      return handleSimRun(url, request, env);
+    }
 
     return json({ error: "not found" }, 404);
+  },
+
+  // Cron (see [triggers] in wrangler.toml) drives the paper-trader. Errors
+  // are swallowed so a bad cycle never throws out of the scheduled handler.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      runSimCycle(env).catch((e) => {
+        console.log("sim cycle error:", String((e && e.message) || e));
+      }),
+    );
   },
 };
 
@@ -430,6 +450,300 @@ async function handleSwapBuild(url, env) {
     });
   } catch (e) {
     return json({ ok: false, error: String(e && e.message || e) });
+  }
+}
+
+/* ================================================================
+   Trusty Trader (Beta) — paper-trading simulation
+
+   A virtual portfolio that trades BSC memecoins on Trusty's own
+   signals. NO real funds, NO wallet, NO on-chain tx — it records
+   what it WOULD have done at real market prices, so the strategy can
+   be validated before any real capital is risked.
+
+   Discovery: Trust Wallet listings API (BSC memes, ranked by volume)
+   Entry:     Trusty scan verdict = APE  AND  social confirmation
+              (X tweets/24h > 0  OR  Binance Square mentions > 0)
+   Exit:      +50% TP · -30% SL · 48h timeout · or verdict flips to RUN
+   Sizing:    $1,000 start · $100 (10%) per trade · ~10 positions
+   Costs:     2% slippage + $0.30 gas each side (so P&L is honest)
+   Engine:    cron every 10 min (scheduled handler) → runSimCycle
+   Storage:   KV (SCAN_KV) — keys sim:state, sim:closed, sim:equity
+
+   NOTE on asset IDs: we never construct the TW asset_id ourselves
+   (BSC tokens use the c20000714_t… prefix on /v2/market/tickers, not
+   c714_t…). Instead we store the asset_id the listings API returns and
+   pass it back verbatim for price marking — self-consistent, no prefix
+   guessing.
+   ================================================================ */
+
+const SIM = {
+  START_CASH: 1000,
+  POSITION_USD: 100, // 10% of start, fixed notional → ~10 positions
+  TAKE_PROFIT: 0.5,
+  STOP_LOSS: -0.3,
+  MAX_HOLD_MS: 48 * 3600 * 1000,
+  SLIPPAGE: 0.02,
+  GAS_USD: 0.3,
+  MAX_NEW_PER_CYCLE: 3, // bound entries (and Sorsa/scan load) per run
+  EVAL_CAP: 12, // max candidates scanned per cycle, to be gentle on GoPlus
+  DISCOVERY_LIMIT: 50,
+  BSC_COIN_ID: 20000714, // TW internal network id for BSC (NOT SLIP-44 714)
+  EQUITY_MIN_GAP_MS: 60 * 60 * 1000, // append an equity snapshot at most hourly
+};
+
+function simRound(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+async function simLoadState(env) {
+  let st = null;
+  try {
+    st = await env.SCAN_KV.get("sim:state", "json");
+  } catch (_) {}
+  if (!st || typeof st.cash !== "number") {
+    st = { startedAt: Date.now(), cash: SIM.START_CASH, equity: SIM.START_CASH, positions: [], updatedAt: Date.now() };
+  }
+  if (!Array.isArray(st.positions)) st.positions = [];
+  return st;
+}
+
+async function simSave(env, st, closed, equity) {
+  st.updatedAt = Date.now();
+  const ops = [env.SCAN_KV.put("sim:state", JSON.stringify(st))];
+  if (closed) ops.push(env.SCAN_KV.put("sim:closed", JSON.stringify(closed.slice(0, 200))));
+  if (equity) ops.push(env.SCAN_KV.put("sim:equity", JSON.stringify(equity.slice(-500))));
+  await Promise.allSettled(ops);
+}
+
+// Discovery: top BSC meme coins by 24h volume, via the TW listings API.
+async function simDiscover(env) {
+  let data = null;
+  try {
+    data = await twakGet(
+      "/v1/assets/listings",
+      {
+        version: 27,
+        currency: "USD",
+        category_id: "memes",
+        sort: "volume",
+        networks: String(SIM.BSC_COIN_ID),
+        limit: SIM.DISCOVERY_LIMIT,
+      },
+      env,
+    );
+  } catch (e) {
+    console.log("simDiscover error:", String((e && e.message) || e));
+    return [];
+  }
+  const docs = (data && data.docs) || [];
+  const out = [];
+  for (const d of docs) {
+    const a = d.asset || {};
+    const id = a.asset_id || "";
+    // Identify an EVM token purely by the asset_id's `_t<address>` form
+    // (don't filter on a.type — BSC tokens report type "BEP20", not
+    // "token"). This also naturally excludes natives (e.g. "c714"). We
+    // rely on the `networks` query filter to scope to BSC.
+    const m = id.match(/_t(0x[a-fA-F0-9]{40})/);
+    if (!m) continue;
+    out.push({
+      ca: m[1].toLowerCase(),
+      assetId: id,
+      symbol: (a.symbol || "").replace(/^\$/, ""),
+      volume24h: (d.market && d.market.volume_24h) || 0,
+    });
+  }
+  return out;
+}
+
+// Bulk USD price marking via /v2/market/tickers (≤50 ids per call). Keyed
+// by the same asset_id the listings API gave us.
+async function simMarkPrices(assetIds, env) {
+  const prices = {};
+  const uniq = [...new Set(assetIds.filter(Boolean))];
+  for (let i = 0; i < uniq.length; i += 50) {
+    const batch = uniq.slice(i, i + 50);
+    try {
+      const r = await twakPost("/v2/market/tickers", { currency: "USD", assets: batch }, env);
+      for (const t of (r && r.tickers) || []) {
+        if (t && t.id && typeof t.price === "number") prices[t.id] = t.price;
+      }
+    } catch (_) {}
+  }
+  return prices;
+}
+
+// Trusty's own safety verdict (reuses the 5-min scan cache).
+async function simScan(ca, env) {
+  try {
+    return await handleScan(ca, "bsc", env, {}).then((r) => r.json());
+  } catch (_) {
+    return null;
+  }
+}
+
+// Social confirmation: any X velocity OR any Binance Square mentions.
+async function simSocialOk(ca, symbol, env) {
+  try {
+    const k = await handleKols(ca, "bsc", env, symbol).then((r) => r.json());
+    const tweets = (k && k.activity && k.activity.tweets24h) || 0;
+    const sq = (k && k.squareActivity && k.squareActivity.mentions7d) || 0;
+    return tweets > 0 || sq > 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+// One engine cycle: mark/exit open positions, then discover + enter.
+async function runSimCycle(env) {
+  if (!env.SCAN_KV || !twakConfigured(env)) return { ok: false, error: "not configured" };
+  const st = await simLoadState(env);
+  let closed = (await env.SCAN_KV.get("sim:closed", "json")) || [];
+  let equity = (await env.SCAN_KV.get("sim:equity", "json")) || [];
+  const now = Date.now();
+
+  // 1) Mark + manage existing positions.
+  const openPrices = await simMarkPrices(st.positions.map((p) => p.assetId), env);
+  const survivors = [];
+  for (const p of st.positions) {
+    const px = openPrices[p.assetId];
+    if (typeof px !== "number" || px <= 0) {
+      survivors.push(p); // can't price right now → hold
+      continue;
+    }
+    const pnlPct = (px - p.entryPrice) / p.entryPrice;
+    let reason = null;
+    if (pnlPct >= SIM.TAKE_PROFIT) reason = "take-profit";
+    else if (pnlPct <= SIM.STOP_LOSS) reason = "stop-loss";
+    else if (now - p.entryAt >= SIM.MAX_HOLD_MS) reason = "timeout";
+    else {
+      const s = await simScan(p.ca, env);
+      if (s && String(s.verdict).toUpperCase() === "RUN") reason = "verdict-RUN";
+    }
+    if (!reason) {
+      survivors.push(p);
+      continue;
+    }
+    // Exit: proceeds net of slippage + gas. P&L vs the $100 we committed.
+    const proceeds = p.tokenQty * px * (1 - SIM.SLIPPAGE) - SIM.GAS_USD;
+    st.cash += proceeds;
+    const pnlUsd = proceeds - SIM.POSITION_USD;
+    closed.unshift({
+      ca: p.ca,
+      symbol: p.symbol,
+      entryPrice: p.entryPrice,
+      exitPrice: px,
+      entryAt: p.entryAt,
+      exitAt: now,
+      pnlUsd: simRound(pnlUsd),
+      pnlPct: simRound((pnlUsd / SIM.POSITION_USD) * 100),
+      reason,
+    });
+  }
+  st.positions = survivors;
+
+  // 2) Discover + enter (bounded by cash, MAX_NEW_PER_CYCLE, EVAL_CAP).
+  let added = 0;
+  let evaluated = 0;
+  const candPrices = {};
+  if (st.cash >= SIM.POSITION_USD) {
+    const held = new Set(st.positions.map((p) => p.ca));
+    const candidates = await simDiscover(env);
+    // Price all candidates once up front (one batched call).
+    Object.assign(candPrices, await simMarkPrices(candidates.map((c) => c.assetId), env));
+    for (const c of candidates) {
+      if (added >= SIM.MAX_NEW_PER_CYCLE || evaluated >= SIM.EVAL_CAP) break;
+      if (st.cash < SIM.POSITION_USD) break;
+      if (held.has(c.ca)) continue;
+      const entryPrice = candPrices[c.assetId];
+      if (typeof entryPrice !== "number" || entryPrice <= 0) continue;
+      evaluated++;
+      const s = await simScan(c.ca, env);
+      if (!s || String(s.verdict).toUpperCase() !== "APE") continue;
+      if (!(await simSocialOk(c.ca, c.symbol || s.symbol || "", env))) continue;
+      // Buy $100 notional; friction (slippage + gas) reduces tokens received.
+      const effUsd = SIM.POSITION_USD * (1 - SIM.SLIPPAGE) - SIM.GAS_USD;
+      st.cash -= SIM.POSITION_USD;
+      st.positions.push({
+        ca: c.ca,
+        assetId: c.assetId,
+        symbol: c.symbol || s.symbol || "",
+        entryPrice,
+        tokenQty: effUsd / entryPrice,
+        entryAt: now,
+        score: typeof s.score === "number" ? s.score : null,
+        lastPrice: entryPrice,
+        lastPnlPct: 0,
+      });
+      held.add(c.ca);
+      added++;
+    }
+  }
+
+  // 3) Recompute equity from a merged price map (survivors priced in step 1,
+  // new entries in step 2 — no extra TW call). Stamp each position's last
+  // mark so the viewer shows unrealized P&L without hitting the quota.
+  const allPrices = Object.assign({}, openPrices, candPrices);
+  let posValue = 0;
+  for (const p of st.positions) {
+    const px = typeof allPrices[p.assetId] === "number" ? allPrices[p.assetId] : p.entryPrice;
+    p.lastPrice = px;
+    p.lastPnlPct = simRound(((px - p.entryPrice) / p.entryPrice) * 100);
+    posValue += p.tokenQty * px;
+  }
+  st.equity = st.cash + posValue;
+  const last = equity[equity.length - 1];
+  if (!last || now - last.t >= SIM.EQUITY_MIN_GAP_MS) equity.push({ t: now, equity: simRound(st.equity) });
+
+  await simSave(env, st, closed, equity);
+  return { ok: true, equity: simRound(st.equity), cash: simRound(st.cash), open: st.positions.length, added, closedTotal: closed.length };
+}
+
+// GET /api/sim/state — public, KV-only read of the current paper portfolio.
+async function handleSimState(env) {
+  if (!env.SCAN_KV) return json({ ok: false, error: "kv unavailable" }, 503);
+  const st = (await env.SCAN_KV.get("sim:state", "json")) || {
+    cash: SIM.START_CASH,
+    equity: SIM.START_CASH,
+    positions: [],
+    startedAt: null,
+  };
+  const closed = (await env.SCAN_KV.get("sim:closed", "json")) || [];
+  const equity = (await env.SCAN_KV.get("sim:equity", "json")) || [];
+  const wins = closed.filter((t) => t.pnlUsd > 0).length;
+  const eq = typeof st.equity === "number" ? st.equity : st.cash;
+  return json({
+    ok: true,
+    startedAt: st.startedAt || null,
+    updatedAt: st.updatedAt || null,
+    startCash: SIM.START_CASH,
+    cash: simRound(st.cash),
+    equity: simRound(eq),
+    roiPct: simRound(((eq - SIM.START_CASH) / SIM.START_CASH) * 100),
+    open: st.positions || [],
+    openCount: (st.positions || []).length,
+    closed: closed.slice(0, 50),
+    closedCount: closed.length,
+    winRatePct: closed.length ? simRound((wins / closed.length) * 100) : null,
+    equityCurve: equity,
+    config: {
+      positionUsd: SIM.POSITION_USD,
+      takeProfitPct: SIM.TAKE_PROFIT * 100,
+      stopLossPct: SIM.STOP_LOSS * 100,
+      maxHoldHours: SIM.MAX_HOLD_MS / 3600000,
+    },
+  });
+}
+
+// GET/POST /api/sim/run?admin=… — manual cycle trigger for testing.
+async function handleSimRun(url, request, env) {
+  const provided = request.headers.get("X-Admin-Secret") || url.searchParams.get("admin");
+  if (!env.ADMIN_SECRET || provided !== env.ADMIN_SECRET) return json({ error: "unauthorized" }, 401);
+  try {
+    return json(await runSimCycle(env));
+  } catch (e) {
+    return json({ ok: false, error: String((e && e.message) || e) }, 500);
   }
 }
 

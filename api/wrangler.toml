@@ -11,5 +11,9 @@ routes = [
 binding = "SCAN_KV"
 id = "2066ce5114e2480fa26bf991faeb0ef6"
 
+# Trusty Trader (Beta) paper-trading engine — runs one cycle every 10 min.
+[triggers]
+crons = ["*/10 * * * *"]
+
 [vars]
 SCAN_TTL_SECONDS = "300"
