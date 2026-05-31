@@ -1021,26 +1021,12 @@
       .replace(/'/g, "&#39;");
   }
 
-  // ── Trade-in-Trust-Wallet CTA row ──
-  // Mobile users get the link.trustwallet.com universal link → opens
-  // TW app's swap. Desktop users get swap.trustwallet.com (TW's web
-  // swap; auto-connects to TW Chrome extension if installed). PCS as
-  // a secondary fallback. UAI: c<coinId>_t<address>.
-  function tradeChainCoinId(chain) {
-    var c = (chain || "").toLowerCase();
-    return ({
-      bsc: 20000714, bnb: 20000714, binance: 20000714, evm: 20000714,
-      ethereum: 60, eth: 60,
-      solana: 501, sol: 501,
-      polygon: 966, matic: 966
-    })[c] || null;
-  }
-  function isMobileDevice() {
-    return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || "");
-  }
-  // Per-chain DEX with stable pre-fill URL pattern. Used as the
-  // always-works swap target on desktop and as the secondary
-  // fallback alongside the TW mobile deep link on mobile.
+  // ── Trade CTA row ──
+  // Primary action routes to Trusty Swap (trustyai.tech/swap), which
+  // handles wallet connect + execution. The chain DEX below is the
+  // always-works fallback / power-user link and the target for chains
+  // Trusty Swap doesn't cover yet.
+  // Per-chain DEX with a stable pre-fill URL pattern.
   function tradeChainDex(chain, ca) {
     var c = (chain || "").toLowerCase();
     if (!ca) return null;
@@ -1062,114 +1048,40 @@
     return null;
   }
 
-  // Detect Trust Wallet Chrome extension on the current page.
-  // Modern wallet extensions use EIP-6963 (multi-injected wallet
-  // discovery) — they don't always inject window.ethereum directly.
-  // We listen for announceProvider events at script load and remember
-  // any TW provider that responds.
-  let _twProviderFromEip6963 = null;
-  try {
-    window.addEventListener("eip6963:announceProvider", function (e) {
-      const info = e?.detail?.info || {};
-      const provider = e?.detail?.provider;
-      if (provider && /trust\s*wallet/i.test(info.name || "")) {
-        _twProviderFromEip6963 = provider;
-      }
-    });
-    // Ask any wallets currently injected to announce themselves
-    window.dispatchEvent(new Event("eip6963:requestProvider"));
-  } catch (_) {}
-
-  function hasTwExtension() {
-    try {
-      if (_twProviderFromEip6963) return true;
-      if (window.trustwallet) return true;
-      if (window.ethereum) {
-        if (window.ethereum.isTrust || window.ethereum.isTrustWallet) return true;
-        if (Array.isArray(window.ethereum.providers)) {
-          return window.ethereum.providers.some(function (p) {
-            return p && (p.isTrust || p.isTrustWallet);
-          });
-        }
-      }
-      return false;
-    } catch (e) { return false; }
-  }
-
-  // Get the actual provider object so we can call .request() on it.
-  function getTwProvider() {
-    if (_twProviderFromEip6963) return _twProviderFromEip6963;
-    if (window.ethereum && (window.ethereum.isTrust || window.ethereum.isTrustWallet)) return window.ethereum;
-    if (window.ethereum && Array.isArray(window.ethereum.providers)) {
-      const p = window.ethereum.providers.find(function (x) { return x && (x.isTrust || x.isTrustWallet); });
-      if (p) return p;
-    }
-    if (window.trustwallet && typeof window.trustwallet.request === "function") return window.trustwallet;
-    if (window.trustwallet && window.trustwallet.ethereum) return window.trustwallet.ethereum;
-    // Fallback: any injected provider (so click still triggers SOMEONE'S
-    // wallet popup — better UX than nothing happening).
-    if (window.ethereum && typeof window.ethereum.request === "function") return window.ethereum;
+  // Chains Trusty Swap (trustyai.tech/swap) covers natively → returns the
+  // canonical ?chain= value. null = not supported there (e.g. Solana), so
+  // we fall back to the chain DEX. Mirrors swap-app/src/chains.ts.
+  function swapSupportedChain(chain) {
+    var c = (chain || "").toLowerCase();
+    if (c === "bsc" || c === "bnb" || c === "binance" || c === "evm" || c === "smartchain") return "bsc";
+    if (c === "eth" || c === "ethereum") return "ethereum";
+    if (c === "base") return "base";
+    if (c === "polygon" || c === "matic") return "polygon";
     return null;
   }
 
-  // Trigger Trust Wallet (or whatever wallet extension is installed)
-  // popup on click, then redirect to the DEX. Returned wallet
-  // addresses are discarded — pure UX trigger so the user sees a
-  // wallet popup attributed to Trusty before they hit the DEX.
-  async function trustyOpenTwAndRedirect(redirectUrl) {
-    const provider = getTwProvider();
-    try {
-      if (provider && typeof provider.request === "function") {
-        await provider.request({ method: "eth_requestAccounts" });
-      }
-    } catch (e) { /* user denied or no provider — fall through */ }
-    window.open(redirectUrl, "_blank", "noopener,noreferrer");
-  }
-  // Expose so onclick attributes in the panel HTML can reach it
-  window.__trustyOpenTwAndRedirect = trustyOpenTwAndRedirect;
-
   function buildTradeRow(chain, ca) {
     if (!ca) return "";
-    var coinId = tradeChainCoinId(chain);
-    var nativeUai = coinId ? ("c" + coinId) : null;
-    var tokenUai = coinId ? ("c" + coinId + "_t" + ca) : null;
-    var twMobile = (nativeUai && tokenUai)
-      ? "https://link.trustwallet.com/swap?from=" + nativeUai + "&to=" + tokenUai
-      : null;
+    var swapChain = swapSupportedChain(chain);
     var dex = tradeChainDex(chain, ca);
-    var hasTw = hasTwExtension();
     var parts = [];
-    if (isMobileDevice() && twMobile) {
-      // Mobile: TW deep link primary, chain DEX secondary
-      parts.push('<a class="trusty-pp-trade-btn primary" href="' + twMobile + '" target="_blank" rel="noopener">' +
-        '<span class="trusty-pp-trade-icon">🛡️</span><span>Trade in Trust Wallet</span></a>');
+    if (swapChain) {
+      // Primary: our own safety-checked swap. The page connects the wallet
+      // and executes the swap with a fresh quote — no wallet handling here.
+      var swapUrl = "https://trustyai.tech/swap?ca=" + encodeURIComponent(ca) +
+        "&chain=" + encodeURIComponent(swapChain);
+      parts.push('<a class="trusty-pp-trade-btn primary" href="' + swapUrl + '" target="_blank" rel="noopener">' +
+        '<span class="trusty-pp-trade-icon">⚡</span><span>Trade — safety-checked swap</span></a>');
       if (dex) {
         parts.push('<a class="trusty-pp-trade-btn secondary" href="' + dex.url + '" target="_blank" rel="noopener">' +
           '<span class="trusty-pp-trade-icon">' + dex.icon + '</span><span>Or ' + dex.name + '</span></a>');
       }
     } else if (dex) {
-      // Desktop: chain DEX primary. ALWAYS trigger the wallet popup
-      // on click via eth_requestAccounts — works whether we
-      // detected TW or not (eip6963 timing, multi-provider arrays,
-      // etc. can fool detection). If no provider is installed the
-      // call silently fails and we just open the DEX.
-      var safeDexUrl = dex.url.replace(/'/g, "&#39;");
-      var primaryLabel = hasTw
-        ? "Trade with Trust Wallet → " + dex.name
-        : "Trade on " + dex.name;
-      var primaryIcon = hasTw ? "🛡️" : dex.icon;
-      parts.push('<a class="trusty-pp-trade-btn primary" href="' + dex.url + '" target="_blank" rel="noopener" ' +
-        'onclick="event.preventDefault();window.__trustyOpenTwAndRedirect(\'' + safeDexUrl + '\');return false;">' +
-        '<span class="trusty-pp-trade-icon">' + primaryIcon + '</span><span>' + primaryLabel + '</span></a>');
-      if (!hasTw) {
-        parts.push('<a class="trusty-pp-trade-btn secondary" href="https://trustwallet.com/browser-extension" target="_blank" rel="noopener">' +
-          '<span class="trusty-pp-trade-icon">⬇️</span><span>Get Trust Wallet</span></a>');
-      }
+      // Chains Trusty Swap doesn't cover yet (e.g. Solana) → DEX direct.
+      parts.push('<a class="trusty-pp-trade-btn primary" href="' + dex.url + '" target="_blank" rel="noopener">' +
+        '<span class="trusty-pp-trade-icon">' + dex.icon + '</span><span>Trade on ' + dex.name + '</span></a>');
     }
     if (!parts.length) return "";
-    var detected = (hasTw && !(isMobileDevice() && twMobile))
-      ? '<div class="trusty-pp-trade-detected">✓ Trust Wallet detected · click will open Trust Wallet first</div>'
-      : '';
     // Placeholder for the lazy-fetched route hint. Hidden until populated
     // post-render in openPaidPanel(); silently stays hidden if the quote
     // endpoint is unavailable or returns no route.
@@ -1177,7 +1089,6 @@
     return '<div class="trusty-pp-section trusty-pp-trade-section">' +
       '<div class="trusty-pp-section-title">💱 Trade</div>' +
       '<div class="trusty-pp-trade-row">' + parts.join('') + '</div>' +
-      detected +
       quoteSlot +
     '</div>';
   }
