@@ -985,3 +985,51 @@ html, body {
 .scan-cta.report:hover { border-color: var(--blue); }
 .scan-cta.trade { background: linear-gradient(135deg, var(--blue), var(--blue-deep)); color: #fff; }
 .scan-cta.trade:hover { filter: brightness(1.08); }
+
+/* Scan — section headings, sub-score bars, paid extras */
+.scan-section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--muted); margin: 12px 0 7px;
+}
+.scan-subs { margin-top: 4px; }
+.scan-sub-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.scan-sub-label { font-size: 10px; color: var(--text); width: 86px; flex: none; }
+.scan-sub-bar { flex: 1; height: 6px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+.scan-sub-fill { display: block; height: 100%; border-radius: 4px; }
+.scan-sub-fill.ape { background: var(--green); }
+.scan-sub-fill.cau { background: var(--gold); }
+.scan-sub-fill.run { background: var(--red); }
+.scan-sub-val { font-size: 10px; color: var(--muted); width: 22px; text-align: right; flex: none; font-variant-numeric: tabular-nums; }
+
+.scan-paid { }
+.scan-locked {
+  margin-top: 12px; padding: 12px; border-radius: 8px;
+  background: var(--bg); border: 1px dashed var(--border); text-align: center;
+}
+.scan-locked-title { font-size: 12px; font-weight: 800; color: var(--gold); }
+.scan-locked-list { font-size: 10px; color: var(--muted); margin: 5px 0; line-height: 1.5; }
+.scan-locked-hint { font-size: 10px; color: var(--text); opacity: 0.8; }
+
+.scan-topaz {
+  margin-top: 8px; font-size: 11px; color: var(--muted);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px;
+}
+.scan-topaz.has { color: var(--text); border-color: var(--blue); }
+
+.scan-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.scan-stat { background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 8px; text-align: center; }
+.scan-stat-num { font-size: 14px; font-weight: 800; }
+.scan-stat-num.up { color: var(--green); }
+.scan-stat-num.down { color: var(--red); }
+.scan-stat-lbl { font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+.scan-kols { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.scan-kol {
+  display: block; text-decoration: none; color: var(--text);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px;
+}
+.scan-kol:hover { border-color: var(--blue); }
+.scan-kol-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.scan-kol-handle { font-size: 11px; font-weight: 700; }
+.scan-kol-eng { font-size: 10px; color: var(--muted); flex: none; }
+.scan-kol-text { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

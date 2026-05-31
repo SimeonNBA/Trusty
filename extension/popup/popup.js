@@ -639,6 +639,32 @@
     }
   }
 
+  // 6-category sub-score labels — mirrors the pill's SUB_SCORE_LABELS.
+  const SCAN_SUB_LABELS = [
+    ["chainReputation", "Chain Reputation"],
+    ["narrative", "Narrative"],
+    ["ownership", "Ownership"],
+    ["ageTiming", "Age / Timing"],
+    ["socialPresence", "Social Presence"],
+    ["supplySafety", "Supply Safety"],
+  ];
+  function scanScoreClass(v) { return v >= 70 ? "ape" : v >= 40 ? "cau" : "run"; }
+
+  function renderSubScoreBars(subScores) {
+    if (!subScores || typeof subScores !== "object") return "";
+    const rows = SCAN_SUB_LABELS.map(function (pair) {
+      let v = Number(subScores[pair[0]]);
+      if (!isFinite(v)) v = 0;
+      const w = Math.max(0, Math.min(100, v));
+      return '<div class="scan-sub-row">' +
+        '<span class="scan-sub-label">' + pair[1] + '</span>' +
+        '<span class="scan-sub-bar"><span class="scan-sub-fill ' + scanScoreClass(v) + '" style="width:' + w + '%"></span></span>' +
+        '<span class="scan-sub-val">' + v + '</span>' +
+      '</div>';
+    }).join("");
+    return '<div class="scan-subs"><div class="scan-section-title">Score breakdown</div>' + rows + '</div>';
+  }
+
   function renderScanResult(d, ca, chain, el) {
     const verdict = String(d.verdict || "").toUpperCase();
     const vClass = verdict === "APE" ? "ape" : verdict === "RUN" ? "run" : "cau";
@@ -674,10 +700,100 @@
         '</div>' +
         (metaBits.length ? '<div class="scan-card-meta">' + metaBits.join(" · ") + '</div>' : '') +
         (checksHtml ? '<div class="scan-checks">' + checksHtml + '</div>' : '') +
+        renderSubScoreBars(d.subScores) +
+        '<div class="scan-paid" id="scanPaidArea"></div>' +
         '<div class="scan-ctas">' +
           '<a class="scan-cta report" href="' + reportUrl + '" target="_blank" rel="noopener">Full report ↗</a>' +
           tradeBtn +
         '</div>' +
       '</div>';
+    // Paid sections (or a locked tease for free users) fill in after.
+    fillScanPaidArea(d, ca, chain);
+  }
+
+  // Tier-gated extras — matches the pill's paid panel. Free users see a
+  // locked tease; paid users get paidChecks, Topaz, and live KOL/X/Square.
+  async function fillScanPaidArea(d, ca, chain) {
+    const area = document.getElementById("scanPaidArea");
+    if (!area) return;
+    let paid = false;
+    try {
+      const rec = await window.TrustyTier.getTier();
+      paid = !!(rec && rec.tier === "paid");
+    } catch (e) { paid = false; }
+
+    if (!paid) {
+      area.innerHTML =
+        '<div class="scan-locked">' +
+          '<div class="scan-locked-title">🔒 Unlock with Paid</div>' +
+          '<div class="scan-locked-list">KOL activity · X velocity · Binance Square sentiment · Topaz pool · coord-shill detection</div>' +
+          '<div class="scan-locked-hint">Subscribe on the Home tab — $5/mo.</div>' +
+        '</div>';
+      return;
+    }
+
+    let html = "";
+    const paidChecks = Array.isArray(d.paidChecks) ? d.paidChecks : [];
+    if (paidChecks.length) {
+      html += '<div class="scan-section-title">Pro checks</div><div class="scan-checks">' +
+        paidChecks.map(function (c) {
+          return '<div class="scan-check ' + (c.ok ? "ok" : "no") + '">' +
+            '<span class="scan-check-mark">' + (c.ok ? "✓" : "✗") + '</span>' +
+            '<span>' + escapeHtml(c.label || "") + '</span></div>';
+        }).join("") + '</div>';
+    }
+    if (d.topaz) {
+      if (d.topaz.hasPool) {
+        const bits = [];
+        if (d.topaz.tvl) bits.push("TVL " + escapeHtml(String(d.topaz.tvl)));
+        if (d.topaz.feeApr) bits.push("APR " + escapeHtml(String(d.topaz.feeApr)));
+        html += '<div class="scan-topaz has">🔷 Topaz Dex pool' + (bits.length ? ' · ' + bits.join(" · ") : "") + '</div>';
+      } else {
+        html += '<div class="scan-topaz">🔷 No Topaz Dex pool</div>';
+      }
+    }
+    html += '<div class="scan-section-title">Social</div><div id="scanSocial"><div class="scan-loading">Loading KOL &amp; X activity…</div></div>';
+    area.innerHTML = html;
+
+    try {
+      const sym = d.symbol ? String(d.symbol).replace(/^\$/, "") : "";
+      const k = await fetch("https://api.trustyai.tech/api/kols?ca=" + encodeURIComponent(ca) +
+        "&chain=" + encodeURIComponent(chain) + "&symbol=" + encodeURIComponent(sym))
+        .then(function (r) { return r.json(); });
+      renderScanSocial(k, document.getElementById("scanSocial"));
+    } catch (e) {
+      const s = document.getElementById("scanSocial");
+      if (s) s.innerHTML = '<div class="scan-msg err">Couldn\'t load social data.</div>';
+    }
+  }
+
+  function renderScanSocial(k, el) {
+    if (!el) return;
+    k = k || {};
+    const act = k.activity || {};
+    const sq = k.squareActivity || {};
+    const kols = Array.isArray(k.kols) ? k.kols : [];
+    let html = '<div class="scan-stat-grid">' +
+      '<div class="scan-stat"><div class="scan-stat-num">' + (Number(act.tweets24h) || 0).toLocaleString() + '</div><div class="scan-stat-lbl">tweets / 24h</div></div>' +
+      '<div class="scan-stat"><div class="scan-stat-num">' + escapeHtml(act.sentiment || "—") + '</div><div class="scan-stat-lbl">X sentiment</div></div>' +
+      '<div class="scan-stat"><div class="scan-stat-num">' + (Number(sq.mentions7d) || 0).toLocaleString() + '</div><div class="scan-stat-lbl">Square / 7d</div></div>' +
+      '<div class="scan-stat"><div class="scan-stat-num ' + (act.coordShill ? "down" : "up") + '">' + (act.coordShill ? "DETECTED" : "Clean") + '</div><div class="scan-stat-lbl">coord. shill</div></div>' +
+    '</div>';
+    if (kols.length) {
+      html += '<div class="scan-kols">' + kols.slice(0, 4).map(function (t) {
+        const handle = escapeHtml(t.handle || "");
+        const eng = (Number(t.likes) || 0) + (Number(t.retweets) || 0);
+        const txt = escapeHtml(String(t.text || "").slice(0, 90));
+        const url = t.tweetUrl ? escapeAttr(t.tweetUrl) : "";
+        const inner = '<div class="scan-kol-top"><span class="scan-kol-handle">' + handle + '</span><span class="scan-kol-eng">♥ ' + eng + '</span></div>' +
+          (txt ? '<div class="scan-kol-text">' + txt + '</div>' : '');
+        return url
+          ? '<a class="scan-kol" href="' + url + '" target="_blank" rel="noopener">' + inner + '</a>'
+          : '<div class="scan-kol">' + inner + '</div>';
+      }).join("") + '</div>';
+    } else {
+      html += '<div class="scan-hint">No KOL tweets in the last 24h.</div>';
+    }
+    el.innerHTML = html;
   }
 })();
