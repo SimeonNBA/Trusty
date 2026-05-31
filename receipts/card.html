@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trusty AI — Track Record card</title>
+    <style>
+      :root {
+        --good: #22c55e; --bad: #ef4444; --warn: #f59e0b;
+        --accent: #5b9cf7; --gold: #f3ba2f;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background: #06080f; min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        color: #f5f5f7; display: flex; flex-direction: column; align-items: center;
+        padding: 24px 12px 60px;
+      }
+      .stage { transform-origin: top center; }
+      /* The card — fixed at X's 1200×675 so the PNG/screenshot is crisp. */
+      .card {
+        width: 1200px; height: 675px; position: relative; overflow: hidden;
+        background:
+          radial-gradient(1200px 500px at 18% -10%, rgba(91,156,247,0.18), transparent 60%),
+          radial-gradient(900px 500px at 100% 120%, rgba(243,186,47,0.12), transparent 55%),
+          linear-gradient(160deg, #0d1424 0%, #090d18 100%);
+        border: 1px solid #233247; padding: 56px 64px;
+        display: flex; flex-direction: column;
+      }
+      .card-head { display: flex; align-items: center; gap: 16px; }
+      .card-head .shield { font-size: 46px; }
+      .card-head .brand { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; }
+      .card-head .tag {
+        margin-left: auto; font-size: 15px; font-weight: 800; letter-spacing: 2px;
+        color: var(--gold); text-transform: uppercase;
+      }
+      .card-title { margin-top: 6px; font-size: 17px; color: #8b95a8; letter-spacing: 0.3px; }
+
+      .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 44px; }
+      .col {
+        background: rgba(255,255,255,0.025); border: 1px solid #233247;
+        border-top-width: 4px; border-radius: 20px; padding: 30px 24px; text-align: center;
+      }
+      .col.ape { border-top-color: var(--good); }
+      .col.cau { border-top-color: var(--warn); }
+      .col.run { border-top-color: var(--bad); }
+      .col-label { font-size: 17px; font-weight: 800; letter-spacing: 1.5px; color: #aeb6c6; text-transform: uppercase; }
+      .col-avg { font-size: 72px; font-weight: 900; line-height: 1.05; margin: 12px 0 6px; letter-spacing: -2px; }
+      .col-avg.up { color: var(--good); } .col-avg.down { color: var(--bad); }
+      .col-sub { font-size: 16px; color: #8b95a8; }
+
+      .strip {
+        margin-top: auto; display: flex; align-items: center; gap: 18px;
+        padding-top: 26px; border-top: 1px solid #233247;
+      }
+      .strip .big { font-size: 22px; font-weight: 800; }
+      .strip .big .hl { color: var(--bad); }
+      .strip .big .hl2 { color: var(--accent); }
+      .strip .gf {
+        margin-left: auto; font-size: 15px; font-weight: 700; color: #cfd6e4;
+        background: rgba(243,186,47,0.12); border: 1px solid rgba(243,186,47,0.4);
+        border-radius: 999px; padding: 8px 16px;
+      }
+      .foot { margin-top: 14px; font-size: 15px; color: #6b7385; }
+      .foot .url { color: var(--accent); font-weight: 700; }
+
+      .controls { margin-top: 22px; display: flex; gap: 10px; align-items: center; }
+      .btn {
+        border: none; border-radius: 10px; font: inherit; font-weight: 800; font-size: 15px;
+        padding: 12px 22px; cursor: pointer; background: var(--accent); color: #fff;
+      }
+      .btn:hover { filter: brightness(1.08); }
+      .hint { font-size: 13px; color: #8b95a8; }
+      .loading { color: #8b95a8; padding: 40px; font-size: 16px; }
+    </style>
+  </head>
+  <body>
+    <div class="stage" id="stage">
+      <div class="card" id="card">
+        <div class="loading">Loading latest receipt…</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="dlBtn">⬇ Download PNG</button>
+      <span class="hint">…or just screenshot the card. <a href="/receipts/" style="color:var(--accent)">Back to receipts</a></span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+      const BUCKET_BASE = "https://greenfield-sp.bnbchain.org/view/trusty-ai-receipts";
+      const params = new URLSearchParams(location.search);
+
+      // Scale the 1200px card to fit the viewport for on-screen viewing;
+      // the PNG export still renders at full resolution.
+      function fitStage() {
+        const s = Math.min(1, (window.innerWidth - 24) / 1200);
+        document.getElementById("stage").style.transform = "scale(" + s + ")";
+        // collapse the empty space the scale transform leaves below
+        document.getElementById("stage").style.marginBottom = (-(675 * (1 - s))) + "px";
+      }
+      window.addEventListener("resize", fitStage);
+
+      function esc(s) { return String(s == null ? "" : s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+      function col(label, b, cls) {
+        b = b || { count: 0, avgChangePct: 0 };
+        const avg = b.avgChangePct || 0;
+        return '<div class="col ' + cls + '">' +
+          '<div class="col-label">' + label + '</div>' +
+          '<div class="col-avg ' + (avg >= 0 ? "up" : "down") + '">' + (avg >= 0 ? "+" : "") + avg + '%</div>' +
+          '<div class="col-sub">' + (b.count || 0) + ' calls</div>' +
+        '</div>';
+      }
+
+      function render(data) {
+        const sc = (data && data.scorecard) || null;
+        const v = (sc && sc.byVerdict) || {};
+        const scanned = (sc && sc.totalScans) || data.totalScans || 0;
+        const caught = (sc && sc.caught != null) ? sc.caught
+          : (Array.isArray(data.rugged) ? data.rugged.filter(r => r.caughtByUs).length : 0);
+        const range = data.dateRange || "";
+        document.getElementById("card").innerHTML =
+          '<div class="card-head">' +
+            '<span class="shield">🛡️</span>' +
+            '<span class="brand">Trusty AI</span>' +
+            '<span class="tag">Track Record</span>' +
+          '</div>' +
+          '<div class="card-title">Every token we scanned, and how it moved · ' + esc(range) + '</div>' +
+          '<div class="cols">' +
+            col("APE calls", v.APE, "ape") +
+            col("Caution", v.CAUTION, "cau") +
+            col("RUN calls", v.RUN, "run") +
+          '</div>' +
+          '<div class="strip">' +
+            '<div class="big">🚨 <span class="hl">' + caught + '</span> rugs caught · <span class="hl2">' + scanned + '</span> tokens scanned</div>' +
+            '<div class="gf">⛓ Verified on BNB Greenfield</div>' +
+          '</div>' +
+          '<div class="foot">Avg market-cap change since first scan, by our verdict · <span class="url">trustyai.tech/receipts</span></div>';
+        fitStage();
+      }
+
+      const DEMO = {
+        dateRange: "May 23–30, 2026", totalScans: 19,
+        scorecard: { totalScans: 19, caught: 2, byVerdict: {
+          APE: { count: 17, avgChangePct: 12 },
+          CAUTION: { count: 2, avgChangePct: -4 },
+          RUN: { count: 3, avgChangePct: -71 } } },
+      };
+
+      async function load() {
+        if (params.get("demo") === "1") { render(DEMO); return; }
+        try {
+          const m = await fetch(BUCKET_BASE + "/manifest.json", { cache: "no-cache" }).then(r => r.json());
+          const weeks = (m && m.weeks) || [];
+          if (!weeks.length) throw new Error("no weeks");
+          // Pick requested week or the latest.
+          const want = params.get("week");
+          const entry = (want && weeks.find(w => w.week === want)) || weeks[weeks.length - 1];
+          const data = await fetch(BUCKET_BASE + "/" + entry.file, { cache: "no-cache" }).then(r => r.json());
+          render(data);
+        } catch (e) {
+          // Fall back to the demo card so there's always something shareable.
+          render(DEMO);
+        }
+      }
+
+      document.getElementById("dlBtn").addEventListener("click", async function () {
+        const btn = this; btn.disabled = true; const orig = btn.textContent; btn.textContent = "Rendering…";
+        try {
+          const canvas = await html2canvas(document.getElementById("card"), { width: 1200, height: 675, scale: 2, backgroundColor: null, useCORS: true });
+          const a = document.createElement("a");
+          a.download = "trusty-track-record.png";
+          a.href = canvas.toDataURL("image/png");
+          a.click();
+        } catch (e) {
+          alert("Couldn't render PNG — just screenshot the card instead.");
+        } finally {
+          btn.disabled = false; btn.textContent = orig;
+        }
+      });
+
+      load();
+    </script>
+  </body>
+</html>
