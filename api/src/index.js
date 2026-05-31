@@ -3498,6 +3498,7 @@ async function handleAdminPublishReceipt(url, request, env) {
   // Categorise
   const hits = [];
   const rugged = [];
+  const performance = []; // every scanned token + signed MC change since scan
   for (let i = 0; i < snapshots.length; i++) {
     const s = snapshots[i];
     const c = currents[i];
@@ -3516,6 +3517,28 @@ async function handleAdminPublishReceipt(url, request, env) {
     }
     const isRugged = (mcDropPct !== null && mcDropPct >= 80)
                   || (liqDropPct !== null && liqDropPct >= 80);
+
+    // Signed MC change since scan (up OR down) for the full performance
+    // ledger. Null current = token gone from Dexscreener → treat as -100%
+    // (same convention as the rug check), flagged `gone` so the viewer can
+    // distinguish a true zero from a fetch miss.
+    let mcChangePct = null;
+    const gone = !c;
+    if (s.mcAtScan > 0) {
+      mcChangePct = c ? Math.round((c.mc / s.mcAtScan - 1) * 100) : -100;
+    }
+    performance.push({
+      ca: s.ca,
+      symbol: s.symbol,
+      chain: s.chain,
+      flaggedAt: s.firstScannedAt,
+      scoreAtScan: s.scoreAtScan,
+      verdictAtScan: s.verdictAtScan,
+      mcAtScan: s.mcAtScan,
+      currentMc: c ? c.mc : 0,
+      mcChangePct,
+      gone,
+    });
 
     if (isHit) {
       hits.push({
@@ -3548,6 +3571,30 @@ async function handleAdminPublishReceipt(url, request, env) {
     }
   }
 
+  // Per-verdict scorecard — the accountability summary. avgChangePct is
+  // the mean signed MC change of tokens we gave that verdict.
+  function bucket() { return { count: 0, sum: 0, up: 0, down: 0 }; }
+  const buckets = { APE: bucket(), CAUTION: bucket(), RUN: bucket() };
+  for (const p of performance) {
+    const b = buckets[(p.verdictAtScan || "").toUpperCase()];
+    if (!b) continue;
+    b.count++;
+    if (typeof p.mcChangePct === "number") {
+      b.sum += p.mcChangePct;
+      if (p.mcChangePct > 0) b.up++;
+      else if (p.mcChangePct < 0) b.down++;
+    }
+  }
+  function summ(b) {
+    return { count: b.count, avgChangePct: b.count ? Math.round(b.sum / b.count) : 0, upCount: b.up, downCount: b.down };
+  }
+  const scorecard = {
+    totalScans: snapshots.length,
+    byVerdict: { APE: summ(buckets.APE), CAUTION: summ(buckets.CAUTION), RUN: summ(buckets.RUN) },
+    rugged: rugged.length,
+    caught: rugged.filter((r) => r.caughtByUs).length,
+  };
+
   // Week label: ISO week of "now" (operator can override via ?week=).
   const weekLabel = url.searchParams.get("week") || isoWeekLabel(new Date());
   const now = new Date();
@@ -3559,8 +3606,11 @@ async function handleAdminPublishReceipt(url, request, env) {
     dateRange: weekStart.toISOString().slice(0, 10) + " to " + now.toISOString().slice(0, 10),
     generatedAt: now.toISOString(),
     totalScans: snapshots.length,
+    scorecard,
     hits: hits.sort((a, b) => a.scoreAtScan - b.scoreAtScan),
     rugged: rugged.sort((a, b) => (b.mcDropPct || 0) - (a.mcDropPct || 0)),
+    // Best performers first; gone/rugged sink to the bottom.
+    performance: performance.sort((a, b) => (b.mcChangePct ?? -101) - (a.mcChangePct ?? -101)),
   });
 }
 

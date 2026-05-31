@@ -131,6 +131,36 @@
     td.num { text-align: right; font-variant-numeric: tabular-nums; }
     td.bad { color: var(--bad); font-weight: 700; }
     td.good { color: var(--good); font-weight: 700; }
+    td.num.up { color: var(--good); font-weight: 700; }
+    td.num.down { color: var(--bad); font-weight: 700; }
+    /* Per-verdict scorecard */
+    .scorecard-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px;
+    }
+    .score-card {
+      background: rgba(99,130,184,0.06); border: 1px solid var(--border);
+      border-top-width: 3px; border-radius: 10px; padding: 14px; text-align: center;
+    }
+    .score-card.ape { border-top-color: var(--good); }
+    .score-card.cau { border-top-color: var(--warn); }
+    .score-card.run { border-top-color: var(--bad); }
+    .score-card-label {
+      font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;
+      color: var(--muted); font-weight: 700;
+    }
+    .score-card-avg { font-size: 26px; font-weight: 800; margin: 4px 0 2px; }
+    .score-card-avg.up { color: var(--good); }
+    .score-card-avg.down { color: var(--bad); }
+    .score-card-sub { font-size: 11px; color: var(--muted); }
+    .scorecard-note { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+    .verdict-pill {
+      display: inline-block; font-size: 9px; padding: 2px 7px; border-radius: 999px;
+      letter-spacing: 0.5px; font-weight: 800;
+    }
+    .verdict-pill.ape { color: var(--good); background: rgba(34,197,94,0.14); }
+    .verdict-pill.caution { color: var(--warn); background: rgba(245,158,11,0.14); }
+    .verdict-pill.run { color: var(--bad); background: rgba(239,68,68,0.14); }
+    @media (max-width: 560px) { .scorecard-row { grid-template-columns: 1fr; } }
     .chain-pill {
       display: inline-block; font-size: 9px; padding: 2px 6px;
       border-radius: 3px; background: rgba(99,130,184,0.15);
@@ -340,8 +370,35 @@
         )
       );
 
+      // Per-verdict scorecard — only present on receipts published with
+      // the performance upgrade; older receipts skip it gracefully.
+      const sc = data.scorecard;
+      if (sc && sc.byVerdict) {
+        function scoreCard(label, b, cls) {
+          b = b || { count: 0, avgChangePct: 0, upCount: 0, downCount: 0 };
+          const avg = b.avgChangePct || 0;
+          return el("div", { className: "score-card " + cls },
+            el("div", { className: "score-card-label" }, label),
+            el("div", { className: "score-card-avg " + (avg >= 0 ? "up" : "down") }, (avg >= 0 ? "+" : "") + avg + "%"),
+            el("div", { className: "score-card-sub" }, b.count + " scanned · " + (b.upCount || 0) + "↑ " + (b.downCount || 0) + "↓"));
+        }
+        statsEl.appendChild(
+          el("div", { className: "scorecard-row" },
+            scoreCard("APE calls", sc.byVerdict.APE, "ape"),
+            scoreCard("CAUTION calls", sc.byVerdict.CAUTION, "cau"),
+            scoreCard("RUN calls", sc.byVerdict.RUN, "run"))
+        );
+        statsEl.appendChild(
+          el("div", { className: "scorecard-note" },
+            "Average market-cap change since we first scanned each token, grouped by the verdict we gave it. Window: this receipt's date range.")
+        );
+      }
+
       // Tables
       tablesEl.innerHTML = "";
+      if (Array.isArray(data.performance) && data.performance.length) {
+        tablesEl.appendChild(renderPerformanceTable(data.performance));
+      }
       tablesEl.appendChild(renderRuggedTable(rugged));
       tablesEl.appendChild(renderHitsTable(hits));
 
@@ -350,6 +407,47 @@
       permaEl.innerHTML = "";
       permaEl.appendChild(document.createTextNode("Verifiable record on Greenfield: "));
       permaEl.appendChild(el("a", { href: fileUrl, target: "_blank", rel: "noopener" }, "open raw JSON →"));
+    }
+
+    function renderPerformanceTable(perf) {
+      const section = el("div", { className: "table-section" },
+        el("h3", {}, "How every scanned token performed ", el("span", { className: "count" }, "· " + perf.length))
+      );
+      const tbl = el("table",
+        { html:
+          '<thead><tr>' +
+            '<th>Token</th>' +
+            '<th>Chain</th>' +
+            '<th>Verdict</th>' +
+            '<th class="num">MC at scan</th>' +
+            '<th class="num">MC now</th>' +
+            '<th class="num">Change</th>' +
+          '</tr></thead>' +
+          '<tbody></tbody>'
+        }
+      );
+      const tbody = tbl.querySelector("tbody");
+      for (const p of perf) {
+        const chg = p.mcChangePct;
+        const chgCls = chg == null ? "" : (chg >= 0 ? "up" : "down");
+        const chgStr = p.gone ? "GONE" : (chg == null ? "—" : (chg >= 0 ? "+" : "") + chg + "%");
+        const v = (p.verdictAtScan || "").toUpperCase();
+        const tr = el("tr", {},
+          el("td", {},
+            el("strong", {}, p.symbol || "?"),
+            document.createTextNode(" "),
+            el("a", { className: "ca-link", href: explorerUrlFor(p.chain, p.ca), target: "_blank", rel: "noopener" }, shortCa(p.ca))
+          ),
+          el("td", {}, el("span", { className: "chain-pill" }, (p.chain || "").toUpperCase())),
+          el("td", {}, el("span", { className: "verdict-pill " + v.toLowerCase() }, v || "—")),
+          el("td", { className: "num" }, fmtUsd(p.mcAtScan)),
+          el("td", { className: "num" }, fmtUsd(p.currentMc)),
+          el("td", { className: "num " + (p.gone ? "down" : chgCls) }, chgStr)
+        );
+        tbody.appendChild(tr);
+      }
+      section.appendChild(tbl);
+      return section;
     }
 
     function renderRuggedTable(rugged) {
