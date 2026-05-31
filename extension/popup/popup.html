@@ -22,6 +22,7 @@
     <nav class="tab-nav" id="tabNav">
       <button class="tab-btn active" type="button" data-tab="home">Home</button>
       <button class="tab-btn" type="button" data-tab="trending">Trending</button>
+      <button class="tab-btn" type="button" data-tab="scan">Scan CA</button>
     </nav>
 
     <!-- Home view (default) -->
@@ -175,6 +176,34 @@
       <a class="trending-tab-seeall" href="https://trustyai.tech/#trending" target="_blank" rel="noopener">
         See all categories on trustyai.tech →
       </a>
+    </div>
+
+    <!-- Scan view — paste any contract address, get a safety verdict -->
+    <div class="tab-view" id="viewScan" data-view="scan" style="display:none;">
+      <div class="scan-tab-header">
+        <span class="scan-tab-title">🔍 Scan a contract</span>
+      </div>
+      <div class="scan-input-row">
+        <input
+          type="text"
+          id="scanCaInput"
+          class="scan-ca-input"
+          placeholder="Paste contract address…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <select id="scanChain" class="scan-chain" aria-label="Chain">
+          <option value="bsc">🟡 BNB</option>
+          <option value="ethereum">🔵 ETH</option>
+          <option value="base">🔷 Base</option>
+          <option value="polygon">🟣 Polygon</option>
+          <option value="solana">🟪 SOL</option>
+        </select>
+      </div>
+      <button class="scan-btn" id="scanBtn" type="button">Scan</button>
+      <div class="scan-result" id="scanResult">
+        <div class="scan-hint">Paste any token's contract address and pick its chain to get an instant safety verdict.</div>
+      </div>
     </div>
   </main>
 

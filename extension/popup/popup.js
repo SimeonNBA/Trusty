@@ -461,6 +461,21 @@
     document.querySelectorAll(".tab-view").forEach(function (v) {
       v.style.display = v.getAttribute("data-view") === target ? "" : "none";
     });
+    if (target === "scan") {
+      const input = $("scanCaInput");
+      if (!scanWired) {
+        const btn = $("scanBtn");
+        if (btn) btn.addEventListener("click", doScan);
+        if (input) {
+          input.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") doScan();
+          });
+        }
+        scanWired = true;
+      }
+      if (input) input.focus();
+      return;
+    }
     if (target === "trending") {
       // Restore last selected chain preference on first activation
       const select = $("popupTrendingChain");
@@ -577,4 +592,92 @@
       .replace(/'/g, "&#39;");
   }
   function escapeAttr(s) { return escapeHtml(s); }
+
+  /* ──────────────────────────────────────────────────────────────
+     Scan tab — paste a contract address, get the same public safety
+     verdict the pills use (/api/scan). Free feature; no tier gating.
+     ────────────────────────────────────────────────────────────── */
+  const SCAN_API = "https://api.trustyai.tech/api/scan";
+  let scanWired = false;
+
+  // Chains Trusty Swap covers → canonical ?chain= value (else no Trade btn).
+  function scanSupportedSwapChain(chain) {
+    var c = (chain || "").toLowerCase();
+    if (c === "bsc") return "bsc";
+    if (c === "ethereum") return "ethereum";
+    if (c === "base") return "base";
+    if (c === "polygon") return "polygon";
+    return null;
+  }
+
+  async function doScan() {
+    const input = $("scanCaInput");
+    const chainSel = $("scanChain");
+    const result = $("scanResult");
+    const btn = $("scanBtn");
+    if (!input || !result) return;
+    const ca = (input.value || "").trim();
+    if (!ca) {
+      result.innerHTML = '<div class="scan-msg err">Paste a contract address first.</div>';
+      return;
+    }
+    const chain = (chainSel && chainSel.value) || "bsc";
+    if (btn) { btn.disabled = true; btn.textContent = "Scanning…"; }
+    result.innerHTML = '<div class="scan-loading">Scanning…</div>';
+    try {
+      const res = await fetch(SCAN_API + "?ca=" + encodeURIComponent(ca) + "&chain=" + encodeURIComponent(chain));
+      const d = await res.json().catch(function () { return null; });
+      if (!d || d.error) {
+        result.innerHTML = '<div class="scan-msg err">' + escapeHtml((d && d.error) || "Couldn't scan that address.") + '</div>';
+        return;
+      }
+      renderScanResult(d, ca, chain, result);
+    } catch (e) {
+      result.innerHTML = '<div class="scan-msg err">Network error — try again.</div>';
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "Scan"; }
+    }
+  }
+
+  function renderScanResult(d, ca, chain, el) {
+    const verdict = String(d.verdict || "").toUpperCase();
+    const vClass = verdict === "APE" ? "ape" : verdict === "RUN" ? "run" : "cau";
+    const score = (d.score == null ? "?" : d.score);
+    const sym = d.symbol ? escapeHtml(d.symbol) : "—";
+    const name = escapeHtml(d.name || "");
+    const md = d.marketData || {};
+    const ch = (md.change && typeof md.change.h24 !== "undefined") ? Number(md.change.h24) : null;
+    const chStr = ch == null ? "" : (ch >= 0 ? "+" : "") + ch + "%";
+    const chCls = ch == null ? "" : (ch >= 0 ? "up" : "down");
+    const checks = Array.isArray(d.checks) ? d.checks : [];
+    const checksHtml = checks.map(function (c) {
+      return '<div class="scan-check ' + (c.ok ? "ok" : "no") + '">' +
+        '<span class="scan-check-mark">' + (c.ok ? "✓" : "✗") + '</span>' +
+        '<span>' + escapeHtml(c.label || "") + '</span></div>';
+    }).join("");
+    const reportUrl = "https://trustyai.tech/?ca=" + encodeURIComponent(ca) +
+      "&chain=" + encodeURIComponent(chain) + "&utm_source=extension_scan";
+    const swapChain = scanSupportedSwapChain(chain);
+    const tradeBtn = swapChain
+      ? '<a class="scan-cta trade" href="https://trustyai.tech/swap?ca=' + encodeURIComponent(ca) +
+        '&chain=' + encodeURIComponent(swapChain) + '" target="_blank" rel="noopener">⚡ Trade</a>'
+      : '';
+    const metaBits = [];
+    if (md.mcap) metaBits.push("MC " + escapeHtml(md.mcap));
+    if (md.volume24h) metaBits.push("Vol " + escapeHtml(md.volume24h));
+    if (chStr) metaBits.push('<span class="' + chCls + '">' + chStr + '</span>');
+    el.innerHTML =
+      '<div class="scan-card ' + vClass + '">' +
+        '<div class="scan-card-top">' +
+          '<div class="scan-card-sym">' + sym + (name ? ' <span class="scan-card-name">' + name + '</span>' : '') + '</div>' +
+          '<div class="scan-verdict ' + vClass + '">' + escapeHtml(verdict || "—") + ' ' + score + '/100</div>' +
+        '</div>' +
+        (metaBits.length ? '<div class="scan-card-meta">' + metaBits.join(" · ") + '</div>' : '') +
+        (checksHtml ? '<div class="scan-checks">' + checksHtml + '</div>' : '') +
+        '<div class="scan-ctas">' +
+          '<a class="scan-cta report" href="' + reportUrl + '" target="_blank" rel="noopener">Full report ↗</a>' +
+          tradeBtn +
+        '</div>' +
+      '</div>';
+  }
 })();
