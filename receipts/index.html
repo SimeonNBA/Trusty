@@ -149,7 +149,8 @@
       font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase;
       color: var(--muted); font-weight: 700;
     }
-    .score-card-avg { font-size: 40px; font-weight: 900; margin: 6px 0 4px; letter-spacing: -1px; }
+    .score-card-avg { font-size: 40px; font-weight: 900; margin: 6px 0 0; letter-spacing: -1px; }
+    .score-card-peaklbl { font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
     .share-card-link {
       display: inline-block; margin-left: 10px; font-size: 13px; font-weight: 700;
       color: var(--accent); padding: 7px 14px; border-radius: 999px;
@@ -386,12 +387,15 @@
       const sc = data.scorecard;
       if (sc && sc.byVerdict) {
         function scoreCard(label, b, cls) {
-          b = b || { count: 0, avgChangePct: 0, upCount: 0, downCount: 0 };
-          const avg = b.avgChangePct || 0;
+          b = b || { count: 0, avgPeakGainPct: 0, avgChangePct: 0, hit2x: 0, hit50: 0 };
+          const peak = b.avgPeakGainPct || 0;
+          const now = b.avgChangePct || 0;
           return el("div", { className: "score-card " + cls },
             el("div", { className: "score-card-label" }, label),
-            el("div", { className: "score-card-avg " + (avg >= 0 ? "up" : "down") }, (avg >= 0 ? "+" : "") + avg + "%"),
-            el("div", { className: "score-card-sub" }, b.count + " scanned · " + (b.upCount || 0) + "↑ " + (b.downCount || 0) + "↓"));
+            el("div", { className: "score-card-avg " + (peak >= 0 ? "up" : "down") }, (peak >= 0 ? "+" : "") + peak + "%"),
+            el("div", { className: "score-card-peaklbl" }, "avg peak after scan"),
+            el("div", { className: "score-card-sub" },
+              (b.count || 0) + " calls · " + (b.hit2x || 0) + " hit 2x · now " + (now >= 0 ? "+" : "") + now + "%"));
         }
         statsEl.appendChild(
           el("div", { className: "scorecard-row" },
@@ -401,7 +405,7 @@
         );
         statsEl.appendChild(
           el("div", { className: "scorecard-note" },
-            "Average market-cap change since we first scanned each token, grouped by the verdict we gave it. Window: this receipt's date range.")
+            "“Avg peak” = the best market-cap gain each token reached AFTER we scanned it — i.e. whether the call gave you a real exit, not where it happens to sit now. Peaks are tracked from scan time onward, sampled every 10 min.")
         );
       }
 
@@ -431,8 +435,8 @@
             '<th>Chain</th>' +
             '<th>Verdict</th>' +
             '<th class="num">MC at scan</th>' +
-            '<th class="num">MC now</th>' +
-            '<th class="num">Change</th>' +
+            '<th class="num">Peak gain</th>' +
+            '<th class="num">Now</th>' +
           '</tr></thead>' +
           '<tbody></tbody>'
         }
@@ -442,6 +446,9 @@
         const chg = p.mcChangePct;
         const chgCls = chg == null ? "" : (chg >= 0 ? "up" : "down");
         const chgStr = p.gone ? "GONE" : (chg == null ? "—" : (chg >= 0 ? "+" : "") + chg + "%");
+        const peak = p.peakGainPct;
+        const peakCls = peak == null ? "" : (peak > 0 ? "up" : "");
+        const peakStr = peak == null ? "—" : (peak >= 0 ? "+" : "") + peak + "%";
         const v = (p.verdictAtScan || "").toUpperCase();
         const tr = el("tr", {},
           el("td", {},
@@ -452,7 +459,7 @@
           el("td", {}, el("span", { className: "chain-pill" }, (p.chain || "").toUpperCase())),
           el("td", {}, el("span", { className: "verdict-pill " + v.toLowerCase() }, v || "—")),
           el("td", { className: "num" }, fmtUsd(p.mcAtScan)),
-          el("td", { className: "num" }, fmtUsd(p.currentMc)),
+          el("td", { className: "num " + peakCls }, peakStr),
           el("td", { className: "num " + (p.gone ? "down" : chgCls) }, chgStr)
         );
         tbody.appendChild(tr);

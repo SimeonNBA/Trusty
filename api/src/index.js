@@ -171,9 +171,10 @@ export default {
   // are swallowed so a bad cycle never throws out of the scheduled handler.
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
-      runSimCycle(env).catch((e) => {
-        console.log("sim cycle error:", String((e && e.message) || e));
-      }),
+      Promise.allSettled([
+        runSimCycle(env).catch((e) => console.log("sim cycle error:", String((e && e.message) || e))),
+        updateScanPeaks(env).catch((e) => console.log("peak update error:", String((e && e.message) || e))),
+      ]),
     );
   },
 };
@@ -1741,19 +1742,72 @@ async function recordScanForReceipt(d, scanResult, env) {
     // saw it" data, so the dedupe end-state is correct either way.
     const existing = await env.SCAN_KV.get(key);
     if (existing) return;
+    const nowIso = new Date().toISOString();
     const record = {
       ca, chain, symbol,
-      firstScannedAt: new Date().toISOString(),
+      firstScannedAt: nowIso,
       scoreAtScan: score,
       verdictAtScan: verdict,
       mcAtScan: mc,
       liquidityAtScan: liquidity,
+      // Running max MC observed AFTER the scan — the real measure of call
+      // quality (best exit it gave). Seeded at scan; bumped by
+      // updateScanPeaks() each cron cycle. Peaks accrue going forward only;
+      // spikes from before tracking started can't be recovered.
+      mcPeak: mc,
+      mcPeakAt: nowIso,
     };
     await env.SCAN_KV.put(key, JSON.stringify(record), {
       expirationTtl: 8 * 24 * 60 * 60, // 8 days — 7-day window with buffer
     });
   } catch (_) {
     // Tracking is best-effort; never let it break a scan.
+  }
+}
+
+// Cron pass: refresh the running peak MC for every tracked scan. Fetches
+// current MC (Dexscreener), and when it's a new high, updates mcPeak +
+// mcPeakAt. Writes ONLY on a new high (keeps KV writes bounded), and
+// preserves the original 8-day-from-first-scan expiry so the weekly
+// window stays fixed even as records are re-put.
+async function updateScanPeaks(env) {
+  if (!env.SCAN_KV) return;
+  const keys = [];
+  let cursor;
+  for (let i = 0; i < 5; i++) {
+    const page = await env.SCAN_KV.list({ prefix: "receipt:scan:", cursor, limit: 1000 });
+    keys.push(...page.keys.map((k) => k.name));
+    if (page.list_complete || !page.cursor) break;
+    cursor = page.cursor;
+  }
+  const now = Date.now();
+  const WINDOW_MS = 8 * 24 * 60 * 60 * 1000;
+  // Process in small chunks to bound concurrent Dex fetches.
+  for (let i = 0; i < keys.length; i += 8) {
+    const chunk = keys.slice(i, i + 8);
+    await Promise.allSettled(chunk.map(async (key) => {
+      const rec = await env.SCAN_KV.get(key, "json");
+      if (!rec || !rec.firstScannedAt) return;
+      const remTtl = Math.floor((Date.parse(rec.firstScannedAt) + WINDOW_MS - now) / 1000);
+      if (remTtl <= 60) return; // about to expire — don't resurrect it
+      const chainForDex = rec.chain === "ethereum" ? "ethereum"
+        : rec.chain === "base" ? "base"
+        : rec.chain === "polygon" ? "polygon"
+        : rec.chain === "solana" ? "solana"
+        : "bsc";
+      let cur = 0;
+      try {
+        const d = await fetchDex(rec.ca, chainForDex, env);
+        cur = d ? (parseFloat(d.mcap || 0) || 0) : 0;
+      } catch (_) { return; }
+      if (cur > (rec.mcPeak || rec.mcAtScan || 0)) {
+        rec.mcPeak = cur;
+        rec.mcPeakAt = new Date().toISOString();
+        try {
+          await env.SCAN_KV.put(key, JSON.stringify(rec), { expirationTtl: remTtl });
+        } catch (_) {}
+      }
+    }));
   }
 }
 
@@ -3527,6 +3581,14 @@ async function handleAdminPublishReceipt(url, request, env) {
     if (s.mcAtScan > 0) {
       mcChangePct = c ? Math.round((c.mc / s.mcAtScan - 1) * 100) : -100;
     }
+    // Peak gain since scan — the real "was it a good call" number. mcPeak
+    // is at least mcAtScan, and we also fold in the freshly-fetched current
+    // MC so a brand-new high isn't missed between cron passes.
+    let peakGainPct = null;
+    if (s.mcAtScan > 0) {
+      const peakMc = Math.max(s.mcPeak || s.mcAtScan, c ? c.mc : 0);
+      peakGainPct = Math.round((peakMc / s.mcAtScan - 1) * 100);
+    }
     performance.push({
       ca: s.ca,
       symbol: s.symbol,
@@ -3537,6 +3599,7 @@ async function handleAdminPublishReceipt(url, request, env) {
       mcAtScan: s.mcAtScan,
       currentMc: c ? c.mc : 0,
       mcChangePct,
+      peakGainPct,
       gone,
     });
 
@@ -3573,7 +3636,7 @@ async function handleAdminPublishReceipt(url, request, env) {
 
   // Per-verdict scorecard — the accountability summary. avgChangePct is
   // the mean signed MC change of tokens we gave that verdict.
-  function bucket() { return { count: 0, sum: 0, up: 0, down: 0 }; }
+  function bucket() { return { count: 0, sum: 0, up: 0, down: 0, peakSum: 0, peakN: 0, hit50: 0, hit2x: 0 }; }
   const buckets = { APE: bucket(), CAUTION: bucket(), RUN: bucket() };
   for (const p of performance) {
     const b = buckets[(p.verdictAtScan || "").toUpperCase()];
@@ -3584,9 +3647,22 @@ async function handleAdminPublishReceipt(url, request, env) {
       if (p.mcChangePct > 0) b.up++;
       else if (p.mcChangePct < 0) b.down++;
     }
+    if (typeof p.peakGainPct === "number") {
+      b.peakSum += p.peakGainPct;
+      b.peakN++;
+      if (p.peakGainPct >= 50) b.hit50++;
+      if (p.peakGainPct >= 100) b.hit2x++;
+    }
   }
   function summ(b) {
-    return { count: b.count, avgChangePct: b.count ? Math.round(b.sum / b.count) : 0, upCount: b.up, downCount: b.down };
+    return {
+      count: b.count,
+      avgChangePct: b.count ? Math.round(b.sum / b.count) : 0,
+      avgPeakGainPct: b.peakN ? Math.round(b.peakSum / b.peakN) : 0,
+      hit50: b.hit50, // calls that peaked at +50% or more
+      hit2x: b.hit2x, // calls that peaked at +100% or more
+      upCount: b.up, downCount: b.down,
+    };
   }
   const scorecard = {
     totalScans: snapshots.length,
@@ -3609,8 +3685,8 @@ async function handleAdminPublishReceipt(url, request, env) {
     scorecard,
     hits: hits.sort((a, b) => a.scoreAtScan - b.scoreAtScan),
     rugged: rugged.sort((a, b) => (b.mcDropPct || 0) - (a.mcDropPct || 0)),
-    // Best performers first; gone/rugged sink to the bottom.
-    performance: performance.sort((a, b) => (b.mcChangePct ?? -101) - (a.mcChangePct ?? -101)),
+    // Best calls first, ranked by peak gain since scan (the quality metric).
+    performance: performance.sort((a, b) => (b.peakGainPct ?? -101) - (a.peakGainPct ?? -101)),
   });
 }
 

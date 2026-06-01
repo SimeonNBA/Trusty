@@ -106,12 +106,12 @@
       function esc(s) { return String(s == null ? "" : s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
 
       function col(label, b, cls) {
-        b = b || { count: 0, avgChangePct: 0 };
-        const avg = b.avgChangePct || 0;
+        b = b || { count: 0, avgPeakGainPct: 0, hit2x: 0 };
+        const peak = b.avgPeakGainPct || 0;
         return '<div class="col ' + cls + '">' +
           '<div class="col-label">' + label + '</div>' +
-          '<div class="col-avg ' + (avg >= 0 ? "up" : "down") + '">' + (avg >= 0 ? "+" : "") + avg + '%</div>' +
-          '<div class="col-sub">' + (b.count || 0) + ' calls</div>' +
+          '<div class="col-avg ' + (peak >= 0 ? "up" : "down") + '">' + (peak >= 0 ? "+" : "") + peak + '%</div>' +
+          '<div class="col-sub">' + (b.count || 0) + ' calls · ' + (b.hit2x || 0) + ' hit 2x</div>' +
         '</div>';
       }
 
@@ -128,7 +128,7 @@
             '<span class="brand">Trusty AI</span>' +
             '<span class="tag">Track Record</span>' +
           '</div>' +
-          '<div class="card-title">Every token we scanned, and how it moved · ' + esc(range) + '</div>' +
+          '<div class="card-title">Best gain each call reached after we scanned it · ' + esc(range) + '</div>' +
           '<div class="cols">' +
             col("APE calls", v.APE, "ape") +
             col("Caution", v.CAUTION, "cau") +
@@ -138,16 +138,16 @@
             '<div class="big">🚨 <span class="hl">' + caught + '</span> rugs caught · <span class="hl2">' + scanned + '</span> tokens scanned</div>' +
             '<div class="gf">⛓ Verified on BNB Greenfield</div>' +
           '</div>' +
-          '<div class="foot">Avg market-cap change since first scan, by our verdict · <span class="url">trustyai.tech/receipts</span></div>';
+          '<div class="foot">Avg peak gain after scan, by our verdict · on-chain proof at <span class="url">trustyai.tech/receipts</span></div>';
         fitStage();
       }
 
       const DEMO = {
         dateRange: "May 23–30, 2026", totalScans: 19,
         scorecard: { totalScans: 19, caught: 2, byVerdict: {
-          APE: { count: 17, avgChangePct: 12 },
-          CAUTION: { count: 2, avgChangePct: -4 },
-          RUN: { count: 3, avgChangePct: -71 } } },
+          APE: { count: 17, avgPeakGainPct: 64, hit2x: 4 },
+          CAUTION: { count: 2, avgPeakGainPct: 18, hit2x: 0 },
+          RUN: { count: 3, avgPeakGainPct: 3, hit2x: 0 } } },
       };
 
       async function load() {
