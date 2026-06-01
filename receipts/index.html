@@ -337,12 +337,15 @@
       permaEl.innerHTML = "";
       detail.scrollIntoView({ behavior: "smooth", block: "start" });
 
-      const fileUrl = DATA_BASE + "/" + weekEntry.file;
+      // Fetch the display copy from the site (free); link the proof copy
+      // on Greenfield (the immutable, independently-verifiable record).
+      const fetchUrl = DATA_BASE + "/" + weekEntry.file;
+      const proofUrl = GREENFIELD_BASE + "/" + weekEntry.file;
       try {
-        const r = await fetch(fileUrl, { cache: "no-cache" });
+        const r = await fetch(fetchUrl, { cache: "no-cache" });
         if (!r.ok) throw new Error("HTTP " + r.status);
         const data = await r.json();
-        renderWeek(data, fileUrl);
+        renderWeek(data, proofUrl);
       } catch (e) {
         metaEl.innerHTML = '<span style="color:var(--bad);">Could not load this receipt: ' + e.message + '</span>';
       }
