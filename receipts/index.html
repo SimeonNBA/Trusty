@@ -238,15 +238,15 @@
 
   <script>
     /*
-      Receipts viewer — fetches manifest.json from the Greenfield bucket,
-      lists weeks, and renders the selected week's hits/rugged tables.
-
-      All reads are direct from Greenfield SP — no Trusty backend in the
-      path. The world can verify each receipt was actually published by
-      curling the same URL.
+      Receipts viewer — the DISPLAY data is served from the site itself
+      (DATA_BASE) so every page view is free + instant and never burns
+      Greenfield's metered read quota. The same receipts are also stored
+      on Greenfield as the permanent, verifiable record (GREENFIELD_BASE),
+      which the "raw JSON on Greenfield" links point to for proof.
     */
-    const BUCKET_BASE = "https://greenfield-sp.bnbchain.org/view/trusty-ai-receipts";
-    const MANIFEST_URL = BUCKET_BASE + "/manifest.json";
+    const DATA_BASE = "/receipts/data";
+    const GREENFIELD_BASE = "https://greenfield-sp.bnbchain.org/view/trusty-ai-receipts";
+    const MANIFEST_URL = DATA_BASE + "/manifest.json";
 
     function el(tag, attrs, ...children) {
       const e = document.createElement(tag);
@@ -337,7 +337,7 @@
       permaEl.innerHTML = "";
       detail.scrollIntoView({ behavior: "smooth", block: "start" });
 
-      const fileUrl = BUCKET_BASE + "/" + weekEntry.file;
+      const fileUrl = DATA_BASE + "/" + weekEntry.file;
       try {
         const r = await fetch(fileUrl, { cache: "no-cache" });
         if (!r.ok) throw new Error("HTTP " + r.status);

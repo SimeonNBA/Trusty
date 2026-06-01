@@ -88,7 +88,9 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
-      const BUCKET_BASE = "https://greenfield-sp.bnbchain.org/view/trusty-ai-receipts";
+      // Display data is served from the site (free, no Greenfield read quota);
+      // the same receipts live on Greenfield as the permanent proof copy.
+      const BUCKET_BASE = "/receipts/data";
       const params = new URLSearchParams(location.search);
 
       // Scale the 1200px card to fit the viewport for on-screen viewing;
