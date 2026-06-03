@@ -748,6 +748,116 @@ async function handleSimRun(url, request, env) {
   }
 }
 
+/* ================================================================
+   Narrative classifier (server-side, free — no LLM)
+
+   Maps a scanned token to a meta/narrative + our flavored playbook.
+   Returned as `narrative` on /api/scan so the extension just renders
+   it (and we can tune narratives by redeploying the worker — no
+   extension re-upload, works for any client version that reads it).
+
+   Tiers (cheapest first):
+     1. seed-token exact match
+     2. CJK characters in symbol/name → Chinese
+     3. keyword regex over symbol + name + DESCRIPTION (priority order)
+   Description comes from CoinGecko → GeckoTerminal (free, cached 30d).
+   Unmatched returns null (we show nothing rather than guess). The
+   description fetch only happens when steps 1–2 + name-only keywords
+   miss, so most tokens cost zero network.
+   ================================================================ */
+const NARRATIVES = {
+  political: { id: "political", name: "Political Meta", subtitle: "The Event Trader", emoji: "🇺🇸", risk: "EXTREME", riskColor: "red", avgReturn: "1,000–50,000%", rugRate: "Very High (~70%)", lifespan: "Hours", bestEntry: "Before the event peaks", kw: "trump|biden|maga|melania|kamala|harris|election|politifi|obama|potus", tokens: ["TRUMP","MELANIA","BODEN","MAGA"], whenToApe: "Only BEFORE the political event, hours ahead of mainstream coverage, tiny size.", whenToAvoid: "After the event peaks. Any 'official endorsement' claim is a lie.", keySignal: "Google Trends spike on the political term + Polymarket activity." },
+  elon: { id: "elon", name: "Elon Meta", subtitle: "The Tweet Trigger", emoji: "🚀", risk: "HIGH", riskColor: "red", avgReturn: "500–20,000%", rugRate: "High (~55%)", lifespan: "Hours–Days", bestEntry: "Minutes after an Elon post", kw: "elon|musk|tesla|grok|starlink|neuralink|spacex|mars|doge ?to ?the", tokens: ["GROK","KEKIUS","MARS"], whenToApe: "Right after Elon posts a word/image/meme — find the token spun from it before CT piles in. Speed is everything.", whenToAvoid: "Hours after the tweet when 20 copies exist. Anything claiming Elon 'endorsed' it.", keySignal: "@elonmusk post → matching ticker minting within minutes." },
+  cz: { id: "cz", name: "CZ Meta", subtitle: "The BNB Season", emoji: "🟡", risk: "MED-HIGH", riskColor: "orange", avgReturn: "200–5,000%", rugRate: "Med-High (~45%)", lifespan: "Days–Weeks", bestEntry: "CZ tweet/post", kw: "\\bcz\\b|binance.?coin|bnb.?season|giggle|changpeng", tokens: ["GIGGLE","4","PAUL","SZN","PUP"], whenToApe: "CZ mentions a project/cause/number — find the BNB token tied to it before Binance makes it official.", whenToAvoid: "Coins claiming to be 'official CZ/Binance' — they never are. The clarification post is a sell signal.", keySignal: "Follow @cz_binance. BNB DEX volume spikes with no obvious cause = CZ season." },
+  ai: { id: "ai", name: "AI Agents", subtitle: "The 2024/25 Wave", emoji: "🤖", risk: "MED", riskColor: "yellow", avgReturn: "1,000–10,000%", rugRate: "Med (~35%)", lifespan: "Weeks–Months", bestEntry: "New AI product launch", kw: "\\bai\\d?\\b|agent|gpt|llm|neural|autonomous|zerebro|virtuals?", tokens: ["GOAT","AI16Z","ZEREBRO","GRIFFAIN","FARTCOIN","VIRTUAL"], whenToApe: "AI projects with verifiable autonomous activity — real posts/txs from the agent. Early, before Binance lists.", whenToAvoid: "Generic memes with 'AI' tacked on. After the first wave — GOAT lost 70%+ from ATH.", keySignal: "Is the AI actually doing things? Real output = the narrative has legs." },
+  brainrot: { id: "brainrot", name: "Brainrot Meta", subtitle: "The Gen-Z Absurd", emoji: "🧠", risk: "HIGH", riskColor: "red", avgReturn: "5,000–50,000%", rugRate: "High (~65%)", lifespan: "Hours–Days", bestEntry: "While the sound/phrase peaks on TikTok", kw: "skibidi|gyatt|sigma|rizz|fanum|brainrot|ohio|mewing|\\btung\\b|aura", tokens: ["SKIBIDI","TUNG","GYATT","SIGMA"], whenToApe: "An absurdist sound/phrase is everywhere on TikTok/Reels but barely tokenized. Pure attention play, tiny size.", whenToAvoid: "After 5 copycats of the same term exist, or once it hits crypto press — the move's done.", keySignal: "TikTok sound velocity. If your teenage cousin knows it, you're late." },
+  knockoffs: { id: "knockoffs", name: "Knockoff Legends", subtitle: "The Copycat", emoji: "🃏", risk: "HIGH", riskColor: "red", avgReturn: "200–3,000%", rugRate: "High (~60%)", lifespan: "Hours–Days", bestEntry: "When the original is too expensive to entry", kw: "baby ?|\\bv2\\b|2\\.0|wrapped|clone|knockoff|\\bjr\\b|mini ?", tokens: [], whenToApe: "A blue-chip meme just ran and is 'too expensive' — the derivative catches the overflow on day one only.", whenToAvoid: "Day 2+. Knockoffs decay fast; the original almost always outlives them.", keySignal: "Parent token pumped 5x+ and is trending — the knockoff rides the spillover for hours." },
+  celebrity: { id: "celebrity", name: "Celebrity Meta", subtitle: "The Influencer Play", emoji: "⭐", risk: "EXTREME", riskColor: "red", avgReturn: "500–30,000%", rugRate: "Very High (~70%)", lifespan: "Hours–Days", bestEntry: "At the moment of the launch/announcement", kw: "celebrity|influencer|\\bjake\\b|kardashian|drake|ronaldo|messi|caitlyn|hawk ?tuah|\\bhaliey\\b", tokens: ["HAWK","JENNER"], whenToApe: "A genuine celebrity launch with locked LP, in the first minutes. Treat as a pure pump-and-dump you exit fast.", whenToAvoid: "After the celebrity goes quiet or deletes posts. 'Official' coins with no LP lock.", keySignal: "Verified celeb posts the CA themselves + LP burned/locked." },
+  "internet-animals": { id: "internet-animals", name: "Internet Animals", subtitle: "The Viral Critter", emoji: "🐾", risk: "HIGH", riskColor: "red", avgReturn: "1,000–40,000%", rugRate: "High (~55%)", lifespan: "Days–Weeks", bestEntry: "As the animal goes viral on normie platforms", kw: "moodeng|pesto|capybara|hippo|quokka|\\bowl\\b|raccoon|otter|seal|penguin", tokens: ["MOODENG","PESTO","PNUT"], whenToApe: "A real animal (zoo/wild) is going viral on TikTok/news but isn't fully tokenized. Cross-platform virality.", whenToAvoid: "After mainstream press; once the animal story fades the chart follows.", keySignal: "Same critter trending on TikTok + news + X at once." },
+  tiktok: { id: "tiktok", name: "TikTok Meta", subtitle: "The Normie Pipeline", emoji: "📱", risk: "HIGH", riskColor: "red", avgReturn: "5,000–80,000%", rugRate: "High (~60%)", lifespan: "Hours–Days", bestEntry: "Before crypto press", kw: "tiktok|viral|chill ?guy|\\bpunch\\b|trend", tokens: ["CHILLGUY","PUNCH"], whenToApe: "After a social explosion but BEFORE crypto press. Everywhere on TikTok but not yet on CoinDesk = the window.", whenToAvoid: "After a Binance/Coinbase listing announce. Tiny LP on a big mcap = brutal exits.", keySignal: "Same meme trending on TikTok + X + Reddit simultaneously." },
+  dogs: { id: "dogs", name: "Dog Meta", subtitle: "The OG", emoji: "🐶", risk: "LOW", riskColor: "green", avgReturn: "300–1,000%", rugRate: "Low (~15%)", lifespan: "Months–Years", bestEntry: "Early bull cycle", kw: "\\bdog|doge|\\binu\\b|shib|puppy|woof|bonk", tokens: ["DOGE","SHIB","WIF","BONK","FLOKI","NEIRO"], whenToApe: "Early in a bull cycle before DOGE 3x's. When Elon tweets. New dogs with LP burned + active community.", whenToAvoid: "After DOGE pumped 3x+. Bear markets. Copy-cat dogs with no identity.", keySignal: "DOGE volume spikes 10x+. Small dogs (BONK, WIF) often run first." },
+  cats: { id: "cats", name: "Cat Meta", subtitle: "The Challenger", emoji: "🐱", risk: "MED", riskColor: "yellow", avgReturn: "500–5,000%", rugRate: "Med (~30%)", lifespan: "Weeks–Months", bestEntry: "After dogs pump", kw: "\\bcat\\b|kitty|popcat|michi|meow|\\bmew\\b", tokens: ["POPCAT","MOG","MEW","MICHI"], whenToApe: "After the dog meta has run 2-4 weeks. Cats lagging while dogs pump = your entry.", whenToAvoid: "First mover in a new cat launch. Cats with no cultural origin.", keySignal: "POPCAT/DOGE ratio. Cats lagging dogs by 2+ weeks in a bull run = rotation incoming." },
+  mascot: { id: "mascot", name: "Mascot Meta", subtitle: "The Stickiest", emoji: "🎭", risk: "LOW", riskColor: "green", avgReturn: "200–2,000%", rugRate: "Low (~20%)", lifespan: "Months–Years", bestEntry: "When the meme goes viral", kw: "pepe|frog|brett|wojak|\\bchad\\b|andy|trusty|mascot|character", tokens: ["PEPE","BRETT","ANDY","TRUSTY"], whenToApe: "Character existed BEFORE the coin. Organic fan art + merch appearing without the team pushing.", whenToAvoid: "AI-generated mascots with no history. PEPE clones. Just a logo with no lore.", keySignal: "Search the character outside crypto. Real-world merch = real cultural weight." },
+};
+
+// Match order — most specific narratives first so generic ones don't
+// swallow them (e.g. an "AI dog" resolves to AI, not Dog).
+const NARRATIVE_ORDER = ["political", "elon", "cz", "ai", "brainrot", "knockoffs", "celebrity", "internet-animals", "tiktok", "dogs", "cats", "mascot"];
+
+// CJK (Chinese/Japanese) characters — strong signal for the Chinese meta.
+function hasCJK(s) { return /[㐀-鿿豈-﫿]/.test(s || ""); }
+
+// Pure-rules classification. `description` optional (only passed on the
+// second pass once we've fetched it). Returns a narrative object or null.
+function classifyNarrative(symbol, name, description) {
+  const sym = String(symbol || "").toUpperCase().replace(/^\$/, "").trim();
+  // 1. seed-token exact match
+  for (const k of NARRATIVE_ORDER) {
+    if (NARRATIVES[k].tokens.includes(sym)) return NARRATIVES[k];
+  }
+  // 2. CJK → Chinese (the one bucket the DBs can't give us)
+  if (hasCJK(symbol) || hasCJK(name)) return CHINESE_NARRATIVE;
+  // 3. keyword regex over symbol + name + description
+  const hay = (String(symbol || "") + " " + String(name || "") + " " + String(description || "")).toLowerCase();
+  for (const k of NARRATIVE_ORDER) {
+    try {
+      if (new RegExp(NARRATIVES[k].kw, "i").test(hay)) return NARRATIVES[k];
+    } catch (_) {}
+  }
+  return null;
+}
+
+const CHINESE_NARRATIVE = { id: "chinese", name: "Chinese Meta", subtitle: "The Asia Pump", emoji: "🀄", risk: "MED-HIGH", riskColor: "orange", avgReturn: "300–8,000%", rugRate: "Med-High (~45%)", lifespan: "Days–Weeks", bestEntry: "Asia hours / Square-CN buzz", tokens: [], whenToApe: "Buzzing in Chinese circles (Binance Square CN, WeChat) before Western CT notices. Asia session (00–08 UTC) volume spikes are the tell.", whenToAvoid: "Western-made 'China'-themed coins with no real CN community. After Western CT has posted it.", keySignal: "Chinese-character ticker + organic CN holders + Asia-hours volume." };
+
+// Free token description from CoinGecko → GeckoTerminal. Cached 30d
+// (descriptions are effectively static). Returns "" if neither has it.
+async function fetchTokenDescription(ca, chain, env) {
+  const cacheKey = `narr-desc:v1:${chain}:${ca}`;
+  if (env.SCAN_KV) {
+    try {
+      const cached = await env.SCAN_KV.get(cacheKey);
+      if (cached !== null) return cached;
+    } catch (_) {}
+  }
+  const cgPlatform = chain === "ethereum" ? "ethereum" : chain === "base" ? "base"
+    : chain === "polygon" ? "polygon-pos" : chain === "solana" ? "solana" : "binance-smart-chain";
+  const gtNet = chain === "ethereum" ? "eth" : chain === "base" ? "base"
+    : chain === "polygon" ? "polygon_pos" : chain === "solana" ? "solana" : "bsc";
+  let desc = "";
+  try {
+    const r = await fetch(`https://api.coingecko.com/api/v3/coins/${cgPlatform}/contract/${ca}`, { headers: { accept: "application/json" } });
+    if (r.ok) {
+      const d = await r.json();
+      desc = (d && d.description && d.description.en) || "";
+    }
+  } catch (_) {}
+  if (!desc) {
+    try {
+      const r = await fetch(`https://api.geckoterminal.com/api/v2/networks/${gtNet}/tokens/${ca}/info`, { headers: { accept: "application/json" } });
+      if (r.ok) {
+        const d = await r.json();
+        desc = (d && d.data && d.data.attributes && d.data.attributes.description) || "";
+      }
+    } catch (_) {}
+  }
+  desc = String(desc).slice(0, 600);
+  if (env.SCAN_KV) {
+    try { await env.SCAN_KV.put(cacheKey, desc, { expirationTtl: 30 * 24 * 60 * 60 }); } catch (_) {}
+  }
+  return desc;
+}
+
+// Orchestrates: free name/seed/CJK pass first; only if that misses do we
+// fetch a description and try keywords against it. Returns the narrative
+// object (for the client to render) or null.
+async function resolveNarrative(symbol, name, ca, chain, env) {
+  let n = classifyNarrative(symbol, name, "");
+  if (n) return n;
+  const desc = await fetchTokenDescription(ca, chain, env);
+  if (!desc) return null;
+  return classifyNarrative(symbol, name, desc);
+}
+
 function parseCaAndChain(url) {
   const rawCa = (url.searchParams.get("ca") || "").trim();
   const chain = (url.searchParams.get("chain") || "bsc").toLowerCase();
@@ -778,6 +888,15 @@ async function handleScan(ca, chain, env, opts) {
   }
 
   const result = await scanToken(ca, chain, env, opts);
+
+  // Server-side narrative classification (free: CJK + seed + keyword on
+  // name/description). Attached here so both EVM + Solana paths get it.
+  // Best-effort — never block or break a scan.
+  try {
+    result.narrative = await resolveNarrative(result.symbol, result.name, ca, chain, env);
+  } catch (_) {
+    result.narrative = null;
+  }
 
   // Maintain a symbol → CA index so Square ticker mentions ($SYMBOL,
   // #symbol) can resolve to the right token. Fire-and-forget; never
