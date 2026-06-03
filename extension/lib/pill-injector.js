@@ -130,14 +130,17 @@
     return tooltipEl;
   }
 
-  // Build the Narrative section for the paid panel — matches the
-  // scanned token's symbol/name against the 7 narrative buckets and
-  // renders the matched bucket's risk profile + condensed playbook.
-  // Returns empty string when there's no match so unclassified
-  // tokens don't get a misleading category.
-  function renderNarrativeSection(symbol, name) {
-    if (!window.TrustyNarratives || !window.TrustyNarratives.classify) return "";
-    const n = window.TrustyNarratives.classify(symbol, name);
+  // Build the Narrative section for the paid panel. Prefers the
+  // server-classified narrative (result.narrative — richer: CJK +
+  // description-based, tunable without an extension update), and falls
+  // back to the local classifier when the worker didn't send one (older
+  // worker, or offline). Returns "" when unclassified so we never show a
+  // misleading category.
+  function renderNarrativeSection(result) {
+    let n = result && result.narrative;
+    if (!n && window.TrustyNarratives && window.TrustyNarratives.classify) {
+      n = window.TrustyNarratives.classify(result && result.symbol, result && result.name);
+    }
     if (!n) return "";
     const tokenChips = (n.tokens || []).slice(0, 6).map(function (t) {
       return '<span class="trusty-pp-narr-chip">$' + escapeAttr(t) + '</span>';
@@ -1254,7 +1257,7 @@
     // 7 narrative buckets from the website's Degen Academy. Renders
     // the matched bucket's risk profile + playbook inline. Returns
     // empty string if no match (token is unclassified).
-    const narrativeHtml = renderNarrativeSection(result.symbol, result.name);
+    const narrativeHtml = renderNarrativeSection(result);
 
     // Sub-score breakdown (same 6 categories as the hover tooltip)
     // — surfaced in the panel too so users get the visual on the
