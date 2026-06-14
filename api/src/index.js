@@ -155,6 +155,14 @@ export default {
     }
     // Trusty Trader (Beta) — paper-trading simulation. /state is a public
     // KV-only read; /run is an admin-triggered manual cycle for testing.
+    if (url.pathname === "/api/market") {
+      if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
+      return handleMarket(env);
+    }
+    if (url.pathname === "/api/admin/market-snapshot") {
+      if (request.method !== "POST") return json({ error: "method not allowed" }, 405);
+      return handleAdminMarketSnapshot(request, env);
+    }
     if (url.pathname === "/api/sim/state") {
       if (request.method !== "GET") return json({ error: "method not allowed" }, 405);
       return handleSimState(env);
@@ -856,6 +864,82 @@ async function resolveNarrative(symbol, name, ca, chain, env) {
   const desc = await fetchTokenDescription(ca, chain, env);
   if (!desc) return null;
   return classifyNarrative(symbol, name, desc);
+}
+
+/* ================================================================
+   Market pulse (CMC Agent Hub)
+
+   A daily "market overview" snapshot powered by CoinMarketCap's
+   daily_market_overview skill. Because MCP is agent-side (the worker
+   can't call it), the flow is: a scheduled agent runs the skill →
+   POSTs a compact snapshot to /api/admin/market-snapshot → we cache
+   it in KV → /api/market serves it to the extension's Market tab.
+
+   MARKET_SEED is a real snapshot (2026-06-14) so the tab has data
+   before the first scheduled push; KV overrides it once the agent runs.
+   ================================================================ */
+const MARKET_SEED = {
+  updatedAt: "2026-06-14T19:55:12Z",
+  source: "cmc:daily_market_overview",
+  status: "partial",
+  confidence: "medium",
+  fearGreed: 20,
+  fearGreedLabel: "Fear",
+  altSeason: 47,
+  marketCapUsd: 2178910000000,
+  volume24hUsd: 45610000000,
+  stablecoinsUsd: 282520000000,
+  cmc100Change24h: -0.85,
+  regime: "headwind_tightening",
+  regimeScore: 58,
+  riskBias: "defensive_research_only",
+  maxPositionPct: 30,
+  etf: { latestFlowUsd: 85900000, latestDate: "2026-06-12", flow5sessionUsd: -319300000, aumUsd: 100980000000 },
+  crossAsset: [
+    { pair: "BTC/Nasdaq 30d", v: 0.49 },
+    { pair: "BTC/SPX 30d", v: 0.51 },
+    { pair: "BTC/Gold 30d", v: 0.44 },
+    { pair: "BTC/DXY 30d", v: -0.36 },
+  ],
+  watchlist: [
+    { symbol: "TON", score: 90.0, thesis: "OI 24h down 26.2%; spot confirmed" },
+    { symbol: "MON", score: 80.1, thesis: "short-lean ratio extreme; spot confirmed" },
+    { symbol: "EPIC", score: 76.9, thesis: "OI up 11.4%; funding deeply positive" },
+  ],
+  macroNews: {
+    view: "neutral to mildly positive for crypto risk appetite",
+    bullets: [
+      "US–Venezuela oil framework could ease energy inflation → supportive for risk assets",
+      "Semiconductor / AI momentum in Asia may sustain risk-on sentiment",
+    ],
+  },
+  takeaway: "Defensive — research only. Fear at 20, weak crypto momentum, and ETF flows net negative over 5 sessions. No-trade until confirmation.",
+};
+
+// GET /api/market — public, serves the cached market snapshot (or the seed).
+async function handleMarket(env) {
+  let snap = null;
+  if (env.SCAN_KV) {
+    try { snap = await env.SCAN_KV.get("market:snapshot", "json"); } catch (_) {}
+  }
+  return json(snap || MARKET_SEED);
+}
+
+// POST /api/admin/market-snapshot — admin-only, stores a snapshot pushed
+// by the scheduled agent (which runs the CMC skill).
+async function handleAdminMarketSnapshot(request, env) {
+  const provided = request.headers.get("X-Admin-Secret");
+  if (!env.ADMIN_SECRET || provided !== env.ADMIN_SECRET) return json({ error: "unauthorized" }, 401);
+  let body = null;
+  try { body = await request.json(); } catch (_) { return json({ error: "invalid json" }, 400); }
+  if (!body || typeof body.fearGreed === "undefined" || typeof body.marketCapUsd === "undefined") {
+    return json({ error: "snapshot missing required fields (fearGreed, marketCapUsd)" }, 400);
+  }
+  body.updatedAt = body.updatedAt || new Date().toISOString();
+  if (env.SCAN_KV) {
+    try { await env.SCAN_KV.put("market:snapshot", JSON.stringify(body)); } catch (_) {}
+  }
+  return json({ ok: true, updatedAt: body.updatedAt });
 }
 
 function parseCaAndChain(url) {
