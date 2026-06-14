@@ -461,6 +461,10 @@
     document.querySelectorAll(".tab-view").forEach(function (v) {
       v.style.display = v.getAttribute("data-view") === target ? "" : "none";
     });
+    if (target === "market") {
+      loadMarket();
+      return;
+    }
     if (target === "scan") {
       const input = $("scanCaInput");
       if (!scanWired) {
@@ -592,6 +596,125 @@
       .replace(/'/g, "&#39;");
   }
   function escapeAttr(s) { return escapeHtml(s); }
+
+  /* ──────────────────────────────────────────────────────────────
+     Market tab — daily market pulse from /api/market (a CMC
+     daily_market_overview snapshot pushed by a scheduled agent).
+     ────────────────────────────────────────────────────────────── */
+  const MARKET_URL = "https://api.trustyai.tech/api/market";
+  const MARKET_CACHE_MS = 5 * 60 * 1000;
+  let marketCache = { at: 0, data: null };
+
+  function fmtBigUsd(n) {
+    n = Number(n);
+    if (!n || !isFinite(n)) return "—";
+    if (n >= 1e12) return "$" + (n / 1e12).toFixed(2) + "T";
+    if (n >= 1e9) return "$" + (n / 1e9).toFixed(1) + "B";
+    if (n >= 1e6) return "$" + (n / 1e6).toFixed(1) + "M";
+    return "$" + Math.round(n);
+  }
+  function fmtSignedUsd(n) {
+    n = Number(n) || 0;
+    return (n >= 0 ? "+" : "−") + fmtBigUsd(Math.abs(n)).replace("$", "$");
+  }
+  function fearClass(v) { return v < 45 ? "down" : v > 55 ? "up" : ""; }
+  function humanize(s) {
+    return String(s || "").replace(/_/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  }
+
+  async function loadMarket() {
+    const body = $("marketBody");
+    const updatedEl = $("marketUpdated");
+    if (!body) return;
+    const now = Date.now();
+    if (marketCache.data && now - marketCache.at < MARKET_CACHE_MS) {
+      renderMarket(marketCache.data, body, updatedEl);
+      return;
+    }
+    try {
+      const d = await fetch(MARKET_URL).then(function (r) { return r.json(); });
+      marketCache = { at: now, data: d };
+      renderMarket(d, body, updatedEl);
+    } catch (e) {
+      body.innerHTML = '<div class="market-error">Couldn\'t load market data. Try again later.</div>';
+      if (updatedEl) updatedEl.textContent = "error";
+    }
+  }
+
+  function renderMarket(d, body, updatedEl) {
+    if (!d) { body.innerHTML = '<div class="market-error">No market data.</div>'; return; }
+    if (updatedEl && d.updatedAt) {
+      const ts = new Date(d.updatedAt).getTime();
+      updatedEl.textContent = isFinite(ts) ? "updated " + timeAgo(ts) : "";
+    }
+    const fg = Number(d.fearGreed);
+    const cmcCh = Number(d.cmc100Change24h) || 0;
+    const etf = d.etf || {};
+    const cross = Array.isArray(d.crossAsset) ? d.crossAsset : [];
+    const wl = Array.isArray(d.watchlist) ? d.watchlist : [];
+    const news = d.macroNews || {};
+
+    let html = "";
+
+    // Headline tiles
+    html += '<div class="market-grid">' +
+      '<div class="market-tile"><div class="market-tile-num ' + fearClass(fg) + '">' + (isFinite(fg) ? fg : "—") + '</div><div class="market-tile-lbl">Fear & Greed' + (d.fearGreedLabel ? " · " + escapeHtml(d.fearGreedLabel) : "") + '</div></div>' +
+      '<div class="market-tile"><div class="market-tile-num">' + fmtBigUsd(d.marketCapUsd) + '</div><div class="market-tile-lbl">Total cap</div></div>' +
+      '<div class="market-tile"><div class="market-tile-num ' + (cmcCh >= 0 ? "up" : "down") + '">' + (cmcCh >= 0 ? "+" : "") + cmcCh.toFixed(2) + '%</div><div class="market-tile-lbl">CMC100 24h</div></div>' +
+      '<div class="market-tile"><div class="market-tile-num">' + (d.altSeason != null ? d.altSeason : "—") + '</div><div class="market-tile-lbl">Alt season</div></div>' +
+    '</div>';
+
+    // Regime banner
+    if (d.regime) {
+      html += '<div class="market-regime">' +
+        '<span class="market-regime-name">' + escapeHtml(humanize(d.regime)) + '</span>' +
+        '<span class="market-regime-score">' + (d.regimeScore != null ? d.regimeScore + "/100" : "") + '</span>' +
+        '<span class="market-regime-bias">' + escapeHtml(humanize(d.riskBias)) + '</span>' +
+      '</div>';
+    }
+
+    // ETF demand
+    html += '<div class="market-section-title">BTC ETF demand</div>' +
+      '<div class="market-row"><span>Latest flow</span><span class="' + ((Number(etf.latestFlowUsd) || 0) >= 0 ? "up" : "down") + '">' + fmtSignedUsd(etf.latestFlowUsd) + '</span></div>' +
+      '<div class="market-row"><span>5-session</span><span class="' + ((Number(etf.flow5sessionUsd) || 0) >= 0 ? "up" : "down") + '">' + fmtSignedUsd(etf.flow5sessionUsd) + '</span></div>' +
+      '<div class="market-row"><span>AUM</span><span>' + fmtBigUsd(etf.aumUsd) + '</span></div>';
+
+    // Cross-asset correlations
+    if (cross.length) {
+      html += '<div class="market-section-title">Cross-asset (30d corr)</div>';
+      html += cross.map(function (c) {
+        const v = Number(c.v);
+        return '<div class="market-row"><span>' + escapeHtml(c.pair.replace(" 30d", "")) + '</span><span class="' + (v >= 0 ? "up" : "down") + '">' + (v >= 0 ? "+" : "") + v.toFixed(2) + '</span></div>';
+      }).join("");
+    }
+
+    // Watchlist
+    if (wl.length) {
+      html += '<div class="market-section-title">Watchlist</div>';
+      html += wl.slice(0, 3).map(function (w) {
+        return '<div class="market-wl">' +
+          '<div class="market-wl-top"><span class="market-wl-sym">' + escapeHtml(w.symbol || "?") + '</span><span class="market-wl-score">' + (w.score != null ? Number(w.score).toFixed(0) : "") + '</span></div>' +
+          (w.thesis ? '<div class="market-wl-thesis">' + escapeHtml(w.thesis) + '</div>' : '') +
+        '</div>';
+      }).join("");
+    }
+
+    // Macro news
+    if (news.view || (news.bullets && news.bullets.length)) {
+      html += '<div class="market-section-title">📰 Macro</div>';
+      if (news.view) html += '<div class="market-news-view">' + escapeHtml(news.view) + '</div>';
+      if (Array.isArray(news.bullets)) {
+        html += '<ul class="market-news-list">' + news.bullets.map(function (b) { return '<li>' + escapeHtml(b) + '</li>'; }).join("") + '</ul>';
+      }
+    }
+
+    // Takeaway
+    if (d.takeaway) {
+      html += '<div class="market-takeaway">💡 ' + escapeHtml(d.takeaway) + '</div>';
+    }
+
+    body.innerHTML = html;
+  }
 
   /* ──────────────────────────────────────────────────────────────
      Scan tab — paste a contract address, get the same public safety

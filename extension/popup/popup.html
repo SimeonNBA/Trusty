@@ -23,6 +23,7 @@
       <button class="tab-btn active" type="button" data-tab="home">Home</button>
       <button class="tab-btn" type="button" data-tab="trending">Trending</button>
       <button class="tab-btn" type="button" data-tab="scan">Scan CA</button>
+      <button class="tab-btn" type="button" data-tab="market">Market</button>
     </nav>
 
     <!-- Home view (default) -->
@@ -205,6 +206,16 @@
       <div class="scan-result" id="scanResult">
         <div class="scan-hint">Paste any token's contract address and pick its chain to get an instant safety verdict.</div>
       </div>
+    </div>
+
+    <!-- Market view — daily market pulse (CoinMarketCap) -->
+    <div class="tab-view" id="viewMarket" data-view="market" style="display:none;">
+      <div class="market-header">
+        <span class="market-title">📈 Market Pulse</span>
+        <span class="market-updated" id="marketUpdated">—</span>
+      </div>
+      <div id="marketBody"><div class="market-loading">Loading…</div></div>
+      <div class="market-foot">Market data via CoinMarketCap · research only, not financial advice</div>
     </div>
   </main>
 
