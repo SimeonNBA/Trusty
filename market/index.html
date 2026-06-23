@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trusty — Market Pulse</title>
+    <meta name="description" content="Daily crypto market pulse — regime, Fear & Greed, BTC ETF flows, cross-asset correlations and a watchlist, powered by CoinMarketCap. Research only." />
+    <style>
+      :root {
+        --bg: #0a0e1a; --card: #111827; --border: #233247;
+        --text: #f5f5f7; --muted: #8b95a8; --accent: #5b9cf7;
+        --gold: #f3ba2f; --green: #22c55e; --red: #ef4444;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; line-height: 1.5; }
+      .wrap { max-width: 860px; margin: 0 auto; padding: 28px 18px 60px; }
+      header.top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+      .logo { font-size: 24px; font-weight: 800; letter-spacing: -0.4px; }
+      .updated { font-size: 12px; color: var(--muted); font-family: ui-monospace, monospace; }
+      .home { margin-left: auto; font-size: 13px; color: var(--accent); text-decoration: none; }
+      .home:hover { text-decoration: underline; }
+      .sub { color: var(--muted); font-size: 14px; margin: 6px 0 20px; }
+      .up { color: var(--green); } .down { color: var(--red); }
+
+      .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+      .tile { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+      .tile-num { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+      .tile-lbl { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+      .regime { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        background: rgba(243,186,47,0.08); border: 1px solid rgba(243,186,47,0.3);
+        border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; }
+      .regime-name { font-size: 16px; font-weight: 800; color: var(--gold); }
+      .regime-score { font-size: 13px; color: var(--text); }
+      .regime-bias { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+      .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      @media (max-width: 640px) { .grid { grid-template-columns: 1fr 1fr; } .cols { grid-template-columns: 1fr; } }
+      .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+      .panel h3 { margin: 0 0 10px; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+      .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; padding: 4px 0; }
+      .row > span:first-child { color: var(--muted); }
+      .row > span:last-child { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+      .wl { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; margin-bottom: 7px; }
+      .wl-top { display: flex; justify-content: space-between; align-items: baseline; }
+      .wl-sym { font-size: 14px; font-weight: 700; }
+      .wl-score { font-size: 13px; color: var(--gold); font-weight: 700; }
+      .wl-thesis { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+
+      .news-view { font-size: 14px; color: var(--text); margin-bottom: 8px; line-height: 1.5; }
+      .news-list { margin: 0; padding-left: 18px; }
+      .news-list li { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 5px; }
+
+      .takeaway { font-size: 14px; line-height: 1.5; margin-top: 8px;
+        background: rgba(91,156,247,0.08); border: 1px solid rgba(91,156,247,0.25);
+        border-radius: 12px; padding: 14px 16px; }
+      .loading, .error { color: var(--muted); text-align: center; padding: 50px 8px; font-size: 15px; }
+      .error { color: var(--red); }
+      footer { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); line-height: 1.5; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <span class="logo">📈 Market Pulse</span>
+        <span class="updated" id="updated"></span>
+        <a class="home" href="/">← trustyai.tech</a>
+      </header>
+      <p class="sub">A daily read on the crypto market — regime, sentiment, ETF flows and a watchlist. Research only, not financial advice.</p>
+      <div id="body"><div class="loading">Loading market data…</div></div>
+      <footer>Market data via CoinMarketCap · safety layer by Trusty AI · research only, not financial advice · © 2026 Trusty</footer>
+    </div>
+
+    <script>
+      const API = "https://api.trustyai.tech/api/market";
+      const esc = (s) => String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+      function fmtBig(n) { n = Number(n);
+        if (!n || !isFinite(n)) return "—";
+        if (n >= 1e12) return "$" + (n / 1e12).toFixed(2) + "T";
+        if (n >= 1e9) return "$" + (n / 1e9).toFixed(1) + "B";
+        if (n >= 1e6) return "$" + (n / 1e6).toFixed(1) + "M";
+        return "$" + Math.round(n); }
+      function fmtSigned(n) { n = Number(n) || 0; return (n >= 0 ? "+" : "−") + fmtBig(Math.abs(n)); }
+      function fearCls(v) { return v < 45 ? "down" : v > 55 ? "up" : ""; }
+      function humanize(s) { return String(s || "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
+      function ago(ts) { const m = Math.floor((Date.now() - ts) / 60000);
+        if (m < 60) return m + "m ago"; const h = Math.floor(m / 60);
+        if (h < 24) return h + "h ago"; return Math.floor(h / 24) + "d ago"; }
+
+      function render(d) {
+        const u = document.getElementById("updated");
+        if (d.updatedAt) { const ts = new Date(d.updatedAt).getTime(); if (isFinite(ts)) u.textContent = "updated " + ago(ts); }
+        const fg = Number(d.fearGreed), cmc = Number(d.cmc100Change24h) || 0;
+        const etf = d.etf || {}, cross = d.crossAsset || [], wl = d.watchlist || [], news = d.macroNews || {};
+        let h = "";
+        h += '<div class="grid">' +
+          '<div class="tile"><div class="tile-num ' + fearCls(fg) + '">' + (isFinite(fg) ? fg : "—") + '</div><div class="tile-lbl">Fear & Greed' + (d.fearGreedLabel ? " · " + esc(d.fearGreedLabel) : "") + '</div></div>' +
+          '<div class="tile"><div class="tile-num">' + fmtBig(d.marketCapUsd) + '</div><div class="tile-lbl">Total market cap</div></div>' +
+          '<div class="tile"><div class="tile-num ' + (cmc >= 0 ? "up" : "down") + '">' + (cmc >= 0 ? "+" : "") + cmc.toFixed(2) + '%</div><div class="tile-lbl">CMC100 24h</div></div>' +
+          '<div class="tile"><div class="tile-num">' + (d.altSeason != null ? d.altSeason : "—") + '</div><div class="tile-lbl">Altcoin season</div></div>' +
+        '</div>';
+        if (d.regime) h += '<div class="regime"><span class="regime-name">' + esc(humanize(d.regime)) + '</span>' +
+          '<span class="regime-score">' + (d.regimeScore != null ? d.regimeScore + "/100" : "") + '</span>' +
+          '<span class="regime-bias">' + esc(humanize(d.riskBias)) + '</span></div>';
+        h += '<div class="cols"><div>';
+        h += '<div class="panel"><h3>BTC ETF demand</h3>' +
+          '<div class="row"><span>Latest flow</span><span class="' + ((Number(etf.latestFlowUsd) || 0) >= 0 ? "up" : "down") + '">' + fmtSigned(etf.latestFlowUsd) + '</span></div>' +
+          '<div class="row"><span>5-session</span><span class="' + ((Number(etf.flow5sessionUsd) || 0) >= 0 ? "up" : "down") + '">' + fmtSigned(etf.flow5sessionUsd) + '</span></div>' +
+          '<div class="row"><span>AUM</span><span>' + fmtBig(etf.aumUsd) + '</span></div></div>';
+        if (cross.length) h += '<div class="panel"><h3>Cross-asset (30d corr)</h3>' + cross.map((c) => {
+          const v = Number(c.v); return '<div class="row"><span>' + esc(c.pair.replace(" 30d", "")) + '</span><span class="' + (v >= 0 ? "up" : "down") + '">' + (v >= 0 ? "+" : "") + v.toFixed(2) + '</span></div>'; }).join("") + '</div>';
+        h += '</div><div>';
+        if (wl.length) h += '<div class="panel"><h3>Watchlist</h3>' + wl.slice(0, 5).map((w) =>
+          '<div class="wl"><div class="wl-top"><span class="wl-sym">' + esc(w.symbol || "?") + '</span><span class="wl-score">' + (w.score != null ? Number(w.score).toFixed(0) : "") + '</span></div>' +
+          (w.thesis ? '<div class="wl-thesis">' + esc(w.thesis) + '</div>' : '') + '</div>').join("") + '</div>';
+        h += '</div></div>';
+        if (news.view || (news.bullets && news.bullets.length)) {
+          h += '<div class="panel"><h3>📰 Macro</h3>';
+          if (news.view) h += '<div class="news-view">' + esc(news.view) + '</div>';
+          if (Array.isArray(news.bullets)) h += '<ul class="news-list">' + news.bullets.map((b) => '<li>' + esc(b) + '</li>').join("") + '</ul>';
+          h += '</div>';
+        }
+        if (d.takeaway) h += '<div class="takeaway">💡 ' + esc(d.takeaway) + '</div>';
+        document.getElementById("body").innerHTML = h;
+      }
+
+      fetch(API).then((r) => r.json()).then(render).catch(() => {
+        document.getElementById("body").innerHTML = '<div class="error">Couldn\'t load market data. Try again shortly.</div>';
+      });
+    </script>
+  </body>
+</html>
