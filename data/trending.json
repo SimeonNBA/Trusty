@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-24T12:07:26.453Z",
+  "updatedAt": "2026-08-24T13:19:58.452Z",
   "categories": {
     "memes": [],
     "bnb": [
@@ -134,11 +134,11 @@
         "symbol": "LARP",
         "assetId": "6TnDNVf3SS1inZxneg5jgwgecG32yYEhZ1CoiD4Fpump",
         "chain": "solana",
-        "priceUsd": 0.0001084,
-        "marketCapUsd": 99128,
-        "priceChange24h": 179,
-        "volume24h": 57469.65,
-        "liquidity": 25286.14,
+        "priceUsd": 0.0001078,
+        "marketCapUsd": 98570,
+        "priceChange24h": 177,
+        "volume24h": 57671.76,
+        "liquidity": 25252.76,
         "logoUrl": "https://cdn.dexscreener.com/cms/images/ca4lmy2eA6LM8Wws?width=800&height=800&quality=95&format=auto",
         "pairAddress": "7EySdbRypzMuTnduADPAsjDdf4mrZFUnBwWVSzuXeHKy"
       },
@@ -147,11 +147,11 @@
         "symbol": "UOTF",
         "assetId": "nWtPgkXqZhfufMD3ojkNPwMbgP1bzKRfJ2UtM82pump",
         "chain": "solana",
-        "priceUsd": 0.002913,
-        "marketCapUsd": 2907925,
-        "priceChange24h": 77.98,
-        "volume24h": 231595.39,
-        "liquidity": 139828.62,
+        "priceUsd": 0.002946,
+        "marketCapUsd": 2940708,
+        "priceChange24h": 77.14,
+        "volume24h": 231513.28,
+        "liquidity": 140336.27,
         "logoUrl": null,
         "pairAddress": "2vJymaw6z3GNxVgB6yRSk7BR9tNabcbGS8ARzEroRJtd"
       },
@@ -160,11 +160,11 @@
         "symbol": "FTFS",
         "assetId": "aUEDbVFoPd6893MVFRHH4F5Y1EcZyYEUwGrcH1Epump",
         "chain": "solana",
-        "priceUsd": 0.002945,
-        "marketCapUsd": 2941626,
-        "priceChange24h": 35.76,
-        "volume24h": 187766.32,
-        "liquidity": 140278.62,
+        "priceUsd": 0.002976,
+        "marketCapUsd": 2972473,
+        "priceChange24h": 34.75,
+        "volume24h": 187744.21,
+        "liquidity": 140725.02,
         "logoUrl": null,
         "pairAddress": "9XALrBmKwwktEsCvhQYFRu3ZgJwgoiPSvv4hefatwTSs"
       },
@@ -176,10 +176,23 @@
         "priceUsd": 0.002255,
         "marketCapUsd": 2255930,
         "priceChange24h": 0,
-        "volume24h": 260344.71,
-        "liquidity": 2050313.28,
+        "volume24h": 297516.82,
+        "liquidity": 2050317,
         "logoUrl": null,
         "pairAddress": "7q2dQbjtxxP4DqmHEC2nsGXWSytQ8jaxdyGswmAg3PFP"
+      },
+      {
+        "name": "Sent from my Pumpfun App",
+        "symbol": "App",
+        "assetId": "49nkLrXi8nCZBVKsShDNasEtPe4Vn1mx9Xbr3kTa8pTL",
+        "chain": "solana",
+        "priceUsd": 0.0009927,
+        "marketCapUsd": 906281,
+        "priceChange24h": -1.77,
+        "volume24h": 123779.16,
+        "liquidity": 49917.17,
+        "logoUrl": "https://cdn.dexscreener.com/cms/images/0g00x3sn6Exl1qE8?width=800&height=800&quality=95&format=auto",
+        "pairAddress": "Gb33gtH6PVQFAvdXmT9S3EW6FtnL7NkwJeYdbxQ3HyiZ"
       },
       {
         "name": "Pumpfun Pepe",
@@ -188,24 +201,11 @@
         "chain": "solana",
         "priceUsd": 0.0002317,
         "marketCapUsd": 231640,
-        "priceChange24h": -2.74,
-        "volume24h": 8710.18,
+        "priceChange24h": -2.96,
+        "volume24h": 8700.35,
         "liquidity": 76826.89,
         "logoUrl": "https://cdn.dexscreener.com/cms/images/wHcAEnoGnOrQXkai?width=800&height=800&quality=95&format=auto",
         "pairAddress": "GdFCD7L8x1GiudFz1wthNHEb352k3Ni37rSwtJgMgLpT"
-      },
-      {
-        "name": "Sent from my Pumpfun App",
-        "symbol": "App",
-        "assetId": "49nkLrXi8nCZBVKsShDNasEtPe4Vn1mx9Xbr3kTa8pTL",
-        "chain": "solana",
-        "priceUsd": 0.0009557,
-        "marketCapUsd": 872476,
-        "priceChange24h": -10.37,
-        "volume24h": 523810.58,
-        "liquidity": 116442.67,
-        "logoUrl": "https://cdn.dexscreener.com/cms/images/0g00x3sn6Exl1qE8?width=800&height=800&quality=95&format=auto",
-        "pairAddress": "95xZPagGKdaZgFDeNx1dxfkUYzFVk53geU7mFa58qffW"
       }
     ]
   }
