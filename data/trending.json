@@ -1,21 +1,33 @@
 {
-  "updatedAt": "2026-08-24T18:12:58.468Z",
+  "updatedAt": "2026-08-24T19:03:28.115Z",
   "categories": {
     "memes": [],
     "bnb": [
       {
-        "name": "Trusty AI",
-        "symbol": "Trusty",
-        "assetId": "0x65aea108c21439693468FCD542D81C29E8df4444",
+        "name": "Binance Super Cycle",
+        "symbol": "BSC",
+        "assetId": "0x6331BF8D601f0D7F0d2101772af5137c418c4444",
         "chain": "bsc",
-        "priceUsd": 0.00002596,
-        "marketCapUsd": 25967,
-        "priceChange24h": 0.28,
-        "volume24h": 256.26,
-        "liquidity": 19710.82,
-        "logoUrl": "https://cdn.dexscreener.com/cms/images/X-shg1fyEiyjZ92z?width=800&height=800&quality=95&format=auto",
-        "pairAddress": "0xe2D86D6dFDE0D428f8F83260b6C7c1e7f16C8ed2",
-        "pinned": true
+        "priceUsd": 0.0001477,
+        "marketCapUsd": 147738,
+        "priceChange24h": 11.74,
+        "volume24h": 14341.14,
+        "liquidity": 71613.12,
+        "logoUrl": "https://cdn.dexscreener.com/cms/images/207594269024794d1d015da53f579070e5a481cb8526bebd64cea52c7699e72d?width=800&height=800&quality=95&format=auto",
+        "pairAddress": "0xff0A8df8c4A0332E28a4c94EBB3f633944B08a94"
+      },
+      {
+        "name": "BscCat",
+        "symbol": "BscCat",
+        "assetId": "0x16099F55662e02274a99Bc73bEa249c92BF8eb12",
+        "chain": "bsc",
+        "priceUsd": 0.0001044,
+        "marketCapUsd": 104447,
+        "priceChange24h": -74.49,
+        "volume24h": 848609.67,
+        "liquidity": 44150.55,
+        "logoUrl": "https://cdn.dexscreener.com/cms/images/w8e6-JdVU-nG_pwi?width=800&height=800&quality=95&format=auto",
+        "pairAddress": "0x5703eb2618974485e2880384408B2E839DF68712"
       }
     ],
     "eth": [
@@ -24,11 +36,11 @@
         "symbol": "Gio",
         "assetId": "0x3b48F83e525268c08426AaA337c3f08F501c824D",
         "chain": "ethereum",
-        "priceUsd": 0.0002114,
-        "marketCapUsd": 206903,
-        "priceChange24h": 38.33,
-        "volume24h": 214746.45,
-        "liquidity": 54267.01,
+        "priceUsd": 0.0003157,
+        "marketCapUsd": 308856,
+        "priceChange24h": 85.25,
+        "volume24h": 217399.29,
+        "liquidity": 67186.63,
         "logoUrl": "https://cdn.dexscreener.com/cms/images/teke0ZERUUaH0mqk?width=800&height=800&quality=95&format=auto",
         "pairAddress": "0xa11c9335B26DfF092aCb59491509cDD7210fb8c5"
       },
@@ -37,27 +49,67 @@
         "symbol": "ETHCAT",
         "assetId": "0x777777780838C00038ecD48F63f3C37669322Bc8",
         "chain": "ethereum",
-        "priceUsd": 0.0008275,
-        "marketCapUsd": 827165,
-        "priceChange24h": -29.18,
-        "volume24h": 841483.76,
-        "liquidity": 96391.22,
+        "priceUsd": 0.0007017,
+        "marketCapUsd": 701456,
+        "priceChange24h": -30.48,
+        "volume24h": 827353.34,
+        "liquidity": 88777.84,
         "logoUrl": "https://cdn.dexscreener.com/cms/images/Sg6e3oFCUWXO-tiN?width=800&height=800&quality=95&format=auto",
         "pairAddress": "0xc56c9D4aEE66E16aA4a31A710A6d2Fc720A626b6"
       }
     ],
-    "sol": [],
+    "sol": [
+      {
+        "name": "NeverZero",
+        "symbol": "NEVERZERO",
+        "assetId": "7MsJCvDi5t5U3Ya2UAs5bR75VJyVMr2FKdzGmeg2rise",
+        "chain": "solana",
+        "priceUsd": 0.5033,
+        "marketCapUsd": 24820228,
+        "priceChange24h": -0.27,
+        "volume24h": 9757.02,
+        "liquidity": 24704086.85,
+        "logoUrl": "https://cdn.dexscreener.com/cms/images/gvZ36rP-rPGKBvH0?width=800&height=800&quality=95&format=auto",
+        "pairAddress": "Dmryq83qiuGuRjd36QkY5Y2cEFZajqrhuXW8kYVG1z2E"
+      },
+      {
+        "name": "FF",
+        "symbol": "FISTFLOOR",
+        "assetId": "3XJb1BtqeXNNAeAAfCzqF5ReWjok11cnStJdM1Mirise",
+        "chain": "solana",
+        "priceUsd": 0.2388,
+        "marketCapUsd": 3972110,
+        "priceChange24h": -2.18,
+        "volume24h": 149141.19,
+        "liquidity": 2702540.37,
+        "logoUrl": "https://cdn.dexscreener.com/cms/images/Musv6w4oRHfUWDbb?width=800&height=800&quality=95&format=auto",
+        "pairAddress": "3fgmJpi5WgR9jHQF37Lz8UH3DzsydJZsLKRFF4gagw5s"
+      },
+      {
+        "name": "Solana Cat",
+        "symbol": "SOLCAT",
+        "assetId": "ErBMFP637RvmNQCXwTb4yCeZz3utDsKmUpvPLfbapump",
+        "chain": "solana",
+        "priceUsd": 0.0001839,
+        "marketCapUsd": 183445,
+        "priceChange24h": -32.92,
+        "volume24h": 171678.84,
+        "liquidity": 38975.49,
+        "logoUrl": "https://cdn.dexscreener.com/cms/images/e8276bcc1e4c61cdad3b1f0d9bc6209b07cef4b78b98288f9d02411563d79264?width=800&height=800&quality=95&format=auto",
+        "pairAddress": "ELGuDG4FhrDkzTPvEX2mQqvFFNFsJNkf1ag7Xh7Zvth8"
+      }
+    ],
     "ai": [
       {
         "name": "DeAgentAI",
         "symbol": "AIA",
         "assetId": "0x53EC33Cd4fA46b9ecED9cA3f6dB626C5FfCd55cC",
         "chain": "bsc",
-        "priceUsd": 0.07169,
-        "marketCapUsd": 14338070,
-        "priceChange24h": 0.85,
-        "volume24h": 1066634.92,
-        "liquidity": 700489.18,
+        "priceUsd": 0.07188,
+        "marketCapUsd": 14377063,
+        "priceChange24h": 1.52,
+        "volume24h": 1077860.85,
+        "liquidity": 701590.78,
         "logoUrl": null,
         "pairAddress": "0xADEDafd06CC16Dec264Fb02D3f8570E072DAEe35"
       }
