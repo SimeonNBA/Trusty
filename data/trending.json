@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-24T13:19:58.452Z",
+  "updatedAt": "2026-08-24T14:11:29.671Z",
   "categories": {
     "memes": [],
     "bnb": [
@@ -119,11 +119,11 @@
         "symbol": "AIA",
         "assetId": "0x53EC33Cd4fA46b9ecED9cA3f6dB626C5FfCd55cC",
         "chain": "bsc",
-        "priceUsd": 0.07187,
-        "marketCapUsd": 14374558,
-        "priceChange24h": 1.23,
-        "volume24h": 627050.23,
-        "liquidity": 701457.79,
+        "priceUsd": 0.07183,
+        "marketCapUsd": 14366373,
+        "priceChange24h": 1.35,
+        "volume24h": 635910.5,
+        "liquidity": 701228.53,
         "logoUrl": null,
         "pairAddress": "0xADEDafd06CC16Dec264Fb02D3f8570E072DAEe35"
       }
